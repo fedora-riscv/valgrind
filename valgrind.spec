@@ -1,13 +1,14 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 2.2.0
-Release: 3
+Release: 4
 Epoch: 1
 Source0: http://developer.kde.org/~sewardj/valgrind-%{version}.tar.bz2
 Patch0: valgrind-2.0.0-pthread-stacksize.patch
 Patch1: valgrind-2.2.0-regtest.patch
 Patch2: valgrind-2.1.2-4G.patch
 Patch3: valgrind-2.2.0.ioctls.patch
+Patch4: valgrind-2.2.0-warnings.patch
 License: GPL
 URL: http://developer.kde.org/~sewardj
 Group: Development/Debuggers
@@ -37,6 +38,7 @@ find/diagnose.
 %patch1 -p1
 %patch2 -p1
 %patch3 -p1
+%patch4 -p1
 
 %define __find_provides %{_builddir}/%{name}-%{version}/find-provides
 find_provides=`rpm --eval %%{__find_provides}`
@@ -103,6 +105,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/pkgconfig/*
 
 %changelog
+* Mon Nov  8 2004 Jakub Jelinek <jakub@redhat.com> 2.2.0-4
+- fix a printout and possible problem with local variable
+  usage around setjmp (#138254)
+
 * Tue Oct  5 2004 Jakub Jelinek <jakub@redhat.com> 2.2.0-3
 - remove workaround for buggy old makes (#134563)
 
