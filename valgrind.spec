@@ -1,7 +1,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 2.2.0
-Release: 7
+Release: 8
 Epoch: 1
 Source0: http://developer.kde.org/~sewardj/valgrind-%{version}.tar.bz2
 Patch0: valgrind-2.0.0-pthread-stacksize.patch
@@ -10,6 +10,7 @@ Patch2: valgrind-2.1.2-4G.patch
 Patch3: valgrind-2.2.0.ioctls.patch
 Patch4: valgrind-2.2.0-warnings.patch
 Patch5: valgrind-2.2.0-valgrind_h.patch
+Patch6: valgrind-2.2.0-unnest.patch
 License: GPL
 URL: http://valgrind.kde.org/
 Group: Development/Debuggers
@@ -41,6 +42,7 @@ find/diagnose.
 %patch3 -p1
 %patch4 -p1
 %patch5 -p1
+%patch6 -p1
 
 %define __find_provides %{_builddir}/%{name}-%{version}/find-provides
 find_provides=`rpm --eval %%{__find_provides}`
@@ -107,6 +109,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/pkgconfig/*
 
 %changelog
+* Tue Feb  8 2005 Jakub Jelinek <jakub@redhat.com> 2.2.0-8
+- avoid unnecessary use of nested functions for pthread_once
+  cleanup
+
 * Mon Dec  6 2004 Jakub Jelinek <jakub@redhat.com> 2.2.0-7
 - update URL (#141873)
 
