@@ -1,7 +1,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 2.2.0
-Release: 5
+Release: 6
 Epoch: 1
 Source0: http://developer.kde.org/~sewardj/valgrind-%{version}.tar.bz2
 Patch0: valgrind-2.0.0-pthread-stacksize.patch
@@ -107,7 +107,7 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/pkgconfig/*
 
 %changelog
-* Tue Nov 16 2004 Jakub Jelinek <jakub@redhat.com> 2.2.0-5
+* Tue Nov 16 2004 Jakub Jelinek <jakub@redhat.com> 2.2.0-6
 - act as if NVALGRIND is defined when using <valgrind.h>
   in non-m32/i386 programs (#138923)
 - remove weak from VALGRIND_PRINTF*, make it static and
