@@ -1,11 +1,12 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 2.1.2
-Release: 1
+Release: 2
 Epoch: 1
 Source0: http://developer.kde.org/~sewardj/valgrind-%{version}.tar.bz2
 Patch0: valgrind-2.0.0-pthread-stacksize.patch
 Patch1: valgrind-2.1.2-regtest.patch
+Patch2: valgrind-2.1.2-4G.patch
 License: GPL
 URL: http://developer.kde.org/~sewardj
 Group: Development/Debuggers
@@ -33,6 +34,7 @@ find/diagnose.
 %setup -q
 %patch0 -p1
 %patch1 -p1
+%patch2 -p1
 
 %define __find_provides %{_builddir}/%{name}-%{version}/find-provides
 find_provides=`rpm --eval %%{__find_provides}`
@@ -56,10 +58,28 @@ done
 # work around #88846
 env - PATH="$PATH" make %{?_smp_mflags}
 
+# Ensure there are no unexpected file descriptors open,
+# the testsuite otherwise fails.
+cat > close_fds.c <<EOF
+#include <stdlib.h>
+#include <unistd.h>
+int main (int argc, char *const argv[])
+{
+  int i, j = sysconf (_SC_OPEN_MAX);
+  if (j < 0)
+    exit (1);
+  for (i = 3; i < j; ++i)
+    close (i);
+  execvp (argv[1], argv + 1);
+  exit (1);
+}
+EOF
+gcc $RPM_OPT_FLAGS -o close_fds close_fds.c
+
 # test
 make check
 echo ===============TESTING===================
-make regtest || :
+./close_fds make regtest || :
 echo ===============END TESTING===============
 
 %install
@@ -80,6 +100,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/pkgconfig/*
 
 %changelog
+* Tue Jul 20 2004 Jakub Jelinek <jakuB@redhat.com> 2.1.2-2
+- allow tracing of 32-bit binaries on x86-64
+
 * Tue Jul 20 2004 Jakub Jelinek <jakuB@redhat.com> 2.1.2-1
 - update to 2.1.2
 - run make regtest as part of package build
