@@ -1,7 +1,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 2.2.0
-Release: 6
+Release: 7
 Epoch: 1
 Source0: http://developer.kde.org/~sewardj/valgrind-%{version}.tar.bz2
 Patch0: valgrind-2.0.0-pthread-stacksize.patch
@@ -11,7 +11,7 @@ Patch3: valgrind-2.2.0.ioctls.patch
 Patch4: valgrind-2.2.0-warnings.patch
 Patch5: valgrind-2.2.0-valgrind_h.patch
 License: GPL
-URL: http://developer.kde.org/~sewardj
+URL: http://valgrind.kde.org/
 Group: Development/Debuggers
 BuildRoot: %{_tmppath}/%{name}-root
 ExclusiveArch: %{ix86}
@@ -107,6 +107,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/pkgconfig/*
 
 %changelog
+* Mon Dec  6 2004 Jakub Jelinek <jakub@redhat.com> 2.2.0-7
+- update URL (#141873)
+
 * Tue Nov 16 2004 Jakub Jelinek <jakub@redhat.com> 2.2.0-6
 - act as if NVALGRIND is defined when using <valgrind.h>
   in non-m32/i386 programs (#138923)
