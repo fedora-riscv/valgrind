@@ -1,7 +1,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 2.2.0
-Release: 4
+Release: 5
 Epoch: 1
 Source0: http://developer.kde.org/~sewardj/valgrind-%{version}.tar.bz2
 Patch0: valgrind-2.0.0-pthread-stacksize.patch
@@ -9,6 +9,7 @@ Patch1: valgrind-2.2.0-regtest.patch
 Patch2: valgrind-2.1.2-4G.patch
 Patch3: valgrind-2.2.0.ioctls.patch
 Patch4: valgrind-2.2.0-warnings.patch
+Patch5: valgrind-2.2.0-valgrind_h.patch
 License: GPL
 URL: http://developer.kde.org/~sewardj
 Group: Development/Debuggers
@@ -39,6 +40,7 @@ find/diagnose.
 %patch2 -p1
 %patch3 -p1
 %patch4 -p1
+%patch5 -p1
 
 %define __find_provides %{_builddir}/%{name}-%{version}/find-provides
 find_provides=`rpm --eval %%{__find_provides}`
@@ -105,6 +107,12 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/pkgconfig/*
 
 %changelog
+* Tue Nov 16 2004 Jakub Jelinek <jakub@redhat.com> 2.2.0-5
+- act as if NVALGRIND is defined when using <valgrind.h>
+  in non-m32/i386 programs (#138923)
+- remove weak from VALGRIND_PRINTF*, make it static and
+  add unused attribute
+
 * Mon Nov  8 2004 Jakub Jelinek <jakub@redhat.com> 2.2.0-4
 - fix a printout and possible problem with local variable
   usage around setjmp (#138254)
