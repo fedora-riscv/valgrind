@@ -1,16 +1,11 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
-Version: 2.2.0
-Release: 10
+Version: 2.4.0
+Release: 1
 Epoch: 1
 Source0: http://developer.kde.org/~sewardj/valgrind-%{version}.tar.bz2
-Patch0: valgrind-2.0.0-pthread-stacksize.patch
-Patch1: valgrind-2.2.0-regtest.patch
+Patch1: valgrind-2.4.0-regtest.patch
 Patch2: valgrind-2.1.2-4G.patch
-Patch3: valgrind-2.2.0.ioctls.patch
-Patch4: valgrind-2.2.0-warnings.patch
-Patch5: valgrind-2.2.0-valgrind_h.patch
-Patch6: valgrind-2.2.0-unnest.patch
 License: GPL
 URL: http://valgrind.kde.org/
 Group: Development/Debuggers
@@ -36,13 +31,8 @@ find/diagnose.
 
 %prep
 %setup -q
-%patch0 -p1
 %patch1 -p1
-%patch2 -p1
-%patch3 -p1
-%patch4 -p1
-%patch5 -p1
-%patch6 -p1
+#%patch2 -p1
 
 %define __find_provides %{_builddir}/%{name}-%{version}/find-provides
 find_provides=`rpm --eval %%{__find_provides}`
@@ -107,8 +97,23 @@ rm -rf $RPM_BUILD_ROOT
 %{_includedir}/valgrind
 %{_libdir}/valgrind
 %{_libdir}/pkgconfig/*
+%{_mandir}/man1/valgrind*
 
 %changelog
+* Sun Mar 27 2005 Colin Walters <walters@redhat.com> 2.4.0-1
+- New upstream version 
+- Update valgrind-2.2.0-regtest.patch to 2.4.0; required minor
+  massaging
+- Disable valgrind-2.1.2-4G.patch for now; Not going to touch this,
+  and Fedora does not ship 4G kernel by default anymore
+- Remove upstreamed valgrind-2.2.0.ioctls.patch
+- Remove obsolete valgrind-2.2.0-warnings.patch; Code is no longer
+  present
+- Remove upstreamed valgrind-2.2.0-valgrind_h.patch
+- Remove obsolete valgrind-2.2.0-unnest.patch and
+  valgrind-2.0.0-pthread-stacksize.patch; valgrind no longer
+  includes its own pthread library
+
 * Thu Mar 17 2005 Jakub Jelinek <jakub@redhat.com> 2.2.0-10
 - rebuilt with GCC 4
 
