@@ -1,22 +1,25 @@
-%define tar_version 1.0.0
-
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
-Version: 1.0.0
+Version: 2.1.2
 Release: 1
 Epoch: 1
-Source0: valgrind-%{tar_version}.tar.bz2
+Source0: http://developer.kde.org/~sewardj/valgrind-%{version}.tar.bz2
+Patch0: valgrind-2.0.0-pthread-stacksize.patch
+Patch1: valgrind-2.1.2-regtest.patch
 License: GPL
+URL: http://developer.kde.org/~sewardj
 Group: Development/Debuggers
 BuildRoot: %{_tmppath}/%{name}-root
 ExclusiveArch: %{ix86}
-Patch0: valgrind-1.0pre1-extra_suppressions.patch
-Patch1: valgrind-1.0pre4-clock.patch
 
-%define __find_requires %{_builddir}/%{name}-%{tar_version}/find-requires
+# Disable internal dependency generator
+%define _use_internal_dependency_generator 0
 
-# disable build root strip policy
+# Disable build root strip policy
 %define __spec_install_post /usr/lib/rpm/brp-compress || :
+
+# Disable -debuginfo package generation
+%define debug_package	%{nil}
 
 %description
 Valgrind is a tool to help you find memory-management problems in your
@@ -27,11 +30,16 @@ detect a lot of problems that are otherwise very hard to
 find/diagnose.
 
 %prep
-%setup -q -n valgrind-%{tar_version}
+%setup -q
+%patch0 -p1
+%patch1 -p1
 
-%patch0 -p1 -b .extra_suppressions
-%patch1 -p1 -b .clock
+%define __find_provides %{_builddir}/%{name}-%{version}/find-provides
+find_provides=`rpm --eval %%{__find_provides}`
+echo "$find_provides | grep -v libpthread" > find-provides
+chmod +x find-provides
 
+%define __find_requires %{_builddir}/%{name}-%{version}/find-requires
 find_requires=`rpm --eval %%{__find_requires}`
 echo "$find_requires | grep -v GLIBC_PRIVATE" > find-requires
 chmod +x find-requires
@@ -39,15 +47,24 @@ chmod +x find-requires
 %build
 %configure
 
-# Force a specific set of default supressions
+# Force a specific set of default suppressions
 echo -n > default.supp
-for file in glibc-2.2.supp xfree-4.supp ; do
+for file in glibc-2.3.supp xfree-4.supp ; do
     cat $file >> default.supp
 done
-make 
+
+# work around #88846
+env - PATH="$PATH" make %{?_smp_mflags}
+
+# test
+make check
+echo ===============TESTING===================
+make regtest || :
+echo ===============END TESTING===============
 
 %install
 rm -rf $RPM_BUILD_ROOT
+
 %makeinstall
 mv $RPM_BUILD_ROOT%{_datadir}/doc/valgrind $RPM_BUILD_ROOT%{_datadir}/doc/valgrind-%{version}
 
@@ -56,12 +73,55 @@ rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(-,root,root)
-%doc ACKNOWLEDGEMENTS COPYING ChangeLog NEWS README TODO README_MISSING_SYSCALL_OR_IOCTL
+%doc ACKNOWLEDGEMENTS COPYING NEWS README_* TODO
 %{_bindir}/*
-%{_prefix}/include/valgrind.h
+%{_includedir}/valgrind
 %{_libdir}/valgrind
+%{_libdir}/pkgconfig/*
 
 %changelog
+* Tue Jul 20 2004 Jakub Jelinek <jakuB@redhat.com> 2.1.2-1
+- update to 2.1.2
+- run make regtest as part of package build
+- use glibc-2.3 suppressions instead of glibc-2.2 suppressions
+
+* Thu Apr 29 2004 Colin Walters <walters@redhat.com> 2.0.0-1
+- update to 2.0.0
+
+* Tue Feb 25 2003 Jeff Johnson <jbj@redhat.com> 1.9.4-0.20030228
+- update to 1.9.4 from CVS.
+- dwarf patch from Graydon Hoare.
+- sysinfo patch from Graydon Hoare, take 1.
+
+* Fri Feb 14 2003 Jeff Johnson <jbj@redhat.com> 1.9.3-6.20030207
+- add return codes to syscalls.
+- fix: set errno after syscalls.
+
+* Tue Feb 11 2003 Graydon Hoare <graydon@redhat.com> 1.9.3-5.20030207
+- add handling for separate debug info (+fix).
+- handle blocking readv/writev correctly.
+- comment out 4 overly zealous pthread checks.
+
+* Tue Feb 11 2003 Jeff Johnson <jbj@redhat.com> 1.9.3-4.20030207
+- move _pthread_desc to vg_include.h.
+- implement pthread_mutex_timedlock().
+- implement pthread_barrier_wait().
+
+* Mon Feb 10 2003 Jeff Johnson <jbj@redhat.com> 1.9.3-3.20030207
+- import all(afaik) missing functionality from linuxthreads.
+
+* Sun Feb  9 2003 Jeff Johnson <jbj@redhat.com> 1.9.3-2.20030207
+- import more missing functionality from linuxthreads in glibc-2.3.1.
+
+* Sat Feb  8 2003 Jeff Johnson <jbj@redhat.com> 1.9.3-1.20030207
+- start fixing nptl test cases.
+
+* Fri Feb  7 2003 Jeff Johnson <jbj@redhat.com> 1.9.3-0.20030207
+- build against current 1.9.3 with nptl hacks.
+
+* Tue Oct 15 2002 Alexander Larsson <alexl@redhat.com>
+- Update to 1.0.4
+
 * Fri Aug  9 2002 Alexander Larsson <alexl@redhat.com>
 - Update to 1.0.0
 
