@@ -1,7 +1,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 2.1.2
-Release: 2
+Release: 3
 Epoch: 1
 Source0: http://developer.kde.org/~sewardj/valgrind-%{version}.tar.bz2
 Patch0: valgrind-2.0.0-pthread-stacksize.patch
@@ -86,7 +86,8 @@ echo ===============END TESTING===============
 rm -rf $RPM_BUILD_ROOT
 
 %makeinstall
-mv $RPM_BUILD_ROOT%{_datadir}/doc/valgrind $RPM_BUILD_ROOT%{_datadir}/doc/valgrind-%{version}
+mkdir docs.installed
+mv $RPM_BUILD_ROOT%{_datadir}/doc/valgrind/* docs.installed/
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -94,12 +95,16 @@ rm -rf $RPM_BUILD_ROOT
 %files
 %defattr(-,root,root)
 %doc ACKNOWLEDGEMENTS COPYING NEWS README_* TODO
+%doc docs.installed/*.html docs.installed/*.gif
 %{_bindir}/*
 %{_includedir}/valgrind
 %{_libdir}/valgrind
 %{_libdir}/pkgconfig/*
 
 %changelog
+* Thu Jul 22 2004 Jakub Jelinek <jakuB@redhat.com> 2.1.2-3
+- fix packaging of documentation
+
 * Tue Jul 20 2004 Jakub Jelinek <jakuB@redhat.com> 2.1.2-2
 - allow tracing of 32-bit binaries on x86-64
 
