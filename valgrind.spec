@@ -1,11 +1,11 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
-Version: 2.1.2
-Release: 3
+Version: 2.2.0
+Release: 1
 Epoch: 1
 Source0: http://developer.kde.org/~sewardj/valgrind-%{version}.tar.bz2
 Patch0: valgrind-2.0.0-pthread-stacksize.patch
-Patch1: valgrind-2.1.2-regtest.patch
+Patch1: valgrind-2.2.0-regtest.patch
 Patch2: valgrind-2.1.2-4G.patch
 License: GPL
 URL: http://developer.kde.org/~sewardj
@@ -102,6 +102,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/pkgconfig/*
 
 %changelog
+* Thu Sep  2 2004 Jakub Jelinek <jakuB@redhat.com> 2.2.0-1
+- update to 2.2.0
+
 * Thu Jul 22 2004 Jakub Jelinek <jakuB@redhat.com> 2.1.2-3
 - fix packaging of documentation
 
