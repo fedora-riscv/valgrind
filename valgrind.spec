@@ -1,7 +1,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 2.2.0
-Release: 2
+Release: 3
 Epoch: 1
 Source0: http://developer.kde.org/~sewardj/valgrind-%{version}.tar.bz2
 Patch0: valgrind-2.0.0-pthread-stacksize.patch
@@ -57,8 +57,7 @@ for file in glibc-2.3.supp xfree-4.supp ; do
     cat $file >> default.supp
 done
 
-# work around #88846
-env - PATH="$PATH" make %{?_smp_mflags}
+make %{?_smp_mflags}
 
 # Ensure there are no unexpected file descriptors open,
 # the testsuite otherwise fails.
@@ -104,6 +103,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/pkgconfig/*
 
 %changelog
+* Tue Oct  5 2004 Jakub Jelinek <jakub@redhat.com> 2.2.0-3
+- remove workaround for buggy old makes (#134563)
+
 * Fri Oct  1 2004 Jakub Jelinek <jakub@redhat.com> 2.2.0-2
 - handle some more ioctls (Peter Jones, #131967)
 
