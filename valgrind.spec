@@ -1,12 +1,13 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 2.2.0
-Release: 1
+Release: 2
 Epoch: 1
 Source0: http://developer.kde.org/~sewardj/valgrind-%{version}.tar.bz2
 Patch0: valgrind-2.0.0-pthread-stacksize.patch
 Patch1: valgrind-2.2.0-regtest.patch
 Patch2: valgrind-2.1.2-4G.patch
+Patch3: valgrind-2.2.0.ioctls.patch
 License: GPL
 URL: http://developer.kde.org/~sewardj
 Group: Development/Debuggers
@@ -35,6 +36,7 @@ find/diagnose.
 %patch0 -p1
 %patch1 -p1
 %patch2 -p1
+%patch3 -p1
 
 %define __find_provides %{_builddir}/%{name}-%{version}/find-provides
 find_provides=`rpm --eval %%{__find_provides}`
@@ -102,16 +104,19 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/pkgconfig/*
 
 %changelog
-* Thu Sep  2 2004 Jakub Jelinek <jakuB@redhat.com> 2.2.0-1
+* Fri Oct  1 2004 Jakub Jelinek <jakub@redhat.com> 2.2.0-2
+- handle some more ioctls (Peter Jones, #131967)
+
+* Thu Sep  2 2004 Jakub Jelinek <jakub@redhat.com> 2.2.0-1
 - update to 2.2.0
 
-* Thu Jul 22 2004 Jakub Jelinek <jakuB@redhat.com> 2.1.2-3
+* Thu Jul 22 2004 Jakub Jelinek <jakub@redhat.com> 2.1.2-3
 - fix packaging of documentation
 
-* Tue Jul 20 2004 Jakub Jelinek <jakuB@redhat.com> 2.1.2-2
+* Tue Jul 20 2004 Jakub Jelinek <jakub@redhat.com> 2.1.2-2
 - allow tracing of 32-bit binaries on x86-64
 
-* Tue Jul 20 2004 Jakub Jelinek <jakuB@redhat.com> 2.1.2-1
+* Tue Jul 20 2004 Jakub Jelinek <jakub@redhat.com> 2.1.2-1
 - update to 2.1.2
 - run make regtest as part of package build
 - use glibc-2.3 suppressions instead of glibc-2.2 suppressions
