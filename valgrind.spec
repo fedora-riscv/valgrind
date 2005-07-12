@@ -1,11 +1,13 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 2.4.0
-Release: 2
+Release: 3
 Epoch: 1
 Source0: http://developer.kde.org/~sewardj/valgrind-%{version}.tar.bz2
 Patch1: valgrind-2.4.0-regtest.patch
 Patch2: valgrind-2.4.0-valgrind_h.patch
+Patch3: valgrind-2.4.0-x86-insn-tests.patch
+Patch4: valgrind-2.4.0-glibc24.patch
 License: GPL
 URL: http://valgrind.kde.org/
 Group: Development/Debuggers
@@ -33,6 +35,8 @@ find/diagnose.
 %setup -q
 %patch1 -p1
 %patch2 -p1
+%patch3 -p1
+%patch4 -p1
 
 %define __find_provides %{_builddir}/%{name}-%{version}/find-provides
 find_provides=`rpm --eval %%{__find_provides}`
@@ -100,7 +104,11 @@ rm -rf $RPM_BUILD_ROOT
 %{_mandir}/man1/valgrind*
 
 %changelog
-* Wed Mar 30 2005 Colin Walters <walters@redhat.com> 2.4.0-2
+* Tue Jul 12 2005 Jakub Jelinek <jakub@redhat.com> 2.4.0-3
+- build some insn tests with -mmmx, -msse or -msse2 (#161572)
+- handle glibc-2.3.90 the same way as 2.3.[0-5]
+
+* Wed Mar 30 2005 Jakub Jelinek <jakub@redhat.com> 2.4.0-2
 - resurrect the non-upstreamed part of valgrind_h patch
 - remove 2.1.2-4G patch, seems to be upstreamed
 - resurrect passing -fno-builtin in memcheck tests
