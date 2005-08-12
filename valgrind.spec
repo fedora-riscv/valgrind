@@ -1,21 +1,21 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
-Version: 2.4.0
-Release: 3
+Version: 3.0.0
+Release: 1
 Epoch: 1
-Source0: http://developer.kde.org/~sewardj/valgrind-%{version}.tar.bz2
-Patch1: valgrind-2.4.0-regtest.patch
-Patch2: valgrind-2.4.0-valgrind_h.patch
-Patch3: valgrind-2.4.0-x86-insn-tests.patch
-Patch4: valgrind-2.4.0-glibc24.patch
+Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
+Patch1: valgrind-3.0.0-regtest.patch
+Patch2: valgrind-3.0.0-valgrind_h.patch
+Patch3: valgrind-3.0.0-amd64-highbase.patch
+Patch4: valgrind-3.0.0-matchexec.patch
+Patch5: valgrind-3.0.0-biarch-hack.patch
 License: GPL
-URL: http://valgrind.kde.org/
+URL: http://www.valgrind.org/
 Group: Development/Debuggers
 BuildRoot: %{_tmppath}/%{name}-root
-ExclusiveArch: %{ix86}
-
-# Disable internal dependency generator
-%define _use_internal_dependency_generator 0
+ExclusiveArch: %{ix86} x86_64
+# Temporarily, valgrind-callgrind has not been ported to valgrind-3.0.0 yet
+Obsoletes: valgrind-callgrind
 
 # Disable build root strip policy
 %define __spec_install_post /usr/lib/rpm/brp-compress || :
@@ -35,21 +35,16 @@ find/diagnose.
 %setup -q
 %patch1 -p1
 %patch2 -p1
+%ifarch x86_64
 %patch3 -p1
+%endif
 %patch4 -p1
-
-%define __find_provides %{_builddir}/%{name}-%{version}/find-provides
-find_provides=`rpm --eval %%{__find_provides}`
-echo "$find_provides | grep -v libpthread" > find-provides
-chmod +x find-provides
-
-%define __find_requires %{_builddir}/%{name}-%{version}/find-requires
-find_requires=`rpm --eval %%{__find_requires}`
-echo "$find_requires | grep -v GLIBC_PRIVATE" > find-requires
-chmod +x find-requires
+%patch5 -p1
 
 %build
 %configure
+
+cp -a glibc-2.3.supp glibc-2.4.supp
 
 # Force a specific set of default suppressions
 echo -n > default.supp
@@ -87,16 +82,19 @@ echo ===============END TESTING===============
 rm -rf $RPM_BUILD_ROOT
 
 %makeinstall
+cp -a $RPM_BUILD_ROOT%{_bindir}/valgrind \
+  $RPM_BUILD_ROOT%{_libdir}/valgrind/valgrind
 mkdir docs.installed
 mv $RPM_BUILD_ROOT%{_datadir}/doc/valgrind/* docs.installed/
+rm -f docs.installed/*.ps
 
 %clean
 rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(-,root,root)
-%doc ACKNOWLEDGEMENTS COPYING NEWS README_* TODO
-%doc docs.installed/*.html docs.installed/*.gif
+%doc ACKNOWLEDGEMENTS COPYING NEWS README_*
+%doc docs.installed/html docs.installed/*.pdf
 %{_bindir}/*
 %{_includedir}/valgrind
 %{_libdir}/valgrind
@@ -104,6 +102,12 @@ rm -rf $RPM_BUILD_ROOT
 %{_mandir}/man1/valgrind*
 
 %changelog
+* Fri Aug 12 2005 Jakub Jelinek <jakub@redhat.com> 3.0.0-1
+- upgrade to 3.0.0
+  - x86_64 support
+- temporarily obsolete valgrind-callgrind, as it has not been
+  ported yet
+
 * Tue Jul 12 2005 Jakub Jelinek <jakub@redhat.com> 2.4.0-3
 - build some insn tests with -mmmx, -msse or -msse2 (#161572)
 - handle glibc-2.3.90 the same way as 2.3.[0-5]
