@@ -1,7 +1,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 3.0.0
-Release: 1
+Release: 2
 Epoch: 1
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
 Patch1: valgrind-3.0.0-regtest.patch
@@ -102,6 +102,11 @@ rm -rf $RPM_BUILD_ROOT
 %{_mandir}/man1/valgrind*
 
 %changelog
+* Fri Aug 12 2005 Jakub Jelinek <jakub@redhat.com> 3.0.0-2
+- lower x86_64 stage2 base from 112TB down to 450GB, so that
+  valgrind works even on 2.4.x kernels.  Still way better than
+  1.75GB that stock valgrind allows
+
 * Fri Aug 12 2005 Jakub Jelinek <jakub@redhat.com> 3.0.0-1
 - upgrade to 3.0.0
   - x86_64 support
