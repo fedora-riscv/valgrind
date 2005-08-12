@@ -1,7 +1,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 3.0.0
-Release: 2
+Release: 3
 Epoch: 1
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
 Patch1: valgrind-3.0.0-regtest.patch
@@ -9,6 +9,9 @@ Patch2: valgrind-3.0.0-valgrind_h.patch
 Patch3: valgrind-3.0.0-amd64-highbase.patch
 Patch4: valgrind-3.0.0-matchexec.patch
 Patch5: valgrind-3.0.0-biarch-hack.patch
+Patch6: valgrind-3.0.0-amd64-grp2-rip.patch
+Patch7: valgrind-3.0.0-amd64-sar16.patch
+Patch8: valgrind-3.0.0-amd64-speedup.patch
 License: GPL
 URL: http://www.valgrind.org/
 Group: Development/Debuggers
@@ -40,6 +43,9 @@ find/diagnose.
 %endif
 %patch4 -p1
 %patch5 -p1
+%patch6 -p1
+%patch7 -p1
+%patch8 -p1
 
 %build
 %configure
@@ -102,6 +108,11 @@ rm -rf $RPM_BUILD_ROOT
 %{_mandir}/man1/valgrind*
 
 %changelog
+* Fri Aug 12 2005 Jakub Jelinek <jakub@redhat.com> 3.0.0-3
+- fix amd64 handling of cwtd instruction
+- fix amd64 handling of e.g. sarb $0x4,val(%rip)
+- speedup amd64 insn decoding
+
 * Fri Aug 12 2005 Jakub Jelinek <jakub@redhat.com> 3.0.0-2
 - lower x86_64 stage2 base from 112TB down to 450GB, so that
   valgrind works even on 2.4.x kernels.  Still way better than
