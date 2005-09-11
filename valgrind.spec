@@ -1,23 +1,20 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
-Version: 3.0.0
-Release: 3
+Version: 3.0.1
+Release: 1
 Epoch: 1
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
-Patch1: valgrind-3.0.0-regtest.patch
-Patch2: valgrind-3.0.0-valgrind_h.patch
-Patch3: valgrind-3.0.0-amd64-highbase.patch
-Patch4: valgrind-3.0.0-matchexec.patch
-Patch5: valgrind-3.0.0-biarch-hack.patch
-Patch6: valgrind-3.0.0-amd64-grp2-rip.patch
-Patch7: valgrind-3.0.0-amd64-sar16.patch
-Patch8: valgrind-3.0.0-amd64-speedup.patch
+Patch1: valgrind-3.0.1-valgrind_h.patch
+Patch2: valgrind-3.0.1-amd64-highbase.patch
+Patch3: valgrind-3.0.1-biarch-hack.patch
+Patch4: valgrind-3.0.1-amd64-speedup.patch
+Patch5: valgrind-3.0.1-amd64-syscalls.patch
 License: GPL
 URL: http://www.valgrind.org/
 Group: Development/Debuggers
 BuildRoot: %{_tmppath}/%{name}-root
 ExclusiveArch: %{ix86} x86_64
-# Temporarily, valgrind-callgrind has not been ported to valgrind-3.0.0 yet
+# Temporarily, valgrind-callgrind has not been ported to valgrind-3.0.x yet
 Obsoletes: valgrind-callgrind
 
 # Disable build root strip policy
@@ -37,15 +34,12 @@ find/diagnose.
 %prep
 %setup -q
 %patch1 -p1
-%patch2 -p1
 %ifarch x86_64
-%patch3 -p1
+%patch2 -p1
 %endif
+%patch3 -p1
 %patch4 -p1
 %patch5 -p1
-%patch6 -p1
-%patch7 -p1
-%patch8 -p1
 
 %build
 %configure
@@ -108,6 +102,11 @@ rm -rf $RPM_BUILD_ROOT
 %{_mandir}/man1/valgrind*
 
 %changelog
+* Sun Sep 11 2005 Jakub Jelinek <jakub@redhat.com> 3.0.1-1
+- upgrade to 3.0.1
+  - many bugfixes
+- handle xattr syscalls on x86-64 (Ulrich Drepper)
+
 * Fri Aug 12 2005 Jakub Jelinek <jakub@redhat.com> 3.0.0-3
 - fix amd64 handling of cwtd instruction
 - fix amd64 handling of e.g. sarb $0x4,val(%rip)
