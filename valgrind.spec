@@ -1,7 +1,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 3.0.1
-Release: 1
+Release: 2
 Epoch: 1
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
 Patch1: valgrind-3.0.1-valgrind_h.patch
@@ -14,8 +14,6 @@ URL: http://www.valgrind.org/
 Group: Development/Debuggers
 BuildRoot: %{_tmppath}/%{name}-root
 ExclusiveArch: %{ix86} x86_64
-# Temporarily, valgrind-callgrind has not been ported to valgrind-3.0.x yet
-Obsoletes: valgrind-callgrind
 
 # Disable build root strip policy
 %define __spec_install_post /usr/lib/rpm/brp-compress || :
@@ -102,6 +100,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_mandir}/man1/valgrind*
 
 %changelog
+* Thu Oct 13 2005 Jakub Jelinek <jakub@redhat.com> 3.0.1-2
+- remove Obsoletes for valgrind-callgrind, as it has been
+  ported to valgrind 3.0.x already
+
 * Sun Sep 11 2005 Jakub Jelinek <jakub@redhat.com> 3.0.1-1
 - upgrade to 3.0.1
   - many bugfixes
