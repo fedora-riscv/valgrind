@@ -1,7 +1,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 3.0.1
-Release: 2
+Release: 2.1
 Epoch: 1
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
 Patch1: valgrind-3.0.1-valgrind_h.patch
@@ -100,6 +100,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_mandir}/man1/valgrind*
 
 %changelog
+* Fri Dec 09 2005 Jesse Keating <jkeating@redhat.com>
+- rebuilt
+
 * Thu Oct 13 2005 Jakub Jelinek <jakub@redhat.com> 3.0.1-2
 - remove Obsoletes for valgrind-callgrind, as it has been
   ported to valgrind 3.0.x already
