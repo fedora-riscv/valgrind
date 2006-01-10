@@ -1,19 +1,17 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
-Version: 3.0.1
-Release: 2.1
+Version: 3.1.0
+Release: 1
 Epoch: 1
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
-Patch1: valgrind-3.0.1-valgrind_h.patch
-Patch2: valgrind-3.0.1-amd64-highbase.patch
-Patch3: valgrind-3.0.1-biarch-hack.patch
-Patch4: valgrind-3.0.1-amd64-speedup.patch
-Patch5: valgrind-3.0.1-amd64-syscalls.patch
+Patch1: valgrind-3.1.0-valgrind_h.patch
+Patch2: valgrind-3.1.0-amd64-highbase.patch
+Patch3: valgrind-3.1.0-amd64-speedup.patch
 License: GPL
 URL: http://www.valgrind.org/
 Group: Development/Debuggers
 BuildRoot: %{_tmppath}/%{name}-root
-ExclusiveArch: %{ix86} x86_64
+ExclusiveArch: %{ix86} x86_64 ppc
 
 # Disable build root strip policy
 %define __spec_install_post /usr/lib/rpm/brp-compress || :
@@ -33,20 +31,23 @@ find/diagnose.
 %setup -q
 %patch1 -p1
 %ifarch x86_64
-%patch2 -p1
+#%patch2 -p1
 %endif
 %patch3 -p1
-%patch4 -p1
-%patch5 -p1
 
 %build
+%ifarch x86_64
+# Ugly hack - libgcc 32-bit package might not be installed
+mkdir -p libgcc/32
+touch libgcc/32/libgcc_s.a
+%configure CC="gcc -B `pwd`/libgcc/"
+%else
 %configure
-
-cp -a glibc-2.3.supp glibc-2.4.supp
+%endif
 
 # Force a specific set of default suppressions
 echo -n > default.supp
-for file in glibc-2.3.supp xfree-4.supp ; do
+for file in glibc-2.4.supp xfree-4.supp ; do
     cat $file >> default.supp
 done
 
@@ -70,6 +71,13 @@ int main (int argc, char *const argv[])
 EOF
 gcc $RPM_OPT_FLAGS -o close_fds close_fds.c
 
+for i in `find . -type f \( -name *-amd64-linux -o -name *-x86-linux -o -name *-ppc-linux \)`; do
+  case "`file $i`" in
+    *ELF*executable*statically\ linked*)
+      objcopy -R .debug_loc -R .debug_frame -R .debug_ranges $i
+  esac
+done
+
 # test
 make check || :
 echo ===============TESTING===================
@@ -80,11 +88,14 @@ echo ===============END TESTING===============
 rm -rf $RPM_BUILD_ROOT
 
 %makeinstall
-cp -a $RPM_BUILD_ROOT%{_bindir}/valgrind \
-  $RPM_BUILD_ROOT%{_libdir}/valgrind/valgrind
 mkdir docs.installed
 mv $RPM_BUILD_ROOT%{_datadir}/doc/valgrind/* docs.installed/
 rm -f docs.installed/*.ps
+
+%ifarch x86_64
+rm -rf $RPM_BUILD_ROOT%{_libdir}/valgrind/x86-linux
+ln -sf ../../lib/valgrind/x86-linux $RPM_BUILD_ROOT%{_libdir}/valgrind/x86-linux
+%endif
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -100,8 +111,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_mandir}/man1/valgrind*
 
 %changelog
-* Fri Dec 09 2005 Jesse Keating <jkeating@redhat.com>
-- rebuilt
+* Mon Jan  9 2006 Jakub Jelinek <jakub@redhat.com> 3.1.0-1
+- upgrade to 3.1.0 (#174582)
+  - many bugfixes, ppc32 support
 
 * Thu Oct 13 2005 Jakub Jelinek <jakub@redhat.com> 3.0.1-2
 - remove Obsoletes for valgrind-callgrind, as it has been
