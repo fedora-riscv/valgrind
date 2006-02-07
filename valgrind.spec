@@ -1,7 +1,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 3.1.0
-Release: 1
+Release: 1.1
 Epoch: 1
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
 Patch1: valgrind-3.1.0-valgrind_h.patch
@@ -111,6 +111,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_mandir}/man1/valgrind*
 
 %changelog
+* Tue Feb 07 2006 Jesse Keating <jkeating@redhat.com> - 1:3.1.0-1.1
+- rebuilt for new gcc4.1 snapshot and glibc changes
+
 * Mon Jan  9 2006 Jakub Jelinek <jakub@redhat.com> 3.1.0-1
 - upgrade to 3.1.0 (#174582)
   - many bugfixes, ppc32 support
