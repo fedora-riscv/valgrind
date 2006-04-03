@@ -1,14 +1,13 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
-Version: 3.1.0
-Release: 2
+Version: 3.1.1
+Release: 1
 Epoch: 1
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
-Patch1: valgrind-3.1.0-valgrind_h.patch
-Patch2: valgrind-3.1.0-amd64-highbase.patch
-Patch3: valgrind-3.1.0-amd64-speedup.patch
-Patch4: valgrind-3.1.0-cfa-val-expr.patch
-Patch5: valgrind-3.1.0-glibc24.patch
+Patch1: valgrind-3.1.1-valgrind_h.patch
+Patch2: valgrind-3.1.1-amd64-speedup.patch
+Patch3: valgrind-3.1.1-cfa-val-expr.patch
+Patch4: valgrind-3.1.1-glibc24.patch
 License: GPL
 URL: http://www.valgrind.org/
 Group: Development/Debuggers
@@ -32,12 +31,9 @@ find/diagnose.
 %prep
 %setup -q
 %patch1 -p1
-%ifarch x86_64
-#%patch2 -p1
-%endif
+%patch2 -p1
 %patch3 -p1
 %patch4 -p1
-%patch5 -p1
 
 %build
 %ifarch x86_64
@@ -115,6 +111,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_mandir}/man1/valgrind*
 
 %changelog
+* Mon Apr  3 2006 Jakub Jelinek <jakub@redhat.com> 3.1.1-1
+- upgrade to 3.1.1
+  - many bugfixes
+
 * Mon Mar 13 2006 Jakub Jelinek <jakub@redhat.com> 3.1.0-2
 - add support for DW_CFA_val_offset{,_sf}, DW_CFA_def_cfa_sf
   and skip over DW_CFA_val_expression quietly
