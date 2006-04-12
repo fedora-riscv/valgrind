@@ -1,13 +1,15 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 3.1.1
-Release: 1
+Release: 2
 Epoch: 1
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
 Patch1: valgrind-3.1.1-valgrind_h.patch
 Patch2: valgrind-3.1.1-amd64-speedup.patch
 Patch3: valgrind-3.1.1-cfa-val-expr.patch
 Patch4: valgrind-3.1.1-glibc24.patch
+Patch5: valgrind-3.1.1-syscall-updates-from-trunk.patch
+Patch6: valgrind-3.1.1-syscall-updates.patch
 License: GPL
 URL: http://www.valgrind.org/
 Group: Development/Debuggers
@@ -34,6 +36,8 @@ find/diagnose.
 %patch2 -p1
 %patch3 -p1
 %patch4 -p1
+%patch5 -p1
+%patch6 -p1
 
 %build
 %ifarch x86_64
@@ -111,6 +115,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_mandir}/man1/valgrind*
 
 %changelog
+* Wed Apr 12 2006 Jakub Jelinek <jakub@redhat.com> 3.1.1-2
+- handle many syscalls that were unhandled before, especially on ppc
+
 * Mon Apr  3 2006 Jakub Jelinek <jakub@redhat.com> 3.1.1-1
 - upgrade to 3.1.1
   - many bugfixes
