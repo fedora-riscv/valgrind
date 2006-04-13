@@ -44,6 +44,7 @@ find/diagnose.
 # Ugly hack - libgcc 32-bit package might not be installed
 mkdir -p libgcc/32
 touch libgcc/32/libgcc_s.a
+touch libgcc/libgcc_s_32.a
 %configure CC="gcc -B `pwd`/libgcc/"
 %else
 %configure
