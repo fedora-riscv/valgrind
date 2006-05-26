@@ -1,7 +1,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 3.1.1
-Release: 2
+Release: 3
 Epoch: 1
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
 Patch1: valgrind-3.1.1-valgrind_h.patch
@@ -10,10 +10,16 @@ Patch3: valgrind-3.1.1-cfa-val-expr.patch
 Patch4: valgrind-3.1.1-glibc24.patch
 Patch5: valgrind-3.1.1-syscall-updates-from-trunk.patch
 Patch6: valgrind-3.1.1-syscall-updates.patch
+Patch7: valgrind-3.1.1-robust-list.patch
+Patch8: valgrind-3.1.1-syscall-updates2.patch
 License: GPL
 URL: http://www.valgrind.org/
 Group: Development/Debuggers
 BuildRoot: %{_tmppath}/%{name}-root
+%ifarch x86_64
+# Ensure glibc{,-devel} is installed for both multilib arches
+BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
+%endif
 ExclusiveArch: %{ix86} x86_64 ppc
 
 # Disable build root strip policy
@@ -38,6 +44,8 @@ find/diagnose.
 %patch4 -p1
 %patch5 -p1
 %patch6 -p1
+%patch7 -p1
+%patch8 -p1
 
 %build
 %ifarch x86_64
@@ -116,6 +124,12 @@ rm -rf $RPM_BUILD_ROOT
 %{_mandir}/man1/valgrind*
 
 %changelog
+* Fri May 26 2006 Jakub Jelinek <jakub@redhat.com> 3.1.1-3
+- handle [sg]et_robust_list syscalls on i?86/x86_64
+- handle *at syscalls on ppc
+- ensure on x86_64 both 32-bit and 64-bit glibc{,-devel} are
+  installed in the buildroot (#191820)
+
 * Wed Apr 12 2006 Jakub Jelinek <jakub@redhat.com> 3.1.1-2
 - handle many syscalls that were unhandled before, especially on ppc
 
