@@ -12,6 +12,7 @@ Patch5: valgrind-3.1.1-syscall-updates-from-trunk.patch
 Patch6: valgrind-3.1.1-syscall-updates.patch
 Patch7: valgrind-3.1.1-robust-list.patch
 Patch8: valgrind-3.1.1-syscall-updates2.patch
+Patch9: valgrind-3.1.1-makefile.patch
 License: GPL
 URL: http://www.valgrind.org/
 Group: Development/Debuggers
@@ -46,6 +47,7 @@ find/diagnose.
 %patch6 -p1
 %patch7 -p1
 %patch8 -p1
+%patch9 -p1
 
 %build
 %ifarch x86_64
