@@ -1,27 +1,21 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
-Version: 3.1.1
-Release: 3
+Version: 3.2.0
+Release: 1
 Epoch: 1
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
-Patch1: valgrind-3.1.1-valgrind_h.patch
-Patch2: valgrind-3.1.1-amd64-speedup.patch
-Patch3: valgrind-3.1.1-cfa-val-expr.patch
-Patch4: valgrind-3.1.1-glibc24.patch
-Patch5: valgrind-3.1.1-syscall-updates-from-trunk.patch
-Patch6: valgrind-3.1.1-syscall-updates.patch
-Patch7: valgrind-3.1.1-robust-list.patch
-Patch8: valgrind-3.1.1-syscall-updates2.patch
-Patch9: valgrind-3.1.1-makefile.patch
+Patch1: valgrind-3.2.0-syscall-updates.patch
+Patch2: valgrind-3.2.0-makefile.patch
 License: GPL
 URL: http://www.valgrind.org/
 Group: Development/Debuggers
 BuildRoot: %{_tmppath}/%{name}-root
-%ifarch x86_64
+Obsoletes: valgrind-callgrind
+%ifarch x86_64 ppc64
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
 %endif
-ExclusiveArch: %{ix86} x86_64 ppc
+ExclusiveArch: %{ix86} x86_64 ppc ppc64
 
 # Disable build root strip policy
 %define __spec_install_post /usr/lib/rpm/brp-compress || :
@@ -41,16 +35,9 @@ find/diagnose.
 %setup -q
 %patch1 -p1
 %patch2 -p1
-%patch3 -p1
-%patch4 -p1
-%patch5 -p1
-%patch6 -p1
-%patch7 -p1
-%patch8 -p1
-%patch9 -p1
 
 %build
-%ifarch x86_64
+%ifarch x86_64 ppc64
 # Ugly hack - libgcc 32-bit package might not be installed
 mkdir -p libgcc/32
 touch libgcc/32/libgcc_s.a
@@ -86,7 +73,7 @@ int main (int argc, char *const argv[])
 EOF
 gcc $RPM_OPT_FLAGS -o close_fds close_fds.c
 
-for i in `find . -type f \( -name *-amd64-linux -o -name *-x86-linux -o -name *-ppc-linux \)`; do
+for i in `find . -type f \( -name *-amd64-linux -o -name *-x86-linux -o -name *-ppc*-linux \)`; do
   case "`file $i`" in
     *ELF*executable*statically\ linked*)
       objcopy -R .debug_loc -R .debug_frame -R .debug_ranges $i
@@ -112,6 +99,11 @@ rm -rf $RPM_BUILD_ROOT%{_libdir}/valgrind/x86-linux
 ln -sf ../../lib/valgrind/x86-linux $RPM_BUILD_ROOT%{_libdir}/valgrind/x86-linux
 %endif
 
+%ifarch ppc64
+rm -rf $RPM_BUILD_ROOT%{_libdir}/valgrind/ppc-linux
+ln -sf ../../lib/valgrind/ppc-linux $RPM_BUILD_ROOT%{_libdir}/valgrind/ppc-linux
+%endif
+
 %clean
 rm -rf $RPM_BUILD_ROOT
 
@@ -126,6 +118,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_mandir}/man1/valgrind*
 
 %changelog
+* Thu Jun 15 2006 Jakub Jelinek <jakub@redhat.com> 3.2.0-1
+- update to 3.2.0
+  - ppc64 support
+
 * Fri May 26 2006 Jakub Jelinek <jakub@redhat.com> 3.1.1-3
 - handle [sg]et_robust_list syscalls on i?86/x86_64
 - handle *at syscalls on ppc
