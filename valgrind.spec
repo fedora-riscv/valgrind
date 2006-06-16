@@ -1,7 +1,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 3.2.0
-Release: 2
+Release: 3
 Epoch: 1
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
 Patch1: valgrind-3.2.0-syscall-updates.patch
@@ -118,6 +118,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_mandir}/man1/valgrind*
 
 %changelog
+* Fri Jun 16 2006 Jakub Jelinek <jakub@redhat.com> 3.2.0-3
+- handle [sg]et_robust_list syscall on ppc{32,64}
+
 * Fri Jun 16 2006 Jakub Jelinek <jakub@redhat.com> 3.2.0-2
 - fix ppc64 symlink to 32-bit valgrind libdir
 - handle a few extra ppc64 syscalls
