@@ -1,7 +1,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 3.2.0
-Release: 1
+Release: 2
 Epoch: 1
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
 Patch1: valgrind-3.2.0-syscall-updates.patch
@@ -100,8 +100,8 @@ ln -sf ../../lib/valgrind/x86-linux $RPM_BUILD_ROOT%{_libdir}/valgrind/x86-linux
 %endif
 
 %ifarch ppc64
-rm -rf $RPM_BUILD_ROOT%{_libdir}/valgrind/ppc-linux
-ln -sf ../../lib/valgrind/ppc-linux $RPM_BUILD_ROOT%{_libdir}/valgrind/ppc-linux
+rm -rf $RPM_BUILD_ROOT%{_libdir}/valgrind/ppc32-linux
+ln -sf ../../lib/valgrind/ppc32-linux $RPM_BUILD_ROOT%{_libdir}/valgrind/ppc32-linux
 %endif
 
 %clean
@@ -118,6 +118,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_mandir}/man1/valgrind*
 
 %changelog
+* Fri Jun 16 2006 Jakub Jelinek <jakub@redhat.com> 3.2.0-2
+- fix ppc64 symlink to 32-bit valgrind libdir
+- handle a few extra ppc64 syscalls
+
 * Thu Jun 15 2006 Jakub Jelinek <jakub@redhat.com> 3.2.0-1
 - update to 3.2.0
   - ppc64 support
