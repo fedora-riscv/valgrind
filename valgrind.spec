@@ -1,12 +1,10 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
-Version: 3.2.0
-Release: 5
+Version: 3.2.1
+Release: 1
 Epoch: 1
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
-Patch1: valgrind-3.2.0-syscall-updates.patch
-Patch2: valgrind-3.2.0-makefile.patch
-Patch3: valgrind-3.2.0-nopl.patch
+Patch1: valgrind-3.2.0-makefile.patch
 License: GPL
 URL: http://www.valgrind.org/
 Group: Development/Debuggers
@@ -35,8 +33,6 @@ find/diagnose.
 %prep
 %setup -q
 %patch1 -p1
-%patch2 -p1
-%patch3 -p1
 
 %build
 %ifarch x86_64 ppc64
@@ -120,6 +116,11 @@ rm -rf $RPM_BUILD_ROOT
 %{_mandir}/man1/valgrind*
 
 %changelog
+* Tue Sep 19 2006 Jakub Jelinek <jakub@redhat.com> 3.2.1-1
+- update to 3.2.1 bugfix release
+  - SSE3 emulation fixes, reduce memcheck false positive rate,
+    4 dozens of bugfixes
+
 * Mon Aug 21 2006 Jakub Jelinek <jakub@redhat.com> 3.2.0-5
 - handle the new i686/x86_64 nops (#203273)
 
