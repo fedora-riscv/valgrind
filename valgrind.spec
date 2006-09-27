@@ -1,7 +1,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 3.2.1
-Release: 2
+Release: 3
 Epoch: 1
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
 Patch1: valgrind-3.2.0-makefile.patch
@@ -120,6 +120,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_mandir}/man1/valgrind*
 
 %changelog
+* Wed Sep 27 2006 Jakub Jelinek <jakub@redhat.com> 3.2.1-3
+- another DW_CFA_set_loc handling fix
+
 * Tue Sep 26 2006 Jakub Jelinek <jakub@redhat.com> 3.2.1-2
 - fix openat handling (#208097)
 - fix DW_CFA_set_loc handling
