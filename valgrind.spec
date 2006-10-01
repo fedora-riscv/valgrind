@@ -1,12 +1,13 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 3.2.1
-Release: 3
+Release: 4
 Epoch: 1
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
 Patch1: valgrind-3.2.0-makefile.patch
 Patch2: valgrind-3.2.1-openat.patch
 Patch3: valgrind-3.2.1-cfa-set-loc.patch
+Patch4: valgrind-3.2.1-glibc25.patch
 License: GPL
 URL: http://www.valgrind.org/
 Group: Development/Debuggers
@@ -16,6 +17,7 @@ Obsoletes: valgrind-callgrind
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
 %endif
+BuildRequires: glibc-devel >= 2.5
 ExclusiveArch: %{ix86} x86_64 ppc ppc64
 
 # Disable build root strip policy
@@ -37,6 +39,7 @@ find/diagnose.
 %patch1 -p1
 %patch2 -p1
 %patch3 -p1
+%patch4 -p1
 
 %build
 %ifarch x86_64 ppc64
@@ -51,7 +54,7 @@ touch libgcc/libgcc_s_32.a
 
 # Force a specific set of default suppressions
 echo -n > default.supp
-for file in glibc-2.4.supp xfree-4.supp ; do
+for file in glibc-2.5.supp xfree-4.supp ; do
     cat $file >> default.supp
 done
 
@@ -120,6 +123,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_mandir}/man1/valgrind*
 
 %changelog
+* Sun Oct  1 2006 Jakub Jelinek <jakub@redhat.com> 3.2.1-4
+- adjust for glibc-2.5
+
 * Wed Sep 27 2006 Jakub Jelinek <jakub@redhat.com> 3.2.1-3
 - another DW_CFA_set_loc handling fix
 
