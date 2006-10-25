@@ -1,13 +1,14 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 3.2.1
-Release: 4
+Release: 5
 Epoch: 1
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
 Patch1: valgrind-3.2.0-makefile.patch
 Patch2: valgrind-3.2.1-openat.patch
 Patch3: valgrind-3.2.1-cfa-set-loc.patch
 Patch4: valgrind-3.2.1-glibc25.patch
+Patch5: valgrind-3.2.1-ppc-pagesize.patch
 License: GPL
 URL: http://www.valgrind.org/
 Group: Development/Debuggers
@@ -40,6 +41,7 @@ find/diagnose.
 %patch2 -p1
 %patch3 -p1
 %patch4 -p1
+%patch5 -p1
 
 %build
 %ifarch x86_64 ppc64
@@ -123,6 +125,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_mandir}/man1/valgrind*
 
 %changelog
+* Wed Oct 25 2006 Jakub Jelinek <jakub@redhat.com> 3.2.1-5
+- fix valgrind on ppc/ppc64 where PAGESIZE is 64K (#211598)
+
 * Sun Oct  1 2006 Jakub Jelinek <jakub@redhat.com> 3.2.1-4
 - adjust for glibc-2.5
 
