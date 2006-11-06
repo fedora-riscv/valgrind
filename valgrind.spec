@@ -1,7 +1,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 3.2.1
-Release: 5
+Release: 6
 Epoch: 1
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
 Patch1: valgrind-3.2.0-makefile.patch
@@ -9,6 +9,8 @@ Patch2: valgrind-3.2.1-openat.patch
 Patch3: valgrind-3.2.1-cfa-set-loc.patch
 Patch4: valgrind-3.2.1-glibc25.patch
 Patch5: valgrind-3.2.1-ppc-pagesize.patch
+Patch6: valgrind-3.2.1-intel-cache-sizes.patch
+Patch7: valgrind-3.2.1-pkg-config.patch
 License: GPL
 URL: http://www.valgrind.org/
 Group: Development/Debuggers
@@ -42,6 +44,8 @@ find/diagnose.
 %patch3 -p1
 %patch4 -p1
 %patch5 -p1
+%patch6 -p1
+%patch7 -p1
 
 %build
 %ifarch x86_64 ppc64
@@ -125,6 +129,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_mandir}/man1/valgrind*
 
 %changelog
+* Mon Nov  6 2006 Jakub Jelinek <jakub@redhat.com> 3.2.1-6
+- fix valgrind.pc (#213149)
+- handle Intel Core2 cache sizes in cachegrind (Ulrich Drepper)
+
 * Wed Oct 25 2006 Jakub Jelinek <jakub@redhat.com> 3.2.1-5
 - fix valgrind on ppc/ppc64 where PAGESIZE is 64K (#211598)
 
