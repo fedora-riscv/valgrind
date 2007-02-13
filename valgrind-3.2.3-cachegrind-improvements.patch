@@ -1,5 +1,5 @@
---- valgrind-3.2.3/cg_sim.c.jj	2007-01-08 02:43:10.000000000 -0500
-+++ valgrind-3.2.3/cg_sim.c	2007-02-13 07:15:46.000000000 -0500
+--- valgrind-3.2.3/cachegrind/cg_sim.c.jj	2007-01-08 02:43:10.000000000 -0500
++++ valgrind-3.2.3/cachegrind/cg_sim.c	2007-02-13 07:15:46.000000000 -0500
 @@ -42,29 +42,32 @@ typedef struct {
     Int          size;                   /* bytes */
     Int          assoc;
