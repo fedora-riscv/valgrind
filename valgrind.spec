@@ -1,11 +1,12 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 3.2.3
-Release: 1
+Release: 2
 Epoch: 1
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
 Patch1: valgrind-3.2.3-openat.patch
 Patch2: valgrind-3.2.3-cachegrind-improvements.patch
+Patch3: valgrind-3.2.3-pkg-config.patch
 License: GPL
 URL: http://www.valgrind.org/
 Group: Development/Debuggers
@@ -36,6 +37,7 @@ find/diagnose.
 %setup -q
 %patch1 -p1
 %patch2 -p1
+%patch3 -p1
 
 %build
 %ifarch x86_64 ppc64
@@ -119,6 +121,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_mandir}/man1/valgrind*
 
 %changelog
+* Tue Feb 13 2007 Jakub Jelinek <jakub@redhat.com> 3.2.3-2
+- fix valgrind.pc again
+
 * Tue Feb 13 2007 Jakub Jelinek <jakub@redhat.com> 3.2.3-1
 - update to 3.2.3
 
