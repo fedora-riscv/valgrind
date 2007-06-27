@@ -1,12 +1,14 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 3.2.3
-Release: 2
+Release: 3
 Epoch: 1
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
 Patch1: valgrind-3.2.3-openat.patch
 Patch2: valgrind-3.2.3-cachegrind-improvements.patch
 Patch3: valgrind-3.2.3-pkg-config.patch
+Patch4: valgrind-3.2.3-glibc2_6.patch
+Patch5: valgrind-3.2.3-io_destroy.patch
 License: GPL
 URL: http://www.valgrind.org/
 Group: Development/Debuggers
@@ -38,6 +40,8 @@ find/diagnose.
 %patch1 -p1
 %patch2 -p1
 %patch3 -p1
+%patch4 -p1
+%patch5 -p1
 
 %build
 %ifarch x86_64 ppc64
@@ -52,7 +56,7 @@ touch libgcc/libgcc_s_32.a
 
 # Force a specific set of default suppressions
 echo -n > default.supp
-for file in glibc-2.5.supp xfree-4.supp ; do
+for file in glibc-2.6.supp xfree-4.supp ; do
     cat $file >> default.supp
 done
 
@@ -121,6 +125,11 @@ rm -rf $RPM_BUILD_ROOT
 %{_mandir}/man1/valgrind*
 
 %changelog
+* Wed Jun 27 2007 Jakub Jelinek <jakub@redhat.com> 3.2.3-3
+- add suppressions for glibc >= 2.6
+- avoid valgrind internal error if io_destroy syscall is
+  passed a bogus argument
+
 * Tue Feb 13 2007 Jakub Jelinek <jakub@redhat.com> 3.2.3-2
 - fix valgrind.pc again
 
