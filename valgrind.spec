@@ -1,7 +1,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 3.2.3
-Release: 3
+Release: 4
 Epoch: 1
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
 Patch1: valgrind-3.2.3-openat.patch
@@ -49,9 +49,9 @@ find/diagnose.
 mkdir -p libgcc/32
 touch libgcc/32/libgcc_s.a
 touch libgcc/libgcc_s_32.a
-%configure CC="gcc -B `pwd`/libgcc/"
+%configure CC="gcc -B `pwd`/libgcc/" GDB=%{_bindir}/gdb
 %else
-%configure
+%configure GDB=%{_bindir}/gdb
 %endif
 
 # Force a specific set of default suppressions
@@ -125,6 +125,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_mandir}/man1/valgrind*
 
 %changelog
+* Thu Jun 28 2007 Jakub Jelinek <jakub@redhat.com> 3.2.3-4
+- pass GDB=%{_prefix}/gdb to configure to fix default
+  --db-command (#220840)
+
 * Wed Jun 27 2007 Jakub Jelinek <jakub@redhat.com> 3.2.3-3
 - add suppressions for glibc >= 2.6
 - avoid valgrind internal error if io_destroy syscall is
