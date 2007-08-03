@@ -1,7 +1,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 3.2.3
-Release: 4
+Release: 5
 Epoch: 1
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
 Patch1: valgrind-3.2.3-openat.patch
@@ -9,6 +9,7 @@ Patch2: valgrind-3.2.3-cachegrind-improvements.patch
 Patch3: valgrind-3.2.3-pkg-config.patch
 Patch4: valgrind-3.2.3-glibc2_6.patch
 Patch5: valgrind-3.2.3-io_destroy.patch
+Patch6: valgrind-3.2.3-power5+-6.patch
 License: GPL
 URL: http://www.valgrind.org/
 Group: Development/Debuggers
@@ -42,6 +43,7 @@ find/diagnose.
 %patch3 -p1
 %patch4 -p1
 %patch5 -p1
+%patch6 -p1
 
 %build
 %ifarch x86_64 ppc64
@@ -111,6 +113,10 @@ rm -rf $RPM_BUILD_ROOT%{_libdir}/valgrind/ppc32-linux
 ln -sf ../../lib/valgrind/ppc32-linux $RPM_BUILD_ROOT%{_libdir}/valgrind/ppc32-linux
 %endif
 
+%ifarch ppc
+ln -sf ../../lib64/valgrind/ppc64-linux $RPM_BUILD_ROOT%{_libdir}/valgrind/ppc64-linux
+%endif
+
 %clean
 rm -rf $RPM_BUILD_ROOT
 
@@ -125,6 +131,13 @@ rm -rf $RPM_BUILD_ROOT
 %{_mandir}/man1/valgrind*
 
 %changelog
+* Fri Aug  3 2007 Jakub Jelinek <jakub@redhat.com> 3.2.3-5
+- add ppc64-linux symlink in valgrind ppc.rpm, so that when
+  rpm prefers 32-bit binaries over 64-bit ones 32-bit
+  /usr/bin/valgrind can find 64-bit valgrind helper binaries
+  (#249773)
+- power5+ and power6 support (#240762)
+
 * Thu Jun 28 2007 Jakub Jelinek <jakub@redhat.com> 3.2.3-4
 - pass GDB=%{_prefix}/gdb to configure to fix default
   --db-command (#220840)
