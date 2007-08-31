@@ -1,13 +1,18 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 3.2.3
-Release: 2
+Release: 5%{?dist}
 Epoch: 1
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
 Patch1: valgrind-3.2.3-openat.patch
 Patch2: valgrind-3.2.3-cachegrind-improvements.patch
 Patch3: valgrind-3.2.3-pkg-config.patch
-License: GPL
+Patch4: valgrind-3.2.3-glibc2_6.patch
+Patch5: valgrind-3.2.3-io_destroy.patch
+Patch6: valgrind-3.2.3-power5+-6.patch
+Patch7: valgrind-3.2.3-private-futex.patch
+Patch8: valgrind-3.2.3-x86_64-nops.patch
+License: GPLv2
 URL: http://www.valgrind.org/
 Group: Development/Debuggers
 BuildRoot: %{_tmppath}/%{name}-root
@@ -38,6 +43,11 @@ find/diagnose.
 %patch1 -p1
 %patch2 -p1
 %patch3 -p1
+%patch4 -p1
+%patch5 -p1
+%patch6 -p1
+%patch7 -p1
+%patch8 -p1
 
 %build
 %ifarch x86_64 ppc64
@@ -45,14 +55,14 @@ find/diagnose.
 mkdir -p libgcc/32
 touch libgcc/32/libgcc_s.a
 touch libgcc/libgcc_s_32.a
-%configure CC="gcc -B `pwd`/libgcc/"
+%configure CC="gcc -B `pwd`/libgcc/" GDB=%{_bindir}/gdb
 %else
-%configure
+%configure GDB=%{_bindir}/gdb
 %endif
 
 # Force a specific set of default suppressions
 echo -n > default.supp
-for file in glibc-2.5.supp xfree-4.supp ; do
+for file in glibc-2.6.supp xfree-4.supp ; do
     cat $file >> default.supp
 done
 
@@ -107,6 +117,10 @@ rm -rf $RPM_BUILD_ROOT%{_libdir}/valgrind/ppc32-linux
 ln -sf ../../lib/valgrind/ppc32-linux $RPM_BUILD_ROOT%{_libdir}/valgrind/ppc32-linux
 %endif
 
+%ifarch ppc
+ln -sf ../../lib64/valgrind/ppc64-linux $RPM_BUILD_ROOT%{_libdir}/valgrind/ppc64-linux
+%endif
+
 %clean
 rm -rf $RPM_BUILD_ROOT
 
@@ -121,6 +135,21 @@ rm -rf $RPM_BUILD_ROOT
 %{_mandir}/man1/valgrind*
 
 %changelog
+* Fri Aug 31 2007 Jakub Jelinek <jakub@redhat.com> 3.2.3-5.fc7
+- handle new x86_64 nops (#256801, KDE#148447)
+- add support for private futexes (KDE#146781)
+- update License tag
+- add ppc64-linux symlink in valgrind ppc.rpm, so that when
+  rpm prefers 32-bit binaries over 64-bit ones 32-bit
+  /usr/bin/valgrind can find 64-bit valgrind helper binaries
+  (#249773)
+- power5+ and power6 support (#240762)
+- pass GDB=%{_prefix}/gdb to configure to fix default
+  --db-command (#220840)
+- add suppressions for glibc >= 2.6 (#245682)
+- avoid valgrind internal error if io_destroy syscall is
+  passed a bogus argument
+
 * Tue Feb 13 2007 Jakub Jelinek <jakub@redhat.com> 3.2.3-2
 - fix valgrind.pc again
 
