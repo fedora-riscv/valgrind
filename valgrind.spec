@@ -1,7 +1,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 3.2.3
-Release: 6
+Release: 7
 Epoch: 1
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
 Patch1: valgrind-3.2.3-openat.patch
@@ -12,6 +12,7 @@ Patch5: valgrind-3.2.3-io_destroy.patch
 Patch6: valgrind-3.2.3-power5+-6.patch
 Patch7: valgrind-3.2.3-private-futex.patch
 Patch8: valgrind-3.2.3-x86_64-nops.patch
+Patch9: valgrind-3.2.3-glibc2_7.patch
 License: GPLv2
 URL: http://www.valgrind.org/
 Group: Development/Debuggers
@@ -48,6 +49,7 @@ find/diagnose.
 %patch6 -p1
 %patch7 -p1
 %patch8 -p1
+%patch9 -p1
 
 %build
 %ifarch x86_64 ppc64
@@ -62,7 +64,7 @@ touch libgcc/libgcc_s_32.a
 
 # Force a specific set of default suppressions
 echo -n > default.supp
-for file in glibc-2.6.supp xfree-4.supp ; do
+for file in glibc-2.7.supp xfree-4.supp ; do
     cat $file >> default.supp
 done
 
@@ -135,6 +137,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_mandir}/man1/valgrind*
 
 %changelog
+* Thu Oct 18 2007 Jakub Jelinek <jakub@redhat.com> 3.2.3-7
+- add suppressions for glibc >= 2.7
+
 * Fri Aug 31 2007 Jakub Jelinek <jakub@redhat.com> 3.2.3-6
 - handle new x86_64 nops (#256801, KDE#148447)
 - add support for private futexes (KDE#146781)
