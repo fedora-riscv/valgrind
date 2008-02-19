@@ -1,7 +1,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 3.2.3
-Release: 7
+Release: 8
 Epoch: 1
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
 Patch1: valgrind-3.2.3-openat.patch
@@ -137,6 +137,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_mandir}/man1/valgrind*
 
 %changelog
+* Tue Feb 19 2008 Fedora Release Engineering <rel-eng@fedoraproject.org> - 1:3.2.3-8
+- Autorebuild for GCC 4.3
+
 * Thu Oct 18 2007 Jakub Jelinek <jakub@redhat.com> 3.2.3-7
 - add suppressions for glibc >= 2.7
 
