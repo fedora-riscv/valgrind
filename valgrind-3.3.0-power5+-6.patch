@@ -1,6 +1,6 @@
---- valgrind-3.2.3/VEX/priv/guest-ppc/toIR.c	2006-08-28 08:39:10.000000000 -0500
-+++ valgrind-3.2.3/VEX/priv/guest-ppc/toIR.c	2007-05-16 18:05:02.000000000 -0500
-@@ -328,6 +328,7 @@ typedef enum {
+--- valgrind-3.3.0/VEX/priv/guest-ppc/toIR.c.jj	2007-12-11 00:18:52.000000000 +0100
++++ valgrind-3.3.0/VEX/priv/guest-ppc/toIR.c	2008-03-03 09:58:59.000000000 +0100
+@@ -333,6 +333,7 @@ typedef enum {
  } PPC_GST;
  
  #define MASK_FPSCR_RN   0x3
@@ -8,7 +8,7 @@
  #define MASK_VSCR_VALID 0x00010001
  
  
-@@ -2122,7 +2123,7 @@ static IRExpr* /* ::Ity_I32 */ getGST_ma
+@@ -2142,7 +2143,7 @@ static IRExpr* /* ::Ity_I32 */ getGST_ma
  
        /* We're only keeping track of the rounding mode,
           so if the mask isn't asking for this, just return 0x0 */
@@ -17,7 +17,7 @@
           assign( val, IRExpr_Get( OFFB_FPROUND, Ity_I32 ) );
        } else {
           assign( val, mkU32(0x0) );
-@@ -2247,7 +2248,7 @@ static void putGST_masked ( PPC_GST reg,
+@@ -2271,7 +2272,7 @@ static void putGST_masked ( PPC_GST reg,
     switch (reg) {
     case PPC_GST_FPSCR: {
        /* Allow writes to Rounding Mode */
@@ -26,7 +26,7 @@
           /* construct new fpround from new and old values as per mask:
              new fpround = (src & (3 & mask)) | (fpround & (3 & ~mask)) */
           stmt( 
-@@ -2255,11 +2256,11 @@ static void putGST_masked ( PPC_GST reg,
+@@ -2279,11 +2280,11 @@ static void putGST_masked ( PPC_GST reg,
                 OFFB_FPROUND,
                 binop(
                    Iop_Or32, 
@@ -40,7 +40,7 @@
                    )
                 )
              )
-@@ -3200,6 +3201,48 @@ static Bool dis_int_logic ( UInt theInst
+@@ -3224,6 +3225,48 @@ static Bool dis_int_logic ( UInt theInst
           // TODO: alternatively: assign(rA, verbose_Clz64(rS));
           break;
  
@@ -89,7 +89,7 @@
        default:
           vex_printf("dis_int_logic(ppc)(opc2)\n");
           return False;
-@@ -6381,6 +6424,45 @@ static Bool dis_fp_round ( UInt theInstr
+@@ -6533,6 +6576,45 @@ static Bool dis_fp_round ( UInt theInstr
                binop(Iop_I64toF64, rm, mkexpr(r_tmp64)) );
        break;
  
@@ -135,7 +135,7 @@
     default:
        vex_printf("dis_fp_round(ppc)(opc2)\n");
        return False;
-@@ -8991,6 +9073,10 @@ DisResult disInstr_PPC_WRK ( 
+@@ -9139,6 +9221,10 @@ DisResult disInstr_PPC_WRK ( 
        case 0x32E: // fctid
        case 0x32F: // fctidz
        case 0x34E: // fcfid
@@ -146,7 +146,7 @@
           if (dis_fp_round(theInstr)) goto decode_success;
           goto decode_failure;
           
-@@ -9067,6 +9153,10 @@ DisResult disInstr_PPC_WRK ( 
+@@ -9216,6 +9302,10 @@ DisResult disInstr_PPC_WRK ( 
           if (dis_int_arith( theInstr )) goto decode_success;
           goto decode_failure;
  
@@ -157,7 +157,7 @@
        default:
           break;  // Fall through...
        }
-@@ -9085,6 +9175,7 @@ DisResult disInstr_PPC_WRK ( 
+@@ -9234,6 +9324,7 @@ DisResult disInstr_PPC_WRK ( 
        case 0x11C: case 0x3BA: case 0x39A: // eqv,  extsb, extsh
        case 0x1DC: case 0x07C: case 0x1BC: // nand, nor,   or
        case 0x19C: case 0x13C:             // orc,  xor
@@ -165,27 +165,28 @@
           if (dis_int_logic( theInstr )) goto decode_success;
           goto decode_failure;
  
---- valgrind-3.2.3/none/tests/ppc32/Makefile.am	2006-08-28 08:38:47.000000000 -0500
-+++ valgrind-3.2.3/none/tests/ppc32/Makefile.am	2007-05-16 18:10:32.000000000 -0500
-@@ -13,11 +13,14 @@ EXTRA_DIST = $(noinst_SCRIPTS) \
- 	test_gx.stderr.exp test_gx.stdout.exp test_gx.vgtest \
+--- valgrind-3.3.0/none/tests/ppc32/Makefile.am.jj	2007-12-11 00:18:32.000000000 +0100
++++ valgrind-3.3.0/none/tests/ppc32/Makefile.am	2008-03-03 10:00:36.000000000 +0100
+@@ -19,13 +19,15 @@ EXTRA_DIST = $(noinst_SCRIPTS) \
  	testVMX.stderr.exp  testVMX.stdout.exp  testVMX.vgtest \
  	twi.stderr.exp twi.stdout.exp twi.vgtest \
+ 	tw.stderr.exp tw.stdout.exp tw.vgtest \
 -	xlc_dbl_u32.stderr.exp xlc_dbl_u32.stdout.exp xlc_dbl_u32.vgtest
 +	xlc_dbl_u32.stderr.exp xlc_dbl_u32.stdout.exp xlc_dbl_u32.vgtest \
 +	power5+_round.stderr.exp power5+_round.stdout.exp power5+_round.vgtest \
 +	power6_bcmp.stderr.exp power6_bcmp.stdout.exp power6_bcmp.vgtest
-+
  
  check_PROGRAMS = \
- 	ldstrev lsw jm-insns mftocrf round test_fx test_gx testVMX \
--	twi xlc_dbl_u32
-+	twi xlc_dbl_u32 power5+_round power6_bcmp
+ 	bug129390-ppc32 \
+ 	bug139050-ppc32 \
+ 	ldstrev lsw jm-insns mftocrf mcrfs round test_fx test_gx \
+-	testVMX twi tw xlc_dbl_u32
++	testVMX twi tw xlc_dbl_u32 power5+_round power6_bcmp
  
  AM_CFLAGS   = $(WERROR) -Winline -Wall -Wshadow -g -I$(top_srcdir)/include \
  		@FLAG_M32@
---- valgrind-3.2.3/none/tests/ppc32/power5+_round.c	1969-12-31 18:00:00.000000000 -0600
-+++ valgrind-3.2.3/none/tests/ppc32/power5+_round.c	2007-05-16 18:05:02.000000000 -0500
+--- valgrind-3.3.0/none/tests/ppc32/power5+_round.c.jj	2008-03-03 09:58:59.000000000 +0100
++++ valgrind-3.3.0/none/tests/ppc32/power5+_round.c	2008-03-03 09:58:59.000000000 +0100
 @@ -0,0 +1,147 @@
 +/*  Copyright (C) 2007  Pete Eberlein  eberlein@us.ibm.com
 +
@@ -334,13 +335,13 @@
 +
 + return 0;
 +}
---- valgrind-3.2.3/none/tests/ppc32/power5+_round.stderr.exp	1969-12-31 18:00:00.000000000 -0600
-+++ valgrind-3.2.3/none/tests/ppc32/power5+_round.stderr.exp	2007-05-16 18:05:02.000000000 -0500
+--- valgrind-3.3.0/none/tests/ppc32/power5+_round.stderr.exp.jj	2008-03-03 09:58:59.000000000 +0100
++++ valgrind-3.3.0/none/tests/ppc32/power5+_round.stderr.exp	2008-03-03 09:58:59.000000000 +0100
 @@ -0,0 +1,2 @@
 +
 +
---- valgrind-3.2.3/none/tests/ppc32/power5+_round.stdout.exp	1969-12-31 18:00:00.000000000 -0600
-+++ valgrind-3.2.3/none/tests/ppc32/power5+_round.stdout.exp	2007-05-16 18:05:02.000000000 -0500
+--- valgrind-3.3.0/none/tests/ppc32/power5+_round.stdout.exp.jj	2008-03-03 09:58:59.000000000 +0100
++++ valgrind-3.3.0/none/tests/ppc32/power5+_round.stdout.exp	2008-03-03 09:58:59.000000000 +0100
 @@ -0,0 +1,60 @@
 +frin	inf	inf	0	PASS
 +frin	1.9	2	0	PASS
@@ -402,12 +403,12 @@
 +frim	-0.9	-1	0	PASS
 +frim	1e-40	0	0	PASS
 +frim	-1e-40	-1	0	PASS
---- valgrind-3.2.3/none/tests/ppc32/power5+_round.vgtest	1969-12-31 18:00:00.000000000 -0600
-+++ valgrind-3.2.3/none/tests/ppc32/power5+_round.vgtest	2007-05-16 18:05:02.000000000 -0500
+--- valgrind-3.3.0/none/tests/ppc32/power5+_round.vgtest.jj	2008-03-03 09:58:59.000000000 +0100
++++ valgrind-3.3.0/none/tests/ppc32/power5+_round.vgtest	2008-03-03 09:58:59.000000000 +0100
 @@ -0,0 +1 @@
 +prog: power5+_round
---- valgrind-3.2.3/none/tests/ppc32/power6_bcmp.c	1969-12-31 18:00:00.000000000 -0600
-+++ valgrind-3.2.3/none/tests/ppc32/power6_bcmp.c	2007-05-16 18:05:02.000000000 -0500
+--- valgrind-3.3.0/none/tests/ppc32/power6_bcmp.c.jj	2008-03-03 09:58:59.000000000 +0100
++++ valgrind-3.3.0/none/tests/ppc32/power6_bcmp.c	2008-03-03 09:58:59.000000000 +0100
 @@ -0,0 +1,58 @@
 +/*  Copyright (C) 2007  Pete Eberlein  eberlein@us.ibm.com
 +
@@ -467,35 +468,34 @@
 +  return 0;
 +}
 +
---- valgrind-3.2.3/none/tests/ppc32/power6_bcmp.stderr.exp	1969-12-31 18:00:00.000000000 -0600
-+++ valgrind-3.2.3/none/tests/ppc32/power6_bcmp.stderr.exp	2007-05-16 18:05:02.000000000 -0500
+--- valgrind-3.3.0/none/tests/ppc32/power6_bcmp.stderr.exp.jj	2008-03-03 09:58:59.000000000 +0100
++++ valgrind-3.3.0/none/tests/ppc32/power6_bcmp.stderr.exp	2008-03-03 09:58:59.000000000 +0100
 @@ -0,0 +1,2 @@
 +
 +
---- valgrind-3.2.3/none/tests/ppc32/power6_bcmp.vgtest	1969-12-31 18:00:00.000000000 -0600
-+++ valgrind-3.2.3/none/tests/ppc32/power6_bcmp.vgtest	2007-05-16 18:05:02.000000000 -0500
+--- valgrind-3.3.0/none/tests/ppc32/power6_bcmp.vgtest.jj	2008-03-03 09:58:59.000000000 +0100
++++ valgrind-3.3.0/none/tests/ppc32/power6_bcmp.vgtest	2008-03-03 09:58:59.000000000 +0100
 @@ -0,0 +1 @@
 +prog: power6_bcmp
---- valgrind-3.2.3/none/tests/ppc64/Makefile.am	2006-08-28 08:38:48.000000000 -0500
-+++ valgrind-3.2.3/none/tests/ppc64/Makefile.am	2007-05-16 18:11:29.000000000 -0500
-@@ -7,10 +7,13 @@ EXTRA_DIST = $(noinst_SCRIPTS) \
- 	jm-vmx.stderr.exp jm-vmx.stdout.exp jm-vmx.vgtest \
- 	lsw.stderr.exp lsw.stdout.exp lsw.vgtest \
+--- valgrind-3.3.0/none/tests/ppc64/Makefile.am.jj	2007-12-11 00:18:35.000000000 +0100
++++ valgrind-3.3.0/none/tests/ppc64/Makefile.am	2008-03-03 10:01:52.000000000 +0100
+@@ -9,10 +9,12 @@ EXTRA_DIST = $(noinst_SCRIPTS) \
+ 	std_reg_imm.vgtest std_reg_imm.stderr.exp std_reg_imm.stdout.exp \
  	round.stderr.exp round.stdout.exp round.vgtest \
--	twi_tdi.stderr.exp twi_tdi.stdout.exp twi_tdi.vgtest
-+	twi_tdi.stderr.exp twi_tdi.stdout.exp twi_tdi.vgtest \
+ 	twi_tdi.stderr.exp twi_tdi.stdout.exp twi_tdi.vgtest \
+-	tw_td.stderr.exp tw_td.stdout.exp tw_td.vgtest
++	tw_td.stderr.exp tw_td.stdout.exp tw_td.vgtest \
 +	power6_bcmp.stderr.exp power6_bcmp.stdout.exp power6_bcmp.vgtest \
 +	power6_mf_gpr.stderr.exp power6_mf_gpr.stdout.exp power6_mf_gpr.vgtest
-+
  
  check_PROGRAMS = \
--	jm-insns lsw round twi_tdi
-+	jm-insns lsw round twi_tdi power6_bcmp power6_mf_gpr
+-	jm-insns lsw round std_reg_imm twi_tdi tw_td
++	jm-insns lsw round std_reg_imm twi_tdi tw_td power6_bcmp power6_mf_gpr
  
  AM_CFLAGS   = $(WERROR) -Winline -Wall -Wshadow -g -I$(top_srcdir)/include \
  		@FLAG_M64@
---- valgrind-3.2.3/none/tests/ppc64/power6_bcmp.c	1969-12-31 18:00:00.000000000 -0600
-+++ valgrind-3.2.3/none/tests/ppc64/power6_bcmp.c	2007-05-16 18:05:02.000000000 -0500
+--- valgrind-3.3.0/none/tests/ppc64/power6_bcmp.c.jj	2008-03-03 09:58:59.000000000 +0100
++++ valgrind-3.3.0/none/tests/ppc64/power6_bcmp.c	2008-03-03 09:58:59.000000000 +0100
 @@ -0,0 +1,61 @@
 +/*  Copyright (C) 2007  Pete Eberlein  eberlein@us.ibm.com
 +
@@ -558,17 +558,17 @@
 +  return 0;
 +}
 +
---- valgrind-3.2.3/none/tests/ppc64/power6_bcmp.stderr.exp	1969-12-31 18:00:00.000000000 -0600
-+++ valgrind-3.2.3/none/tests/ppc64/power6_bcmp.stderr.exp	2007-05-16 18:05:02.000000000 -0500
+--- valgrind-3.3.0/none/tests/ppc64/power6_bcmp.stderr.exp.jj	2008-03-03 09:58:59.000000000 +0100
++++ valgrind-3.3.0/none/tests/ppc64/power6_bcmp.stderr.exp	2008-03-03 09:58:59.000000000 +0100
 @@ -0,0 +1,2 @@
 +
 +
---- valgrind-3.2.3/none/tests/ppc64/power6_bcmp.vgtest	1969-12-31 18:00:00.000000000 -0600
-+++ valgrind-3.2.3/none/tests/ppc64/power6_bcmp.vgtest	2007-05-16 18:05:02.000000000 -0500
+--- valgrind-3.3.0/none/tests/ppc64/power6_bcmp.vgtest.jj	2008-03-03 09:58:59.000000000 +0100
++++ valgrind-3.3.0/none/tests/ppc64/power6_bcmp.vgtest	2008-03-03 09:58:59.000000000 +0100
 @@ -0,0 +1 @@
 +prog: power6_bcmp
---- valgrind-3.2.3/none/tests/ppc64/power6_mf_gpr.c	1969-12-31 18:00:00.000000000 -0600
-+++ valgrind-3.2.3/none/tests/ppc64/power6_mf_gpr.c	2007-05-16 18:05:02.000000000 -0500
+--- valgrind-3.3.0/none/tests/ppc64/power6_mf_gpr.c.jj	2008-03-03 09:58:59.000000000 +0100
++++ valgrind-3.3.0/none/tests/ppc64/power6_mf_gpr.c	2008-03-03 09:58:59.000000000 +0100
 @@ -0,0 +1,47 @@
 +/*  Copyright (C) 2007  Pete Eberlein  eberlein@us.ibm.com
 +
@@ -617,34 +617,34 @@
 +
 +  return 0;
 +}
---- valgrind-3.2.3/none/tests/ppc64/power6_mf_gpr.stderr.exp	1969-12-31 18:00:00.000000000 -0600
-+++ valgrind-3.2.3/none/tests/ppc64/power6_mf_gpr.stderr.exp	2007-05-16 18:05:02.000000000 -0500
+--- valgrind-3.3.0/none/tests/ppc64/power6_mf_gpr.stderr.exp.jj	2008-03-03 09:58:59.000000000 +0100
++++ valgrind-3.3.0/none/tests/ppc64/power6_mf_gpr.stderr.exp	2008-03-03 09:58:59.000000000 +0100
 @@ -0,0 +1,2 @@
 +
 +
---- valgrind-3.2.3/none/tests/ppc64/power6_mf_gpr.stdout.exp	1969-12-31 18:00:00.000000000 -0600
-+++ valgrind-3.2.3/none/tests/ppc64/power6_mf_gpr.stdout.exp	2007-05-16 18:05:02.000000000 -0500
+--- valgrind-3.3.0/none/tests/ppc64/power6_mf_gpr.stdout.exp.jj	2008-03-03 09:58:59.000000000 +0100
++++ valgrind-3.3.0/none/tests/ppc64/power6_mf_gpr.stdout.exp	2008-03-03 09:58:59.000000000 +0100
 @@ -0,0 +1,3 @@
 +0 100.000000
 +4059000000000000 0.000000
 +4059000000000000 100.000000
---- valgrind-3.2.3/none/tests/ppc64/power6_mf_gpr.vgtest	1969-12-31 18:00:00.000000000 -0600
-+++ valgrind-3.2.3/none/tests/ppc64/power6_mf_gpr.vgtest	2007-05-16 18:05:02.000000000 -0500
+--- valgrind-3.3.0/none/tests/ppc64/power6_mf_gpr.vgtest.jj	2008-03-03 09:58:59.000000000 +0100
++++ valgrind-3.3.0/none/tests/ppc64/power6_mf_gpr.vgtest	2008-03-03 09:58:59.000000000 +0100
 @@ -0,0 +1 @@
 +prog: power6_mf_gpr
---- valgrind-3.2.3/none/tests/ppc32/Makefile.in	2007-01-29 20:45:20.000000000 +0100
-+++ valgrind-3.2.3/none/tests/ppc32/Makefile.in	2007-08-03 16:49:16.000000000 +0200
-@@ -39,7 +39,8 @@ host_triplet = @host@
- check_PROGRAMS = ldstrev$(EXEEXT) lsw$(EXEEXT) jm-insns$(EXEEXT) \
- 	mftocrf$(EXEEXT) round$(EXEEXT) test_fx$(EXEEXT) \
- 	test_gx$(EXEEXT) testVMX$(EXEEXT) twi$(EXEEXT) \
--	xlc_dbl_u32$(EXEEXT)
-+	xlc_dbl_u32$(EXEEXT) power5+_round$(EXEEXT) \
-+	power6_bcmp$(EXEEXT)
+--- valgrind-3.3.0/none/tests/ppc32/Makefile.in.jj	2007-12-11 00:23:53.000000000 +0100
++++ valgrind-3.3.0/none/tests/ppc32/Makefile.in	2008-03-03 10:02:14.000000000 +0100
+@@ -40,7 +40,8 @@ check_PROGRAMS = bug129390-ppc32$(EXEEXT
+ 	ldstrev$(EXEEXT) lsw$(EXEEXT) jm-insns$(EXEEXT) \
+ 	mftocrf$(EXEEXT) mcrfs$(EXEEXT) round$(EXEEXT) \
+ 	test_fx$(EXEEXT) test_gx$(EXEEXT) testVMX$(EXEEXT) \
+-	twi$(EXEEXT) tw$(EXEEXT) xlc_dbl_u32$(EXEEXT)
++	twi$(EXEEXT) tw$(EXEEXT) xlc_dbl_u32$(EXEEXT) \
++	power5+_round$(EXEEXT) power6_bcmp$(EXEEXT)
  subdir = none/tests/ppc32
  DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
  ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
-@@ -61,6 +62,12 @@ lsw_LDADD = $(LDADD)
+@@ -71,6 +72,12 @@ mcrfs_LDADD = $(LDADD)
  mftocrf_SOURCES = mftocrf.c
  mftocrf_OBJECTS = mftocrf.$(OBJEXT)
  mftocrf_LDADD = $(LDADD)
@@ -657,27 +657,27 @@
  round_SOURCES = round.c
  round_OBJECTS = round.$(OBJEXT)
  round_LDADD = $(LDADD)
-@@ -87,10 +94,12 @@ COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUD
- 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
+@@ -101,11 +108,12 @@ COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUD
  CCLD = $(CC)
  LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
--SOURCES = jm-insns.c ldstrev.c lsw.c mftocrf.c round.c testVMX.c \
--	test_fx.c test_gx.c twi.c xlc_dbl_u32.c
--DIST_SOURCES = jm-insns.c ldstrev.c lsw.c mftocrf.c round.c testVMX.c \
--	test_fx.c test_gx.c twi.c xlc_dbl_u32.c
-+SOURCES = jm-insns.c ldstrev.c lsw.c mftocrf.c power5+_round.c \
-+	power6_bcmp.c round.c testVMX.c test_fx.c test_gx.c twi.c \
-+	xlc_dbl_u32.c
-+DIST_SOURCES = jm-insns.c ldstrev.c lsw.c mftocrf.c power5+_round.c \
-+	power6_bcmp.c round.c testVMX.c test_fx.c test_gx.c twi.c \
+ SOURCES = bug129390-ppc32.c bug139050-ppc32.c jm-insns.c ldstrev.c \
+-	lsw.c mcrfs.c mftocrf.c round.c testVMX.c test_fx.c test_gx.c \
+-	tw.c twi.c xlc_dbl_u32.c
++	lsw.c mcrfs.c mftocrf.c power5+_round.c power6_bcmp.c round.c \
++	testVMX.c test_fx.c test_gx.c tw.c twi.c xlc_dbl_u32.c
+ DIST_SOURCES = bug129390-ppc32.c bug139050-ppc32.c jm-insns.c \
+-	ldstrev.c lsw.c mcrfs.c mftocrf.c round.c testVMX.c test_fx.c \
+-	test_gx.c tw.c twi.c xlc_dbl_u32.c
++	ldstrev.c lsw.c mcrfs.c mftocrf.c power5+_round.c \
++	power6_bcmp.c round.c testVMX.c test_fx.c test_gx.c tw.c twi.c \
 +	xlc_dbl_u32.c
  ETAGS = etags
  CTAGS = ctags
  DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
-@@ -228,7 +245,9 @@ EXTRA_DIST = $(noinst_SCRIPTS) \
- 	test_gx.stderr.exp test_gx.stdout.exp test_gx.vgtest \
+@@ -266,7 +275,9 @@ EXTRA_DIST = $(noinst_SCRIPTS) \
  	testVMX.stderr.exp  testVMX.stdout.exp  testVMX.vgtest \
  	twi.stderr.exp twi.stdout.exp twi.vgtest \
+ 	tw.stderr.exp tw.stdout.exp tw.vgtest \
 -	xlc_dbl_u32.stderr.exp xlc_dbl_u32.stdout.exp xlc_dbl_u32.vgtest
 +	xlc_dbl_u32.stderr.exp xlc_dbl_u32.stdout.exp xlc_dbl_u32.vgtest \
 +	power5+_round.stderr.exp power5+_round.stdout.exp power5+_round.vgtest \
@@ -685,7 +685,7 @@
  
  AM_CFLAGS = $(WERROR) -Winline -Wall -Wshadow -g -I$(top_srcdir)/include \
  		@FLAG_M32@
-@@ -288,6 +307,12 @@ lsw$(EXEEXT): $(lsw_OBJECTS) $(lsw_DEPEN
+@@ -335,6 +346,12 @@ mcrfs$(EXEEXT): $(mcrfs_OBJECTS) $(mcrfs
  mftocrf$(EXEEXT): $(mftocrf_OBJECTS) $(mftocrf_DEPENDENCIES) 
  	@rm -f mftocrf$(EXEEXT)
  	$(LINK) $(mftocrf_LDFLAGS) $(mftocrf_OBJECTS) $(mftocrf_LDADD) $(LIBS)
@@ -698,27 +698,28 @@
  round$(EXEEXT): $(round_OBJECTS) $(round_DEPENDENCIES) 
  	@rm -f round$(EXEEXT)
  	$(LINK) $(round_LDFLAGS) $(round_OBJECTS) $(round_LDADD) $(LIBS)
-@@ -317,6 +342,8 @@ distclean-compile:
- @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ldstrev.Po@am__quote@
+@@ -370,6 +387,8 @@ distclean-compile:
  @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsw.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mcrfs.Po@am__quote@
  @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mftocrf.Po@am__quote@
 +@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/power5+_round.Po@am__quote@
 +@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/power6_bcmp.Po@am__quote@
  @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/round.Po@am__quote@
  @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testVMX-testVMX.Po@am__quote@
  @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_fx.Po@am__quote@
---- valgrind-3.2.3/none/tests/ppc64/Makefile.in	2007-01-29 20:45:21.000000000 +0100
-+++ valgrind-3.2.3/none/tests/ppc64/Makefile.in	2007-08-03 16:49:16.000000000 +0200
-@@ -37,7 +37,7 @@ POST_UNINSTALL = :
+--- valgrind-3.3.0/none/tests/ppc64/Makefile.in.jj	2007-12-11 00:23:55.000000000 +0100
++++ valgrind-3.3.0/none/tests/ppc64/Makefile.in	2008-03-03 10:02:14.000000000 +0100
+@@ -37,7 +37,8 @@ POST_UNINSTALL = :
  build_triplet = @build@
  host_triplet = @host@
  check_PROGRAMS = jm-insns$(EXEEXT) lsw$(EXEEXT) round$(EXEEXT) \
--	twi_tdi$(EXEEXT)
-+	twi_tdi$(EXEEXT) power6_bcmp$(EXEEXT) power6_mf_gpr$(EXEEXT)
+-	std_reg_imm$(EXEEXT) twi_tdi$(EXEEXT) tw_td$(EXEEXT)
++	std_reg_imm$(EXEEXT) twi_tdi$(EXEEXT) tw_td$(EXEEXT) \
++	power6_bcmp$(EXEEXT) power6_mf_gpr$(EXEEXT)
  subdir = none/tests/ppc64
  DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
  ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
-@@ -53,6 +53,12 @@ jm_insns_LDADD = $(LDADD)
+@@ -53,6 +54,12 @@ jm_insns_LDADD = $(LDADD)
  lsw_SOURCES = lsw.c
  lsw_OBJECTS = lsw.$(OBJEXT)
  lsw_LDADD = $(LDADD)
@@ -731,31 +732,32 @@
  round_SOURCES = round.c
  round_OBJECTS = round.$(OBJEXT)
  round_LDADD = $(LDADD)
-@@ -67,8 +73,10 @@ COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUD
+@@ -73,9 +80,10 @@ COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUD
  	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
  CCLD = $(CC)
  LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
--SOURCES = jm-insns.c lsw.c round.c twi_tdi.c
--DIST_SOURCES = jm-insns.c lsw.c round.c twi_tdi.c
+-SOURCES = jm-insns.c lsw.c round.c std_reg_imm.c tw_td.c twi_tdi.c
+-DIST_SOURCES = jm-insns.c lsw.c round.c std_reg_imm.c tw_td.c \
+-	twi_tdi.c
 +SOURCES = jm-insns.c lsw.c power6_bcmp.c power6_mf_gpr.c round.c \
-+	twi_tdi.c
++	std_reg_imm.c tw_td.c twi_tdi.c
 +DIST_SOURCES = jm-insns.c lsw.c power6_bcmp.c power6_mf_gpr.c round.c \
-+	twi_tdi.c
++	std_reg_imm.c tw_td.c twi_tdi.c
  ETAGS = etags
  CTAGS = ctags
  DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
-@@ -200,7 +216,9 @@ EXTRA_DIST = $(noinst_SCRIPTS) \
- 	jm-vmx.stderr.exp jm-vmx.stdout.exp jm-vmx.vgtest \
- 	lsw.stderr.exp lsw.stdout.exp lsw.vgtest \
+@@ -226,7 +235,9 @@ EXTRA_DIST = $(noinst_SCRIPTS) \
+ 	std_reg_imm.vgtest std_reg_imm.stderr.exp std_reg_imm.stdout.exp \
  	round.stderr.exp round.stdout.exp round.vgtest \
--	twi_tdi.stderr.exp twi_tdi.stdout.exp twi_tdi.vgtest
-+	twi_tdi.stderr.exp twi_tdi.stdout.exp twi_tdi.vgtest \
+ 	twi_tdi.stderr.exp twi_tdi.stdout.exp twi_tdi.vgtest \
+-	tw_td.stderr.exp tw_td.stdout.exp tw_td.vgtest
++	tw_td.stderr.exp tw_td.stdout.exp tw_td.vgtest \
 +	power6_bcmp.stderr.exp power6_bcmp.stdout.exp power6_bcmp.vgtest \
 +	power6_mf_gpr.stderr.exp power6_mf_gpr.stdout.exp power6_mf_gpr.vgtest
  
  AM_CFLAGS = $(WERROR) -Winline -Wall -Wshadow -g -I$(top_srcdir)/include \
  		@FLAG_M64@
-@@ -251,6 +269,12 @@ jm-insns$(EXEEXT): $(jm_insns_OBJECTS) $
+@@ -277,6 +288,12 @@ jm-insns$(EXEEXT): $(jm_insns_OBJECTS) $
  lsw$(EXEEXT): $(lsw_OBJECTS) $(lsw_DEPENDENCIES) 
  	@rm -f lsw$(EXEEXT)
  	$(LINK) $(lsw_LDFLAGS) $(lsw_OBJECTS) $(lsw_LDADD) $(LIBS)
@@ -768,12 +770,12 @@
  round$(EXEEXT): $(round_OBJECTS) $(round_DEPENDENCIES) 
  	@rm -f round$(EXEEXT)
  	$(LINK) $(round_LDFLAGS) $(round_OBJECTS) $(round_LDADD) $(LIBS)
-@@ -266,6 +290,8 @@ distclean-compile:
+@@ -298,6 +315,8 @@ distclean-compile:
  
  @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/jm_insns-jm-insns.Po@am__quote@
  @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lsw.Po@am__quote@
 +@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/power6_bcmp.Po@am__quote@
 +@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/power6_mf_gpr.Po@am__quote@
  @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/round.Po@am__quote@
- @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/twi_tdi.Po@am__quote@
- 
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/std_reg_imm.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tw_td.Po@am__quote@

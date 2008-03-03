@@ -15,28 +15,17 @@ main (void)
   return 0;
 }
 
---- valgrind-3.2.3/include/vki-linux.h.jj	2006-08-28 15:38:37.000000000 +0200
-+++ valgrind-3.2.3/include/vki-linux.h	2006-09-26 18:29:00.000000000 +0200
-@@ -1223,6 +1223,8 @@ struct vki_dirent {
- 
- #define VKI_F_NOTIFY	(VKI_F_LINUX_SPECIFIC_BASE+2)
- 
-+#define VKI_AT_FDCWD	-100
-+
- //----------------------------------------------------------------------
- // From linux-2.6.8.1/include/linux/sysctl.h
- //----------------------------------------------------------------------
---- valgrind-3.2.3/coregrind/m_syswrap/syswrap-linux.c.jj	2006-08-28 15:38:57.000000000 +0200
-+++ valgrind-3.2.3/coregrind/m_syswrap/syswrap-linux.c	2006-09-26 18:42:04.000000000 +0200
-@@ -2350,10 +2350,15 @@ PRE(sys_openat)
+--- valgrind-3.3.0/coregrind/m_syswrap/syswrap-linux.c.jj	2007-12-11 00:18:43.000000000 +0100
++++ valgrind-3.3.0/coregrind/m_syswrap/syswrap-linux.c	2008-03-03 11:35:15.000000000 +0100
+@@ -2455,10 +2455,15 @@ PRE(sys_openat)
                      int, dfd, const char *, filename, int, flags);
     }
  
--   if (!ML_(fd_allowed)(ARG1, "openat", tid, False))
+-   if (ARG1 != VKI_AT_FDCWD && !ML_(fd_allowed)(ARG1, "openat", tid, False))
 +   PRE_MEM_RASCIIZ( "openat(filename)", ARG2 );
 +
 +   /* For absolute filenames, dfd is ignored.  If dfd is AT_FDCWD,
-+      filename is relative to cwd.  */   
++      filename is relative to cwd.  */
 +   if (ML_(safe_to_deref)( (void*)ARG2, 1 )
 +       && *(Char *)ARG2 != '/'
 +       && ARG1 != VKI_AT_FDCWD

@@ -1,18 +1,14 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
-Version: 3.2.3
-Release: 8
+Version: 3.3.0
+Release: 1
 Epoch: 1
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
-Patch1: valgrind-3.2.3-openat.patch
-Patch2: valgrind-3.2.3-cachegrind-improvements.patch
-Patch3: valgrind-3.2.3-pkg-config.patch
-Patch4: valgrind-3.2.3-glibc2_6.patch
-Patch5: valgrind-3.2.3-io_destroy.patch
-Patch6: valgrind-3.2.3-power5+-6.patch
-Patch7: valgrind-3.2.3-private-futex.patch
-Patch8: valgrind-3.2.3-x86_64-nops.patch
-Patch9: valgrind-3.2.3-glibc2_7.patch
+Patch1: valgrind-3.3.0-cachegrind-improvements.patch
+Patch2: valgrind-3.3.0-pkg-config.patch
+Patch3: valgrind-3.3.0-power5+-6.patch
+Patch4: valgrind-3.3.0-openat.patch
+Patch5: valgrind-3.3.0-helgrind-p_b_w.patch
 License: GPLv2
 URL: http://www.valgrind.org/
 Group: Development/Debuggers
@@ -22,8 +18,24 @@ Obsoletes: valgrind-callgrind
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
 %endif
-BuildRequires: glibc-devel >= 2.5
+BuildRequires: glibc-devel >= 2.7
 ExclusiveArch: %{ix86} x86_64 ppc ppc64
+%ifarch %{ix86}
+%define valarch x86
+%define valsecarch %{nil}
+%endif
+%ifarch x86_64
+%define valarch amd64
+%define valsecarch x86
+%endif
+%ifarch ppc
+%define valarch ppc32
+%define valsecarch ppc64
+%endif
+%ifarch ppc64
+%define valarch ppc64
+%define valsecarch ppc32
+%endif
 
 # Disable build root strip policy
 %define __spec_install_post /usr/lib/rpm/brp-compress || :
@@ -39,6 +51,15 @@ malloc/new/free/delete are intercepted. As a result, Valgrind can
 detect a lot of problems that are otherwise very hard to
 find/diagnose.
 
+%package devel
+Summary: Development files for valgrind
+Group: Development/Debuggers
+Requires: valgrind = %{epoch}:%{version}-%{release}
+
+%description devel
+Header files and libraries for development of valgrind aware programs
+or valgrind plugins.
+
 %prep
 %setup -q
 %patch1 -p1
@@ -46,10 +67,6 @@ find/diagnose.
 %patch3 -p1
 %patch4 -p1
 %patch5 -p1
-%patch6 -p1
-%patch7 -p1
-%patch8 -p1
-%patch9 -p1
 
 %build
 %ifarch x86_64 ppc64
@@ -64,7 +81,7 @@ touch libgcc/libgcc_s_32.a
 
 # Force a specific set of default suppressions
 echo -n > default.supp
-for file in glibc-2.7.supp xfree-4.supp ; do
+for file in xfree-4.supp glibc-2.34567-NPTL-helgrind.supp glibc-2.7.supp; do
     cat $file >> default.supp
 done
 
@@ -109,18 +126,13 @@ mkdir docs.installed
 mv $RPM_BUILD_ROOT%{_datadir}/doc/valgrind/* docs.installed/
 rm -f docs.installed/*.ps
 
-%ifarch x86_64
-rm -rf $RPM_BUILD_ROOT%{_libdir}/valgrind/x86-linux
-ln -sf ../../lib/valgrind/x86-linux $RPM_BUILD_ROOT%{_libdir}/valgrind/x86-linux
-%endif
-
-%ifarch ppc64
-rm -rf $RPM_BUILD_ROOT%{_libdir}/valgrind/ppc32-linux
-ln -sf ../../lib/valgrind/ppc32-linux $RPM_BUILD_ROOT%{_libdir}/valgrind/ppc32-linux
-%endif
-
+%if "%{valsecarch}" != ""
 %ifarch ppc
-ln -sf ../../lib64/valgrind/ppc64-linux $RPM_BUILD_ROOT%{_libdir}/valgrind/ppc64-linux
+ln -sf ../../lib64/valgrind/%{valsecarch}-linux $RPM_BUILD_ROOT%{_libdir}/valgrind/%{valsecarch}-linux
+%else
+rm -rf $RPM_BUILD_ROOT%{_libdir}/valgrind/%{valsecarch}-linux || :
+ln -sf ../../lib/valgrind/%{valsecarch}-linux $RPM_BUILD_ROOT%{_libdir}/valgrind/%{valsecarch}-linux
+%endif
 %endif
 
 %clean
@@ -131,14 +143,28 @@ rm -rf $RPM_BUILD_ROOT
 %doc ACKNOWLEDGEMENTS COPYING NEWS README_*
 %doc docs.installed/html docs.installed/*.pdf
 %{_bindir}/*
-%{_includedir}/valgrind
-%{_libdir}/valgrind
-%{_libdir}/pkgconfig/*
+%dir %{_libdir}/valgrind
+%dir %{_libdir}/valgrind/%{valarch}-linux
+%if "%{valsecarch}" != ""
+%{_libdir}/valgrind/%{valsecarch}-linux
+%endif
+%{_libdir}/valgrind/%{valarch}-linux/*[^a]
+%{_libdir}/valgrind/%{valarch}-linux/*[^.]a
+%{_libdir}/valgrind/*.supp
 %{_mandir}/man1/valgrind*
 
+%files devel
+%defattr(-,root,root)
+%{_includedir}/valgrind
+%dir %{_libdir}/valgrind
+%dir %{_libdir}/valgrind/%{valarch}-linux
+%{_libdir}/valgrind/%{valarch}-linux/*.a
+%{_libdir}/pkgconfig/*
+
 %changelog
-* Tue Feb 19 2008 Fedora Release Engineering <rel-eng@fedoraproject.org> - 1:3.2.3-8
-- Autorebuild for GCC 4.3
+* Mon Mar  3 2008 Jakub Jelinek <jakub@redhat.com> 3.3.0-1
+- update to 3.3.0
+- split off devel bits into valgrind-devel subpackage
 
 * Thu Oct 18 2007 Jakub Jelinek <jakub@redhat.com> 3.2.3-7
 - add suppressions for glibc >= 2.7
