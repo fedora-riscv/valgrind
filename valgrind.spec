@@ -1,7 +1,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 3.3.0
-Release: 2
+Release: 3
 Epoch: 1
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
 Patch1: valgrind-3.3.0-cachegrind-improvements.patch
@@ -10,6 +10,9 @@ Patch3: valgrind-3.3.0-power5+-6.patch
 Patch4: valgrind-3.3.0-openat.patch
 Patch5: valgrind-3.3.0-helgrind-p_b_w.patch
 Patch6: valgrind-3.3.0-glibc27-dlhack.patch
+Patch7: valgrind-3.3.0-glibc28.patch
+Patch8: valgrind-3.3.0-syscalls1.patch
+Patch9: valgrind-3.3.0-syscalls2.patch
 License: GPLv2
 URL: http://www.valgrind.org/
 Group: Development/Debuggers
@@ -19,7 +22,7 @@ Obsoletes: valgrind-callgrind
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
 %endif
-BuildRequires: glibc-devel >= 2.7
+BuildRequires: glibc-devel >= 2.8
 ExclusiveArch: %{ix86} x86_64 ppc ppc64
 %ifarch %{ix86}
 %define valarch x86
@@ -69,6 +72,9 @@ or valgrind plugins.
 %patch4 -p1
 %patch5 -p1
 %patch6 -p1
+%patch7 -p1
+%patch8 -p1
+%patch9 -p1
 
 %build
 %ifarch x86_64 ppc64
@@ -83,7 +89,7 @@ touch libgcc/libgcc_s_32.a
 
 # Force a specific set of default suppressions
 echo -n > default.supp
-for file in xfree-4.supp glibc-2.34567-NPTL-helgrind.supp glibc-2.7.supp; do
+for file in xfree-4.supp glibc-2.34567-NPTL-helgrind.supp glibc-2.8.supp; do
     cat $file >> default.supp
 done
 
@@ -164,6 +170,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/pkgconfig/*
 
 %changelog
+* Wed Apr 16 2008 Jakub Jelinek <jakub@redhat.com> 3.3.0-3
+- add suppressions for glibc 2.8
+- add a bunch of syscall wrappers (#441709)
+
 * Mon Mar  3 2008 Jakub Jelinek <jakub@redhat.com> 3.3.0-2
 - add _dl_start suppression for ppc/ppc64
 

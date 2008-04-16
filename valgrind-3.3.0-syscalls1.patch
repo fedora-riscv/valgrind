@@ -1,0 +1,163 @@
+--- valgrind-3.3.0/coregrind/m_syswrap/syswrap-ppc64-linux.c	(revision 7260)
++++ valgrind-3.3.0/coregrind/m_syswrap/syswrap-ppc64-linux.c	(revision 7880)
+@@ -1269,7 +1270,7 @@ const SyscallTableEntry ML_(syscall_tabl
+    GENXY(__NR_wait4,             sys_wait4),              // 114
+ 
+ // _____(__NR_swapoff,           sys_swapoff),            // 115
+-// _____(__NR_sysinfo,           sys_sysinfo),            // 116
++   LINXY(__NR_sysinfo,           sys_sysinfo),            // 116
+    PLAXY(__NR_ipc,               sys_ipc),                // 117
+    GENX_(__NR_fsync,             sys_fsync),              // 118
+ // _____(__NR_sigreturn,         sys_sigreturn),          // 119
+@@ -1328,13 +1329,13 @@ const SyscallTableEntry ML_(syscall_tabl
+    GENX_(__NR_mremap,            sys_mremap),             // 163
+ // _____(__NR_setresuid,         sys_setresuid),          // 164
+ 
+-// _____(__NR_getresuid,         sys_getresuid),          // 165
++   LINXY(__NR_getresuid,         sys_getresuid),          // 165
+ // _____(__NR_query_module,      sys_query_module),       // 166
+    GENXY(__NR_poll,              sys_poll),               // 167
+ // _____(__NR_nfsservctl,        sys_nfsservctl),         // 168
+ // _____(__NR_setresgid,         sys_setresgid),          // 169
+ 
+-// _____(__NR_getresgid,         sys_getresgid),          // 170
++   LINXY(__NR_getresgid,         sys_getresgid),          // 170
+ // _____(__NR_prctl,             sys_prctl),              // 171
+    PLAX_(__NR_rt_sigreturn,      sys_rt_sigreturn),       // 172
+    LINXY(__NR_rt_sigaction,      sys_rt_sigaction),       // 173
+--- valgrind-3.3.0/coregrind/m_syswrap/syswrap-linux.c	(revision 7260)
++++ valgrind-3.3.0/coregrind/m_syswrap/syswrap-linux.c	(revision 7880)
+@@ -2115,6 +2118,17 @@ POST(sys_waitid)
+       POST_MEM_WRITE( ARG5, sizeof(struct vki_rusage) );
+ }
+ 
++PRE(sys_sync_file_range)
++{
++  PRINT("sys_sync_file_range ( %d, %lld, %lld, %d )",
++	ARG1,ARG2,ARG3,ARG4);
++  PRE_REG_READ4(long, "sync_file_range",
++		int, fd, vki_loff_t, offset, vki_loff_t, nbytes,
++		unsigned int, flags);
++  if (!ML_(fd_allowed)(ARG1, "sync_file_range", tid, False))
++     SET_STATUS_Failure( VKI_EBADF );
++}
++
+ /* ---------------------------------------------------------------------
+    utime wrapper
+    ------------------------------------------------------------------ */
+--- valgrind-3.3.0/coregrind/m_syswrap/priv_syswrap-linux.h	(revision 7260)
++++ valgrind-3.3.0/coregrind/m_syswrap/priv_syswrap-linux.h	(revision 7880)
+@@ -220,6 +220,9 @@ DECL_TEMPLATE(linux, sys_rt_sigtimedwait
+ DECL_TEMPLATE(linux, sys_rt_sigqueueinfo);
+ DECL_TEMPLATE(linux, sys_rt_sigsuspend);
+ 
++// Linux-specific?
++DECL_TEMPLATE(linux, sys_sync_file_range);
++
+ /* ---------------------------------------------------------------------
+    Wrappers for sockets and ipc-ery.  These are split into standalone
+    procedures because x86-linux hides them inside multiplexors
+--- valgrind-3.3.0/coregrind/m_syswrap/syswrap-amd64-linux.c	(revision 7260)
++++ valgrind-3.3.0/coregrind/m_syswrap/syswrap-amd64-linux.c	(revision 7880)
+@@ -1371,6 +1374,12 @@ const SyscallTableEntry ML_(syscall_tabl
+ //   LINX_(__NR_unshare,		 sys_unshare),          // 272
+    LINX_(__NR_set_robust_list,	 sys_set_robust_list),  // 273
+    LINXY(__NR_get_robust_list,	 sys_get_robust_list),  // 274
++
++//   LINX_(__NR_splice,            sys_ni_syscall),       // 275
++//   LINX_(__NR_tee,               sys_ni_syscall),       // 276
++   LINX_(__NR_sync_file_range,   sys_sync_file_range),  // 277
++//   LINX_(__NR_vmsplice,          sys_ni_syscall),       // 278
++//   LINX_(__NR_move_pages,        sys_ni_syscall),       // 279
+ };
+ 
+ const UInt ML_(syscall_table_size) = 
+--- valgrind-3.3.0/coregrind/m_syswrap/syswrap-x86-linux.c	(revision 7260)
++++ valgrind-3.3.0/coregrind/m_syswrap/syswrap-x86-linux.c	(revision 7880)
+@@ -2216,6 +2217,14 @@ const SyscallTableEntry ML_(syscall_tabl
+ //   LINX_(__NR_unshare,		 sys_unshare),          // 310
+    LINX_(__NR_set_robust_list,	 sys_set_robust_list),  // 311
+    LINXY(__NR_get_robust_list,	 sys_get_robust_list),  // 312
++//   LINX_(__NR_splice,            sys_ni_syscall),       // 313
++   LINX_(__NR_sync_file_range,   sys_sync_file_range),  // 314
++
++//   LINX_(__NR_tee,               sys_ni_syscall),       // 315
++//   LINX_(__NR_vmsplice,          sys_ni_syscall),       // 316
++//   LINX_(__NR_move_pages,        sys_ni_syscall),       // 317
++//   LINX_(__NR_getcpu,            sys_ni_syscall),       // 318
++//   LINX_(__NR_epoll_pwait,       sys_ni_syscall),       // 319
+ 
+    LINX_(__NR_utimensat,         sys_utimensat),        // 320
+ };
+--- valgrind-3.3.0/include/vki/vki-scnums-amd64-linux.h	2007-12-11 00:18:25.000000000 +0100
++++ valgrind-3.3.0/include/vki/vki-scnums-amd64-linux.h	2008-04-16 11:48:19.000000000 +0200
+@@ -360,6 +360,13 @@
+ #define __NR_tee		276
+ #define __NR_sync_file_range	277
+ #define __NR_vmsplice		278
++#define __NR_move_pages		279
++#define __NR_utimensat		280
++#define __NR_epoll_pwait	281
++#define __NR_signalfd		282
++#define __NR_timerfd		283
++#define __NR_eventfd		284
++#define __NR_fallocate		285
+ 
+ #endif /* __VKI_SCNUMS_AMD64_LINUX_H */
+ 
+--- valgrind-3.3.0/include/vki/vki-scnums-ppc32-linux.h	2007-12-11 00:18:25.000000000 +0100
++++ valgrind-3.3.0/include/vki/vki-scnums-ppc32-linux.h	2008-04-16 11:48:19.000000000 +0200
+@@ -343,8 +343,17 @@
+ #define __NR_faccessat		298
+ #define __NR_get_robust_list	299
+ #define __NR_set_robust_list	300
++#define __NR_move_pages		301
++#define __NR_getcpu		302
++#define __NR_epoll_pwait	303
++#define __NR_utimensat		304
++#define __NR_signalfd		305
++#define __NR_timerfd		306
++#define __NR_eventfd		307
++#define __NR_sync_file_range2	308
++#define __NR_fallocate		309
+ 
+-#define __NR_syscalls		301
++#define __NR_syscalls		310
+ 
+ #endif /* __VKI_SCNUMS_PPC32_LINUX_H */
+ 
+--- valgrind-3.3.0/include/vki/vki-scnums-ppc64-linux.h	2007-12-11 00:18:25.000000000 +0100
++++ valgrind-3.3.0/include/vki/vki-scnums-ppc64-linux.h	2008-04-16 11:48:19.000000000 +0200
+@@ -335,6 +335,15 @@
+ #define __NR_faccessat		298
+ #define __NR_get_robust_list	299
+ #define __NR_set_robust_list	300
++#define __NR_move_pages		301
++#define __NR_getcpu		302
++#define __NR_epoll_pwait	303
++#define __NR_utimensat		304
++#define __NR_signalfd		305
++#define __NR_timerfd		306
++#define __NR_eventfd		307
++#define __NR_sync_file_range2	308
++#define __NR_fallocate		309
+ 
+ #endif /* __VKI_SCNUMS_PPC64_LINUX_H */
+ 
+--- valgrind-3.3.0/include/vki/vki-scnums-x86-linux.h	2007-12-11 00:18:25.000000000 +0100
++++ valgrind-3.3.0/include/vki/vki-scnums-x86-linux.h	2008-04-16 11:48:19.000000000 +0200
+@@ -351,7 +351,14 @@
+ #define __NR_sync_file_range	314
+ #define __NR_tee		315
+ #define __NR_vmsplice		316
++#define __NR_move_pages		317
++#define __NR_getcpu		318
++#define __NR_epoll_pwait	319
+ #define __NR_utimensat		320
++#define __NR_signalfd		321
++#define __NR_timerfd		322
++#define __NR_eventfd		323
++#define __NR_fallocate		324
+ 
+ #endif /* __VKI_SCNUMS_X86_LINUX_H */
+ 
