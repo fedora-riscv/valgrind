@@ -1,6 +1,6 @@
 --- valgrind-3.3.0/configure.in.jj	2007-01-29 14:42:52.000000000 -0500
 +++ valgrind-3.3.0/configure.in	2007-02-13 08:02:26.000000000 -0500
-@@ -251,6 +251,7 @@ AC_MSG_CHECKING([for a supported CPU/OS 
+@@ -303,6 +303,7 @@ AC_MSG_CHECKING([for a supported CPU/OS 
  
  AC_SUBST(VG_PLATFORM_PRI)
  AC_SUBST(VG_PLATFORM_SEC)
@@ -8,13 +8,13 @@
  
  case "$VG_ARCH-$VG_OS" in
       x86-linux)
-@@ -296,6 +297,7 @@ case "$VG_ARCH-$VG_OS" in
+@@ -361,6 +362,7 @@ case "$VG_ARCH-$VG_OS" in
          AC_MSG_ERROR([Valgrind is platform specific. Sorry. Please consider doing a port.])
          ;;
  esac
 +VG_PLATFORM=`echo "$VG_PLATFORM_PRI" | LC_ALL=C tr A-Z_ a-z-`
  
- # Set up VG_<platform>.  Either one or two of these become defined.
+ # Set up VGP_<platform>.  Either one or two of these become defined.
  #
 --- valgrind-3.3.0/configure.jj	2007-01-29 14:45:30.000000000 -0500
 +++ valgrind-3.3.0/configure	2007-02-13 08:04:33.000000000 -0500
