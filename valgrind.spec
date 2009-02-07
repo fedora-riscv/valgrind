@@ -1,18 +1,13 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
-Version: 3.3.0
-Release: 3
+Version: 3.4.0
+Release: 1
 Epoch: 1
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
-Patch1: valgrind-3.3.0-cachegrind-improvements.patch
-Patch2: valgrind-3.3.0-pkg-config.patch
-Patch3: valgrind-3.3.0-power5+-6.patch
-Patch4: valgrind-3.3.0-openat.patch
-Patch5: valgrind-3.3.0-helgrind-p_b_w.patch
-Patch6: valgrind-3.3.0-glibc27-dlhack.patch
-Patch7: valgrind-3.3.0-glibc28.patch
-Patch8: valgrind-3.3.0-syscalls1.patch
-Patch9: valgrind-3.3.0-syscalls2.patch
+Patch1: valgrind-3.4.0-cachegrind-improvements.patch
+Patch2: valgrind-3.4.0-pkg-config.patch
+Patch3: valgrind-3.4.0-power5+-6.patch
+Patch4: valgrind-3.4.0-openat.patch
 License: GPLv2
 URL: http://www.valgrind.org/
 Group: Development/Debuggers
@@ -70,11 +65,6 @@ or valgrind plugins.
 %patch2 -p1
 %patch3 -p1
 %patch4 -p1
-%patch5 -p1
-%patch6 -p1
-%patch7 -p1
-%patch8 -p1
-%patch9 -p1
 
 %build
 %ifarch x86_64 ppc64
@@ -170,6 +160,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/pkgconfig/*
 
 %changelog
+* Sat Feb  7 2009 Jakub Jelinek <jakub@redhat.com> 3.4.0-1
+- update to 3.4.0
+
 * Wed Apr 16 2008 Jakub Jelinek <jakub@redhat.com> 3.3.0-3
 - add suppressions for glibc 2.8
 - add a bunch of syscall wrappers (#441709)
