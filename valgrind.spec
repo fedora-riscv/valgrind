@@ -1,7 +1,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 3.4.0
-Release: 1
+Release: 2
 Epoch: 1
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
 Patch1: valgrind-3.4.0-cachegrind-improvements.patch
@@ -76,12 +76,6 @@ touch libgcc/libgcc_s_32.a
 %else
 %configure GDB=%{_bindir}/gdb
 %endif
-
-# Force a specific set of default suppressions
-echo -n > default.supp
-for file in xfree-4.supp glibc-2.34567-NPTL-helgrind.supp glibc-2.8.supp; do
-    cat $file >> default.supp
-done
 
 make %{?_smp_mflags}
 
@@ -160,7 +154,7 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/pkgconfig/*
 
 %changelog
-* Sat Feb  7 2009 Jakub Jelinek <jakub@redhat.com> 3.4.0-1
+* Sat Feb  7 2009 Jakub Jelinek <jakub@redhat.com> 3.4.0-2
 - update to 3.4.0
 
 * Wed Apr 16 2008 Jakub Jelinek <jakub@redhat.com> 3.3.0-3
