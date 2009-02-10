@@ -1,13 +1,14 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 3.4.0
-Release: 2
+Release: 3
 Epoch: 1
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
 Patch1: valgrind-3.4.0-cachegrind-improvements.patch
 Patch2: valgrind-3.4.0-pkg-config.patch
-Patch3: valgrind-3.4.0-power5+-6.patch
-Patch4: valgrind-3.4.0-openat.patch
+Patch3: valgrind-3.4.0-openat.patch
+Patch4: valgrind-3.4.0-newbu.patch
+Patch5: valgrind-3.4.0-debug.patch
 License: GPLv2
 URL: http://www.valgrind.org/
 Group: Development/Debuggers
@@ -65,6 +66,7 @@ or valgrind plugins.
 %patch2 -p1
 %patch3 -p1
 %patch4 -p1
+%patch5 -p1
 
 %build
 %ifarch x86_64 ppc64
@@ -127,6 +129,8 @@ ln -sf ../../lib/valgrind/%{valsecarch}-linux $RPM_BUILD_ROOT%{_libdir}/valgrind
 %endif
 %endif
 
+rm -f $RPM_BUILD_ROOT%{_libdir}/valgrind/*.supp.in
+
 %clean
 rm -rf $RPM_BUILD_ROOT
 
@@ -141,7 +145,6 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/valgrind/%{valsecarch}-linux
 %endif
 %{_libdir}/valgrind/%{valarch}-linux/*[^a]
-%{_libdir}/valgrind/%{valarch}-linux/*[^.]a
 %{_libdir}/valgrind/*.supp
 %{_mandir}/man1/valgrind*
 
@@ -154,7 +157,7 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/pkgconfig/*
 
 %changelog
-* Sat Feb  7 2009 Jakub Jelinek <jakub@redhat.com> 3.4.0-2
+* Tue Feb  9 2009 Jakub Jelinek <jakub@redhat.com> 3.4.0-3
 - update to 3.4.0
 
 * Wed Apr 16 2008 Jakub Jelinek <jakub@redhat.com> 3.3.0-3

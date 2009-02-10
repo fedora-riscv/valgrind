@@ -1,0 +1,68 @@
+--- valgrind-3.4.0/Makefile.am.jj	2009-01-02 13:40:45.000000000 -0500
++++ valgrind-3.4.0/Makefile.am	2009-02-09 07:40:21.140994000 -0500
+@@ -209,26 +209,26 @@ valt_load_address_x86_linux.lds: Makefil
+ 	$(CC) @FLAG_M32@ -Wl,--verbose -nostdlib 2>&1 | sed \
+ 		-e '1,/^=====\+$$/d' \
+ 		-e '/^=====\+$$/,/.\*/d' \
+-		-e '/\. = 0x[0-9A-Fa-f]\+ + SIZEOF_HEADERS/s/0x[0-9A-Fa-f]\+/valt_load_address/g' > $@ \
++		-e '/\. = \(0x[0-9A-Fa-f]\+\|SEGMENT_START("[^"]\+", 0x[0-9A-Fa-f]\+)\) + SIZEOF_HEADERS/s/0x[0-9A-Fa-f]\+/valt_load_address/g' > $@ \
+ 	|| rm -f $@
+ 
+ valt_load_address_amd64_linux.lds: Makefile
+ 	$(CC) -m64 -Wl,--verbose -nostdlib 2>&1 | sed \
+ 		-e '1,/^=====\+$$/d' \
+ 		-e '/^=====\+$$/,/.\*/d' \
+-		-e '/\. = 0x[0-9A-Fa-f]\+ + SIZEOF_HEADERS/s/0x[0-9A-Fa-f]\+/valt_load_address/g' > $@ \
++		-e '/\. = \(0x[0-9A-Fa-f]\+\|SEGMENT_START("[^"]\+", 0x[0-9A-Fa-f]\+)\) + SIZEOF_HEADERS/s/0x[0-9A-Fa-f]\+/valt_load_address/g' > $@ \
+ 	|| rm -f $@
+ 
+ valt_load_address_ppc32_linux.lds: Makefile
+ 	$(CC) @FLAG_M32@ -Wl,--verbose -nostdlib 2>&1 | sed \
+ 		-e '1,/^=====\+$$/d' \
+ 		-e '/^=====\+$$/,/.\*/d' \
+-		-e '/\. = 0x[0-9A-Fa-f]\+ + SIZEOF_HEADERS/s/0x[0-9A-Fa-f]\+/valt_load_address/g' > $@ \
++		-e '/\. = \(0x[0-9A-Fa-f]\+\|SEGMENT_START("[^"]\+", 0x[0-9A-Fa-f]\+)\) + SIZEOF_HEADERS/s/0x[0-9A-Fa-f]\+/valt_load_address/g' > $@ \
+ 	|| rm -f $@
+ 
+ valt_load_address_ppc64_linux.lds: Makefile
+ 	$(CC) -m64 -Wl,--verbose -nostdlib 2>&1 | sed \
+ 		-e '1,/^=====\+$$/d' \
+ 		-e '/^=====\+$$/,/.\*/d' \
+-		-e '/\. = 0x[0-9A-Fa-f]\+ + SIZEOF_HEADERS/s/0x[0-9A-Fa-f]\+/valt_load_address/g' > $@ \
++		-e '/\. = \(0x[0-9A-Fa-f]\+\|SEGMENT_START("[^"]\+", 0x[0-9A-Fa-f]\+)\) + SIZEOF_HEADERS/s/0x[0-9A-Fa-f]\+/valt_load_address/g' > $@ \
+ 	|| rm -f $@
+--- valgrind-3.4.0/Makefile.in.jj	2009-01-02 13:50:00.000000000 -0500
++++ valgrind-3.4.0/Makefile.in	2009-02-09 07:41:28.439218000 -0500
+@@ -946,28 +946,28 @@ valt_load_address_x86_linux.lds: Makefil
+ 	$(CC) @FLAG_M32@ -Wl,--verbose -nostdlib 2>&1 | sed \
+ 		-e '1,/^=====\+$$/d' \
+ 		-e '/^=====\+$$/,/.\*/d' \
+-		-e '/\. = 0x[0-9A-Fa-f]\+ + SIZEOF_HEADERS/s/0x[0-9A-Fa-f]\+/valt_load_address/g' > $@ \
++		-e '/\. = \(0x[0-9A-Fa-f]\+\|SEGMENT_START("[^"]\+", 0x[0-9A-Fa-f]\+)\) + SIZEOF_HEADERS/s/0x[0-9A-Fa-f]\+/valt_load_address/g' > $@ \
+ 	|| rm -f $@
+ 
+ valt_load_address_amd64_linux.lds: Makefile
+ 	$(CC) -m64 -Wl,--verbose -nostdlib 2>&1 | sed \
+ 		-e '1,/^=====\+$$/d' \
+ 		-e '/^=====\+$$/,/.\*/d' \
+-		-e '/\. = 0x[0-9A-Fa-f]\+ + SIZEOF_HEADERS/s/0x[0-9A-Fa-f]\+/valt_load_address/g' > $@ \
++		-e '/\. = \(0x[0-9A-Fa-f]\+\|SEGMENT_START("[^"]\+", 0x[0-9A-Fa-f]\+)\) + SIZEOF_HEADERS/s/0x[0-9A-Fa-f]\+/valt_load_address/g' > $@ \
+ 	|| rm -f $@
+ 
+ valt_load_address_ppc32_linux.lds: Makefile
+ 	$(CC) @FLAG_M32@ -Wl,--verbose -nostdlib 2>&1 | sed \
+ 		-e '1,/^=====\+$$/d' \
+ 		-e '/^=====\+$$/,/.\*/d' \
+-		-e '/\. = 0x[0-9A-Fa-f]\+ + SIZEOF_HEADERS/s/0x[0-9A-Fa-f]\+/valt_load_address/g' > $@ \
++		-e '/\. = \(0x[0-9A-Fa-f]\+\|SEGMENT_START("[^"]\+", 0x[0-9A-Fa-f]\+)\) + SIZEOF_HEADERS/s/0x[0-9A-Fa-f]\+/valt_load_address/g' > $@ \
+ 	|| rm -f $@
+ 
+ valt_load_address_ppc64_linux.lds: Makefile
+ 	$(CC) -m64 -Wl,--verbose -nostdlib 2>&1 | sed \
+ 		-e '1,/^=====\+$$/d' \
+ 		-e '/^=====\+$$/,/.\*/d' \
+-		-e '/\. = 0x[0-9A-Fa-f]\+ + SIZEOF_HEADERS/s/0x[0-9A-Fa-f]\+/valt_load_address/g' > $@ \
++		-e '/\. = \(0x[0-9A-Fa-f]\+\|SEGMENT_START("[^"]\+", 0x[0-9A-Fa-f]\+)\) + SIZEOF_HEADERS/s/0x[0-9A-Fa-f]\+/valt_load_address/g' > $@ \
+ 	|| rm -f $@
+ # Tell versions [3.59,3.63) of GNU make to not export all variables.
+ # Otherwise a system limit (for SysV at least) may be exceeded.

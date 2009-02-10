@@ -8,7 +8,7 @@
  #define MASK_VSCR_VALID 0x00010001
  
  
-@@ -2142,7 +2143,7 @@ static IRExpr* /* ::Ity_I32 */ getGST_ma
+@@ -2149,7 +2150,7 @@ static IRExpr* /* ::Ity_I32 */ getGST_ma
  
        /* We're only keeping track of the rounding mode,
           so if the mask isn't asking for this, just return 0x0 */
@@ -17,7 +17,7 @@
           assign( val, IRExpr_Get( OFFB_FPROUND, Ity_I32 ) );
        } else {
           assign( val, mkU32(0x0) );
-@@ -2271,7 +2272,7 @@ static void putGST_masked ( PPC_GST reg,
+@@ -2278,7 +2279,7 @@ static void putGST_masked ( PPC_GST reg,
     switch (reg) {
     case PPC_GST_FPSCR: {
        /* Allow writes to Rounding Mode */
@@ -26,7 +26,7 @@
           /* construct new fpround from new and old values as per mask:
              new fpround = (src & (3 & mask)) | (fpround & (3 & ~mask)) */
           stmt( 
-@@ -2279,11 +2280,11 @@ static void putGST_masked ( PPC_GST reg,
+@@ -2286,11 +2287,11 @@ static void putGST_masked ( PPC_GST reg,
                 OFFB_FPROUND,
                 binop(
                    Iop_Or32, 
@@ -40,7 +40,7 @@
                    )
                 )
              )
-@@ -3224,6 +3225,48 @@ static Bool dis_int_logic ( UInt theInst
+@@ -3231,6 +3232,48 @@ static Bool dis_int_logic ( UInt theInst
           // TODO: alternatively: assign(rA, verbose_Clz64(rS));
           break;
  
@@ -89,7 +89,7 @@
        default:
           vex_printf("dis_int_logic(ppc)(opc2)\n");
           return False;
-@@ -6533,6 +6576,45 @@ static Bool dis_fp_round ( UInt theInstr
+@@ -6556,6 +6599,45 @@ static Bool dis_fp_round ( UInt theInstr
                binop(Iop_I64toF64, rm, mkexpr(r_tmp64)) );
        break;
  
@@ -135,7 +135,7 @@
     default:
        vex_printf("dis_fp_round(ppc)(opc2)\n");
        return False;
-@@ -9139,6 +9221,10 @@ DisResult disInstr_PPC_WRK ( 
+@@ -9224,6 +9306,10 @@ DisResult disInstr_PPC_WRK ( 
        case 0x32E: // fctid
        case 0x32F: // fctidz
        case 0x34E: // fcfid
@@ -145,8 +145,8 @@
 +      case 0x1E8: // frim (Power5+)
           if (dis_fp_round(theInstr)) goto decode_success;
           goto decode_failure;
-          
-@@ -9216,6 +9302,10 @@ DisResult disInstr_PPC_WRK ( 
+ 
+@@ -9310,6 +9396,10 @@ DisResult disInstr_PPC_WRK ( 
           if (dis_int_arith( theInstr )) goto decode_success;
           goto decode_failure;
  
@@ -157,7 +157,7 @@
        default:
           break;  // Fall through...
        }
-@@ -9234,6 +9324,7 @@ DisResult disInstr_PPC_WRK ( 
+@@ -9328,6 +9418,7 @@ DisResult disInstr_PPC_WRK ( 
        case 0x11C: case 0x3BA: case 0x39A: // eqv,  extsb, extsh
        case 0x1DC: case 0x07C: case 0x1BC: // nand, nor,   or
        case 0x19C: case 0x13C:             // orc,  xor

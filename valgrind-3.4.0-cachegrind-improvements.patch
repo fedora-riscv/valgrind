@@ -50,7 +50,7 @@
 -   for (i = 0; i < c->sets * c->assoc; i++)
 -      c->tags[i] = 0;
 +   c->tags = VG_(calloc)("cg.sim.ci.1",
-+                         sizeof(UWord), c->sets * c->assoc);
++                         sizeof(UWord), sets * c->assoc);
  }
  
  /* This is done as a macro rather than by passing in the cache_t2 as an 
