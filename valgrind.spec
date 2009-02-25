@@ -1,7 +1,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 3.4.0
-Release: 3
+Release: 4
 Epoch: 1
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
 Patch1: valgrind-3.4.0-cachegrind-improvements.patch
@@ -157,6 +157,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/pkgconfig/*
 
 %changelog
+* Wed Feb 25 2009 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1:3.4.0-4
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_11_Mass_Rebuild
+
 * Tue Feb  9 2009 Jakub Jelinek <jakub@redhat.com> 3.4.0-3
 - update to 3.4.0
 
