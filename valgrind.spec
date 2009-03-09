@@ -1,14 +1,11 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
-Version: 3.4.0
-Release: 4
+Version: 3.4.1
+Release: 1
 Epoch: 1
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
-Patch1: valgrind-3.4.0-cachegrind-improvements.patch
-Patch2: valgrind-3.4.0-pkg-config.patch
-Patch3: valgrind-3.4.0-openat.patch
-Patch4: valgrind-3.4.0-newbu.patch
-Patch5: valgrind-3.4.0-debug.patch
+Patch1: valgrind-3.4.1-cachegrind-improvements.patch
+Patch2: valgrind-3.4.1-openat.patch
 License: GPLv2
 URL: http://www.valgrind.org/
 Group: Development/Debuggers
@@ -18,7 +15,7 @@ Obsoletes: valgrind-callgrind
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
 %endif
-BuildRequires: glibc-devel >= 2.8
+BuildRequires: glibc-devel >= 2.9
 ExclusiveArch: %{ix86} x86_64 ppc ppc64
 %ifarch %{ix86}
 %define valarch x86
@@ -64,9 +61,6 @@ or valgrind plugins.
 %setup -q
 %patch1 -p1
 %patch2 -p1
-%patch3 -p1
-%patch4 -p1
-%patch5 -p1
 
 %build
 %ifarch x86_64 ppc64
@@ -157,8 +151,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/pkgconfig/*
 
 %changelog
-* Wed Feb 25 2009 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1:3.4.0-4
-- Rebuilt for https://fedoraproject.org/wiki/Fedora_11_Mass_Rebuild
+* Mon Mar  9 2009 Jakub Jelinek <jakub@redhat.com> 3.4.1-1
+- update to 3.4.1
 
 * Tue Feb  9 2009 Jakub Jelinek <jakub@redhat.com> 3.4.0-3
 - update to 3.4.0

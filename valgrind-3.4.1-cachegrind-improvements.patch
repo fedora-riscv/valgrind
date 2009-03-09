@@ -1,12 +1,11 @@
 --- valgrind-3.4.0/cachegrind/cg_sim.c.jj	2007-01-08 02:43:10.000000000 -0500
 +++ valgrind-3.4.0/cachegrind/cg_sim.c	2007-02-13 07:15:46.000000000 -0500
-@@ -42,29 +42,32 @@ typedef struct {
+@@ -42,27 +42,30 @@ typedef struct {
     Int          size;                   /* bytes */
     Int          assoc;
     Int          line_size;              /* bytes */
 -   Int          sets;
     Int          sets_min_1;
-    Int          assoc_bits;
     Int          line_size_bits;
     Int          tag_shift;
 -   Char         desc_line[128];
@@ -33,14 +32,13 @@
 -   c->sets_min_1     = c->sets - 1;
 +   sets              = (c->size / c->line_size) / c->assoc;
 +   c->sets_min_1     = sets - 1;
-    c->assoc_bits     = VG_(log2)(c->assoc);
     c->line_size_bits = VG_(log2)(c->line_size);
 -   c->tag_shift      = c->line_size_bits + VG_(log2)(c->sets);
 +   c->tag_shift      = c->line_size_bits + VG_(log2)(sets);
  
     if (c->assoc == 1) {
        VG_(sprintf)(c->desc_line, "%d B, %d B, direct-mapped", 
-@@ -74,11 +77,8 @@ static void cachesim_initcache(cache_t c
+@@ -72,11 +75,8 @@ static void cachesim_initcache(cache_t c
                                   c->size, c->line_size, c->assoc);
     }
  
@@ -54,13 +52,13 @@
  }
  
  /* This is done as a macro rather than by passing in the cache_t2 as an 
-@@ -141,8 +141,7 @@ void cachesim_##L##_doref(Addr a, UChar 
+@@ -138,8 +138,7 @@ void cachesim_##L##_doref(Addr a, UChar 
        return;                                                               \
                                                                              \
     /* Second case: word straddles two lines. */                             \
 -   /* Nb: this is a fast way of doing ((set1+1) % L.sets) */                \
 -   } else if (((set1 + 1) & (L.sets-1)) == set2) {                          \
 +   } else if (((set1 + 1) & (L.sets_min_1)) == set2) {                      \
-       set = &(L.tags[set1 << L.assoc_bits]);                                \
+       set = &(L.tags[set1 * L.assoc]);                                      \
        if (tag == set[0]) {                                                  \
           goto block2;                                                       \
