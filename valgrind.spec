@@ -1,11 +1,12 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 3.4.1
-Release: 1
+Release: 2
 Epoch: 1
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
 Patch1: valgrind-3.4.1-cachegrind-improvements.patch
 Patch2: valgrind-3.4.1-openat.patch
+Patch3: valgrind-3.4.1-x86_64-ldso-strlen.patch
 License: GPLv2
 URL: http://www.valgrind.org/
 Group: Development/Debuggers
@@ -61,6 +62,7 @@ or valgrind plugins.
 %setup -q
 %patch1 -p1
 %patch2 -p1
+%patch3 -p1
 
 %build
 %ifarch x86_64 ppc64
@@ -151,6 +153,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/pkgconfig/*
 
 %changelog
+* Wed Apr 22 2009 Jakub Jelinek <jakub@redhat.com> 3.4.1-2
+- redirect x86_64 ld.so strlen early (#495645)
+
 * Mon Mar  9 2009 Jakub Jelinek <jakub@redhat.com> 3.4.1-1
 - update to 3.4.1
 
