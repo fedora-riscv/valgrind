@@ -1,7 +1,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 3.4.1
-Release: 2
+Release: 3
 Epoch: 1
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
 Patch1: valgrind-3.4.1-cachegrind-improvements.patch
@@ -16,7 +16,7 @@ Obsoletes: valgrind-callgrind
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
 %endif
-BuildRequires: glibc-devel >= 2.9
+BuildRequires: glibc-devel >= 2.10
 ExclusiveArch: %{ix86} x86_64 ppc ppc64
 %ifarch %{ix86}
 %define valarch x86
@@ -153,6 +153,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/pkgconfig/*
 
 %changelog
+* Sun May 10 2009 Jakub Jelinek <jakub@redhat.com> 3.4.1-3
+- rebuilt against glibc 2.10
+
 * Wed Apr 22 2009 Jakub Jelinek <jakub@redhat.com> 3.4.1-2
 - redirect x86_64 ld.so strlen early (#495645)
 
