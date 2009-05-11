@@ -7,6 +7,7 @@ Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
 Patch1: valgrind-3.4.1-cachegrind-improvements.patch
 Patch2: valgrind-3.4.1-openat.patch
 Patch3: valgrind-3.4.1-x86_64-ldso-strlen.patch
+Patch4: valgrind-3.4.1-glibc-2.10.1.patch
 License: GPLv2
 URL: http://www.valgrind.org/
 Group: Development/Debuggers
@@ -63,6 +64,7 @@ or valgrind plugins.
 %patch1 -p1
 %patch2 -p1
 %patch3 -p1
+%patch4 -p1
 
 %build
 %ifarch x86_64 ppc64
@@ -153,8 +155,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/pkgconfig/*
 
 %changelog
-* Sun May 10 2009 Jakub Jelinek <jakub@redhat.com> 3.4.1-3
-- rebuilt against glibc 2.10
+* Mon May 11 2009 Jakub Jelinek <jakub@redhat.com> 3.4.1-3
+- rebuilt against glibc 2.10.1
 
 * Wed Apr 22 2009 Jakub Jelinek <jakub@redhat.com> 3.4.1-2
 - redirect x86_64 ld.so strlen early (#495645)
