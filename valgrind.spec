@@ -1,7 +1,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 3.4.1
-Release: 4
+Release: 5
 Epoch: 1
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
 Patch1: valgrind-3.4.1-cachegrind-improvements.patch
@@ -9,6 +9,8 @@ Patch2: valgrind-3.4.1-openat.patch
 Patch3: valgrind-3.4.1-x86_64-ldso-strlen.patch
 Patch4: valgrind-3.4.1-glibc-2.10.1.patch
 Patch5: valgrind-3.4.1-dwarf3.patch
+Patch6: valgrind-3.4.1-dwarf-cfa-remember-state1.patch
+Patch7: valgrind-3.4.1-dwarf-cfa-remember-state2.patch
 License: GPLv2
 URL: http://www.valgrind.org/
 Group: Development/Debuggers
@@ -67,6 +69,8 @@ or valgrind plugins.
 %patch3 -p1
 %patch4 -p1
 %patch5 -p1
+%patch6 -p1
+%patch7 -p1
 
 %build
 %ifarch x86_64 ppc64
@@ -157,6 +161,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/pkgconfig/*
 
 %changelog
+* Mon Jul 13 2009 Jakub Jelinek <jakub@redhat.com> 3.4.1-5
+- add support for DW_CFA_{remember,restore}_state
+
 * Mon Jul 13 2009 Jakub Jelinek <jakub@redhat.com> 3.4.1-4
 - handle version 3 .debug_frame, .eh_frame, .debug_info and
   .debug_line (#509197)
