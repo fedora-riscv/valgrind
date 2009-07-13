@@ -1,7 +1,7 @@
 --- valgrind/coregrind/m_debuginfo/readdwarf3.c.jj	2009-07-13 12:15:20.000000000 +0200
 +++ valgrind/coregrind/m_debuginfo/readdwarf3.c	2009-07-13 13:16:23.000000000 +0200
-@@ -1322,8 +1322,8 @@ void read_filename_table( /*MOD*/D3VarPa
-       get_Initial_Length( &is_dw64, &c,
+@@ -1415,8 +1415,8 @@ void read_filename_table( /*MOD*/D3VarPa
+       = get_Initial_Length( &is_dw64, &c,
             "read_filename_table: invalid initial-length field" );
     version = get_UShort( &c );
 -   if (version != 2)
@@ -9,8 +9,8 @@
 +   if (version != 2 && version != 3)
 +     cc->barf("read_filename_table: Only DWARF version 2 and 3 line info "
                "is currently supported.");
-    /*header_length              = (ULong)*/ get_Dwarfish_UWord( &c, is_dw64 );
-    /*minimum_instruction_length = */ get_UChar( &c );
+    header_length = (ULong)get_Dwarfish_UWord( &c, is_dw64 );
+    minimum_instruction_length = get_UChar( &c );
 --- valgrind/coregrind/m_debuginfo/readdwarf.c.jj	2009-07-13 12:15:20.000000000 +0200
 +++ valgrind/coregrind/m_debuginfo/readdwarf.c	2009-07-13 13:17:52.000000000 +0200
 @@ -512,9 +512,9 @@ void read_dwarf2_lineblock ( struct _Deb

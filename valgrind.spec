@@ -1,11 +1,14 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 3.4.1
-Release: 1
+Release: 4
 Epoch: 1
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
 Patch1: valgrind-3.4.1-cachegrind-improvements.patch
 Patch2: valgrind-3.4.1-openat.patch
+Patch3: valgrind-3.4.1-x86_64-ldso-strlen.patch
+Patch4: valgrind-3.4.1-glibc-2.10.1.patch
+Patch5: valgrind-3.4.1-dwarf3.patch
 License: GPLv2
 URL: http://www.valgrind.org/
 Group: Development/Debuggers
@@ -15,7 +18,7 @@ Obsoletes: valgrind-callgrind
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
 %endif
-BuildRequires: glibc-devel >= 2.9
+BuildRequires: glibc-devel >= 2.10
 ExclusiveArch: %{ix86} x86_64 ppc ppc64
 %ifarch %{ix86}
 %define valarch x86
@@ -61,6 +64,9 @@ or valgrind plugins.
 %setup -q
 %patch1 -p1
 %patch2 -p1
+%patch3 -p1
+%patch4 -p1
+%patch5 -p1
 
 %build
 %ifarch x86_64 ppc64
@@ -151,6 +157,16 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/pkgconfig/*
 
 %changelog
+* Mon Jul 13 2009 Jakub Jelinek <jakub@redhat.com> 3.4.1-4
+- handle version 3 .debug_frame, .eh_frame, .debug_info and
+  .debug_line (#509197)
+
+* Mon May 11 2009 Jakub Jelinek <jakub@redhat.com> 3.4.1-3
+- rebuilt against glibc 2.10.1
+
+* Wed Apr 22 2009 Jakub Jelinek <jakub@redhat.com> 3.4.1-2
+- redirect x86_64 ld.so strlen early (#495645)
+
 * Mon Mar  9 2009 Jakub Jelinek <jakub@redhat.com> 3.4.1-1
 - update to 3.4.1
 
