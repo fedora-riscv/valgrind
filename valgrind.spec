@@ -1,7 +1,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 3.4.1
-Release: 6
+Release: 7
 Epoch: 1
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
 Patch1: valgrind-3.4.1-cachegrind-improvements.patch
@@ -11,6 +11,7 @@ Patch4: valgrind-3.4.1-glibc-2.10.1.patch
 Patch5: valgrind-3.4.1-dwarf3.patch
 Patch6: valgrind-3.4.1-dwarf-cfa-remember-state1.patch
 Patch7: valgrind-3.4.1-dwarf-cfa-remember-state2.patch
+Patch8: valgrind-3.4.1-futex.patch
 License: GPLv2
 URL: http://www.valgrind.org/
 Group: Development/Debuggers
@@ -71,6 +72,7 @@ or valgrind plugins.
 %patch5 -p1
 %patch6 -p1
 %patch7 -p1
+%patch8 -p1
 
 %build
 %ifarch x86_64 ppc64
@@ -161,7 +163,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/pkgconfig/*
 
 %changelog
-* Sun Jul 26 2009 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1:3.4.1-6
+* Tue Jul 28 2009 Jakub Jelinek <jakub@redhat.com> 3.4.1-7
+- handle futex ops newly added during last 4 years (#512121)
+
+* Sun Jul 26 2009 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> 3.4.1-6
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_12_Mass_Rebuild
 
 * Mon Jul 13 2009 Jakub Jelinek <jakub@redhat.com> 3.4.1-5
