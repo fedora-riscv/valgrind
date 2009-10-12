@@ -1,12 +1,15 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 3.5.0
-Release: 1
+Release: 2
 Epoch: 1
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
 Patch1: valgrind-3.5.0-cachegrind-improvements.patch
 Patch2: valgrind-3.5.0-openat.patch
 Patch3: valgrind-3.5.0-glibc-2.10.1.patch
+Patch4: valgrind-3.5.0-ifunc.patch
+Patch5: valgrind-3.5.0-inotify-init1.patch
+Patch6: valgrind-3.5.0-mmap-mprotect.patch
 License: GPLv2
 URL: http://www.valgrind.org/
 Group: Development/Debuggers
@@ -63,6 +66,9 @@ or valgrind plugins.
 %patch1 -p1
 %patch2 -p1
 %patch3 -p1
+%patch4 -p1
+%patch5 -p1
+%patch6 -p1
 
 %build
 %ifarch x86_64 ppc64
@@ -155,6 +161,11 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/pkgconfig/*
 
 %changelog
+* Mon Oct 12 2009 Jakub Jelinek <jakub@redhat.com> 3.5.0-2
+- add STT_GNU_IFUNC support (Dodji Seketeli, #518247)
+- wrap inotify_init1 syscall (Dodji Seketeli, #527198)
+- fix mmap/mprotect handling in memcheck (KDE#210268)
+
 * Fri Aug 21 2009 Jakub Jelinek <jakub@redhat.com> 3.5.0-1
 - update to 3.5.0
 

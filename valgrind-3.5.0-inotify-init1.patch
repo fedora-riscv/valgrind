@@ -80,7 +80,7 @@ index 90eb512..180e36b 100644
 -   LINXY(__NR_pipe2,             sys_pipe2)             // 331
 -   //   (__NR_inotify_init1,     sys_ni_syscall)        // 332
 +   LINXY(__NR_pipe2,             sys_pipe2),            // 331
-+   LINKX_(__NR_inotify_init1,    sys_inotify_init1)     // 332
++   LINX_(__NR_inotify_init1,     sys_inotify_init1)     // 332
  };
  
  const UInt ML_(syscall_table_size) = 
