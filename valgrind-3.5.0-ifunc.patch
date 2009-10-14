@@ -1,4 +1,4 @@
-commit 27dc1029d4bca6409d0ed990264592dc75761cd0
+commit 3bd6e2ed7544778a5bbb0acaf69b103d7907185e
 Author: Dodji Seketeli <dodji@redhat.com>
 Date:   Wed Oct 7 16:09:30 2009 +0200
 
@@ -58,7 +58,10 @@ Date:   Wed Oct 7 16:09:30 2009 +0200
     	means once we have intercepted the strlen call by the runtime linker
     	to get the pointer to strlen_target. So we now store the strlen ->
     	vg_strlen redirection request in the iFuncToDirectFuncSet set so that
-    	we can get it later.
+    	we can get it later. For a given ifunc symbol that is loaded, activate
+    	the ifunc --> standard func redirection only if there is a
+    	standard func --> standard func redirection matching the ifunc
+    	symbol.
     	* coregrind/m_scheduler/scheduler.c (do_client_request): Add a new
     	VG_USERREQ__CHANGE_IFUNC_REDIR_TARGET.
     	* coregrind/pub_core_clreq.h (enum Vg_InternalClientRequest): Add
@@ -294,7 +297,7 @@ index 262fcfc..3ae050a 100644
  
        if (sym[i] == '_')
 diff --git a/coregrind/m_redir.c b/coregrind/m_redir.c
-index 98a502f..0140fc0 100644
+index 98a502f..cf968bd 100644
 --- a/coregrind/m_redir.c
 +++ b/coregrind/m_redir.c
 @@ -223,6 +223,7 @@ typedef
@@ -305,7 +308,15 @@ index 98a502f..0140fc0 100644
        const HChar** mandatory; /* non-NULL ==> abort V and print the
                                    strings if from_sopatt is loaded but
                                    from_fnpatt cannot be found */
-@@ -268,12 +269,20 @@ typedef
+@@ -252,7 +253,6 @@ typedef
+    to record abovementioned preloaded specifications.) */
+ static TopSpec* topSpecs = NULL;
+ 
+-
+ /*------------------------------------------------------------*/
+ /*--- CURRENTLY ACTIVE REDIRECTIONS                        ---*/
+ /*------------------------------------------------------------*/
+@@ -268,12 +268,20 @@ typedef
        TopSpec* parent_spec; /* the TopSpec which supplied the Spec */
        TopSpec* parent_sym;  /* the TopSpec which supplied the symbol */
        Bool     isWrap;      /* wrap or replacement? */
@@ -327,7 +338,7 @@ index 98a502f..0140fc0 100644
  
  /*------------------------------------------------------------*/
  /*--- FWDses                                               ---*/
-@@ -317,7 +326,7 @@ void generate_and_add_actives (
+@@ -317,7 +325,7 @@ void generate_and_add_actives (
  
  void VG_(redir_notify_new_DebugInfo)( DebugInfo* newsi )
  {
@@ -336,7 +347,7 @@ index 98a502f..0140fc0 100644
     Int          i, nsyms;
     Spec*        specList;
     Spec*        spec;
-@@ -350,10 +359,16 @@ void VG_(redir_notify_new_DebugInfo)( DebugInfo* newsi )
+@@ -350,10 +358,16 @@ void VG_(redir_notify_new_DebugInfo)( DebugInfo* newsi )
  
     nsyms = VG_(DebugInfo_syms_howmany)( newsi );
     for (i = 0; i < nsyms; i++) {
@@ -357,7 +368,7 @@ index 98a502f..0140fc0 100644
        /* ignore data symbols */
        if (!isText)
           continue;
-@@ -378,6 +393,7 @@ void VG_(redir_notify_new_DebugInfo)( DebugInfo* newsi )
+@@ -378,6 +392,7 @@ void VG_(redir_notify_new_DebugInfo)( DebugInfo* newsi )
        vg_assert(spec->from_fnpatt);
        spec->to_addr = sym_addr;
        spec->isWrap = isWrap;
@@ -365,7 +376,7 @@ index 98a502f..0140fc0 100644
        /* check we're not adding manifestly stupid destinations */
        vg_assert(is_plausible_guest_addr(sym_addr));
        spec->next = specList;
-@@ -388,12 +404,15 @@ void VG_(redir_notify_new_DebugInfo)( DebugInfo* newsi )
+@@ -388,12 +403,15 @@ void VG_(redir_notify_new_DebugInfo)( DebugInfo* newsi )
  
     if (check_ppcTOCs) {
        for (i = 0; i < nsyms; i++) {
@@ -384,7 +395,7 @@ index 98a502f..0140fc0 100644
           if (!ok)
              /* not a redirect.  Ignore. */
              continue;
-@@ -470,6 +489,38 @@ void VG_(redir_notify_new_DebugInfo)( DebugInfo* newsi )
+@@ -470,6 +488,42 @@ void VG_(redir_notify_new_DebugInfo)( DebugInfo* newsi )
  
  #undef N_DEMANGLED
  
@@ -404,26 +415,30 @@ index 98a502f..0140fc0 100644
 +    old = VG_(OSetGen_Lookup)(activeSet, &old_from);
 +    vg_assert(old);
 +    vg_assert(old->isIFunc);
++    /* We must have got here only if there was an ifunc symbol
++       that matches an active direct function --> direct function
++       redirection. Otherwise, it is not necessary to call this function.  */
++    vg_assert(iFuncToDirectFuncSet);
 +
 +    e = VG_(OSetGen_Lookup)(iFuncToDirectFuncSet, &old_from);
++    /* Same comment as for vg_assert(iFuncToDirectFuncSet) above.  */
++    vg_assert(e);
 +
 +    new = *old;
-+    if (e) {
-+        new.from_addr = new_from;
-+        new.to_addr = e->direct_func;
-+        if (VG_(clo_trace_redir))
-+            VG_(message) (Vg_DebugMsg, "changed redir (%lx)[indired]->(%lx) "
-+                           "to (%lx) -> (%lx))\n",
-+                           old_from, old->to_addr,
-+                           new_from, e->direct_func);
-+        new.isIFunc = False;
-+        maybe_add_active (new);
-+    }
++    new.from_addr = new_from;
++    new.to_addr = e->direct_func;
++    if (VG_(clo_trace_redir))
++        VG_(message) (Vg_DebugMsg, "changed redir (%lx)[indired]->(%lx) "
++                       "to (%lx) -> (%lx))\n",
++                       old_from, old->to_addr,
++                       new_from, e->direct_func);
++    new.isIFunc = False;
++    maybe_add_active (new);
 +}
  
  /* Do one element of the basic cross product: add to the active set,
     all matches resulting from comparing all the given specs against
-@@ -487,7 +538,7 @@ void generate_and_add_actives (
+@@ -487,7 +541,7 @@ void generate_and_add_actives (
       )
  {
     Spec*  sp;
@@ -432,7 +447,7 @@ index 98a502f..0140fc0 100644
     Active act;
     Int    nsyms, i;
     Addr   sym_addr;
-@@ -513,7 +564,7 @@ void generate_and_add_actives (
+@@ -513,7 +567,7 @@ void generate_and_add_actives (
     nsyms = VG_(DebugInfo_syms_howmany)( di );
     for (i = 0; i < nsyms; i++) {
        VG_(DebugInfo_syms_getidx)( di, i, &sym_addr, NULL, NULL,
@@ -441,7 +456,7 @@ index 98a502f..0140fc0 100644
  
        /* ignore data symbols */
        if (!isText)
-@@ -533,13 +584,47 @@ void generate_and_add_actives (
+@@ -533,13 +587,61 @@ void generate_and_add_actives (
           if (!sp->mark)
              continue; /* soname doesn't match */
           if (VG_(string_match)( sp->from_fnpatt, sym_name )) {
@@ -450,8 +465,9 @@ index 98a502f..0140fc0 100644
 +            sp->done = True;
 +            if (isIFunc && !sp->isIFunc) {
 +                IFuncToDirectFuncEntry *e;
-+                 /* So we are facing a redirection spec
-+                    indirect function -> direct function.
++                 /* So we are facing an indirect function
++                    that matches a direct function -> direct function
++                    redirection spec.
 +                    We need to store that mapping in iFuncToDirectFuncSet so
 +                    that later once the indirect function's relocations are
 +                    processed by the dynamic linker on the client, we
@@ -478,6 +494,19 @@ index 98a502f..0140fc0 100644
 +                VG_(OSetGen_Insert)(iFuncToDirectFuncSet, e);
 +                continue;
 +            }
++
++            /* Consider special ifunc --> direct function redirections only when
++               there already is an direct function --> direct function
++               redirection that matches an ifunc symbol. Otherwise, we would
++               grow the active set unnecessarily.  */
++            if (isIFunc && sp->isIFunc) {
++                IFuncToDirectFuncEntry *e = NULL;
++                if (iFuncToDirectFuncSet)
++                    e = VG_(OSetGen_Lookup)(iFuncToDirectFuncSet, &sym_addr);
++                if (!e)
++                    continue;
++            }
++
              /* got a new binding.  Add to collection. */
              act.from_addr   = sym_addr;
              act.to_addr     = sp->to_addr;
@@ -559,7 +588,7 @@ index c993c27..025789d 100644
  // Queries
  //--------------------------------------------------------------------
 diff --git a/coregrind/vg_preloaded.c b/coregrind/vg_preloaded.c
-index 6f0f049..28e6c7d 100644
+index 6f0f049..41986d2 100644
 --- a/coregrind/vg_preloaded.c
 +++ b/coregrind/vg_preloaded.c
 @@ -68,6 +68,33 @@ void VG_NOTIFY_ON_LOAD(freeres)( void )
@@ -573,8 +602,8 @@ index 6f0f049..28e6c7d 100644
 +   (running on the real CPU) to update the redirection "ifunc -> this function".
 +
 +*/
-+void * VG_WRAP_I_FUNCTION_ZZ(VG_Z_LIBC_SONAME, Za) (void);
-+void * VG_WRAP_I_FUNCTION_ZZ(VG_Z_LIBC_SONAME, Za) (void)
++void * VG_WRAP_I_FUNCTION_ZZ(Za, Za) (void);
++void * VG_WRAP_I_FUNCTION_ZZ(Za, Za) (void)
 +{
 +    OrigFn fn;
 +    Addr result = 0;
@@ -611,7 +640,7 @@ index a02b790..85129ce 100644
  /* A simple enumeration to describe the 'kind' of various kinds of
     segments that arise from the mapping of object files. */
 diff --git a/include/pub_tool_redir.h b/include/pub_tool_redir.h
-index 3d3b516..ff6af2e 100644
+index 3d3b516..ec3e00a 100644
 --- a/include/pub_tool_redir.h
 +++ b/include/pub_tool_redir.h
 @@ -51,6 +51,16 @@
@@ -641,25 +670,29 @@ index 3d3b516..ff6af2e 100644
     characters are transformed.
  
       *         -->  Za    (asterisk)
-@@ -143,6 +154,17 @@
+@@ -143,6 +154,21 @@
       Z         -->  ZZ    (Z)
  
     Everything else is left unchanged.
 +
 +   Indirect function wrapping
-+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
++   ~~~~~~~~~~~~~~~~~~~~~~~~~~
 +
 +   VG_WRAP_I_FUNCTION_ZZ is a macro (similar to VG_WRAP_FUNCTION_ZZ) that
-+   wraps functions only. It does not have any effect on regular (STT_FUNC) functions.
-+   Beware, the use of VG_WRAP_I_FUNCTION_ZZ in coregrin/vg_preloaded.c makes
-+   the wrapping function match all the indirect functions of the C library.
-+   So no other use of that macro should be necessary to match
-+   indirect functions of the C library.
++   wraps indirect functions (a.k.a. ifunc) only. It does not have any effect on
++   regular (STT_FUNC) functions. In other words this macros registers an
++   ifunc --> regular function redirection. It does it in a special way though.
++   The ifunc --> regular function redirection is registered iff there is a
++   regular function --> regular function redirection that matches the ifunc symbol
++   pattern of this macro.
++   Beware, the use of VG_WRAP_I_FUNCTION_ZZ in coregrind/vg_preloaded.c makes
++   the wrapping function match all the indirect functions of all libraries.
++   So no other use of that macro should be necessary.
 +
  */
  
  /* If you change these, the code in VG_(maybe_Z_demangle) needs to be
-@@ -158,6 +180,7 @@
+@@ -158,6 +184,7 @@
  
  #define VG_WRAP_FUNCTION_ZU(soname,fnname) VG_CONCAT4(_vgwZU_,soname,_,fnname)
  #define VG_WRAP_FUNCTION_ZZ(soname,fnname) VG_CONCAT4(_vgwZZ_,soname,_,fnname)
@@ -668,7 +701,7 @@ index 3d3b516..ff6af2e 100644
  /* --------- Some handy Z-encoded names. --------- */
  
 diff --git a/memcheck/mc_replace_strmem.c b/memcheck/mc_replace_strmem.c
-index c15717a..2bfe40b 100644
+index c15717a..abd838f 100644
 --- a/memcheck/mc_replace_strmem.c
 +++ b/memcheck/mc_replace_strmem.c
 @@ -116,6 +116,7 @@ Bool is_overlap ( void* dst, const void* src, SizeT dstlen, SizeT srclen )
@@ -765,3 +798,14 @@ index c15717a..2bfe40b 100644
  STPCPY(VG_Z_LD_LINUX_SO_2,        stpcpy)
  STPCPY(VG_Z_LD_LINUX_X86_64_SO_2, stpcpy)
  #elif defined(VGO_darwin)
+@@ -709,7 +725,9 @@ GLIBC232_STRCHRNUL(VG_Z_LIBC_SONAME, strchrnul)
+    }
+ 
+ GLIBC232_RAWMEMCHR(VG_Z_LIBC_SONAME, rawmemchr)
+-
++#if defined (VGO_linux)
++GLIBC232_RAWMEMCHR(VG_Z_LIBC_SONAME, __GI___rawmemchr)
++#endif
+ 
+ /* glibc variant of strcpy that checks the dest is big enough.
+    Copied from glibc-2.5/debug/test-strcpy_chk.c. */

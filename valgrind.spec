@@ -1,7 +1,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 3.5.0
-Release: 2
+Release: 3
 Epoch: 1
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
 Patch1: valgrind-3.5.0-cachegrind-improvements.patch
@@ -10,6 +10,8 @@ Patch3: valgrind-3.5.0-glibc-2.10.1.patch
 Patch4: valgrind-3.5.0-ifunc.patch
 Patch5: valgrind-3.5.0-inotify-init1.patch
 Patch6: valgrind-3.5.0-mmap-mprotect.patch
+Patch7: valgrind-3.5.0-dwarf3.patch
+Patch8: valgrind-3.5.0-pr40659.patch
 License: GPLv2
 URL: http://www.valgrind.org/
 Group: Development/Debuggers
@@ -69,6 +71,8 @@ or valgrind plugins.
 %patch4 -p1
 %patch5 -p1
 %patch6 -p1
+%patch7 -p1
+%patch8 -p1
 
 %build
 %ifarch x86_64 ppc64
@@ -100,13 +104,6 @@ int main (int argc, char *const argv[])
 }
 EOF
 gcc $RPM_OPT_FLAGS -o close_fds close_fds.c
-
-for i in `find . -type f \( -name *-amd64-linux -o -name *-x86-linux -o -name *-ppc*-linux \)`; do
-  case "`file $i`" in
-    *ELF*executable*statically\ linked*)
-      objcopy -R .debug_loc -R .debug_frame -R .debug_ranges $i
-  esac
-done
 
 # XXX pth_cancel2 hangs on x86_64
 echo 'int main (void) { return 0; }' > none/tests/pth_cancel2.c
@@ -161,6 +158,11 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/pkgconfig/*
 
 %changelog
+* Wed Oct 14 2009 Jakub Jelinek <jakub@redhat.com> 3.5.0-3
+- handle many more DW_OP_* ops that GCC now uses
+- handle the more compact form of DW_AT_data_member_location
+- don't strip .debug_loc etc. from valgrind binaries
+
 * Mon Oct 12 2009 Jakub Jelinek <jakub@redhat.com> 3.5.0-2
 - add STT_GNU_IFUNC support (Dodji Seketeli, #518247)
 - wrap inotify_init1 syscall (Dodji Seketeli, #527198)
