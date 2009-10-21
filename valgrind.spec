@@ -1,7 +1,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 3.5.0
-Release: 3
+Release: 4
 Epoch: 1
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
 Patch1: valgrind-3.5.0-cachegrind-improvements.patch
@@ -12,6 +12,8 @@ Patch5: valgrind-3.5.0-inotify-init1.patch
 Patch6: valgrind-3.5.0-mmap-mprotect.patch
 Patch7: valgrind-3.5.0-dwarf3.patch
 Patch8: valgrind-3.5.0-pr40659.patch
+Patch9: valgrind-3.5.0-helgrind-race-supp.patch
+Patch10: valgrind-3.5.0-ppc-tests.patch
 License: GPLv2
 URL: http://www.valgrind.org/
 Group: Development/Debuggers
@@ -73,13 +75,15 @@ or valgrind plugins.
 %patch6 -p1
 %patch7 -p1
 %patch8 -p1
+%patch9 -p1
+%patch10 -p1
 
 %build
 %ifarch x86_64 ppc64
 # Ugly hack - libgcc 32-bit package might not be installed
 mkdir -p libgcc/32
-touch libgcc/32/libgcc_s.a
-touch libgcc/libgcc_s_32.a
+ar r libgcc/32/libgcc_s.a
+ar r libgcc/libgcc_s_32.a
 %configure CC="gcc -B `pwd`/libgcc/" GDB=%{_bindir}/gdb
 %else
 %configure GDB=%{_bindir}/gdb
@@ -158,6 +162,12 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/pkgconfig/*
 
 %changelog
+* Wed Oct 21 2009 Jakub Jelinek <jakub@redhat.com> 3.5.0-4
+- handle reading of .debug_frame in addition to .eh_frame
+- ignore unknown DWARF3 expressions in evaluate_trivial_GX
+- suppress helgrind race errors in helgrind's own mythread_wrapper
+- fix compilation of x86 tests on x86_64 and ppc tests
+
 * Wed Oct 14 2009 Jakub Jelinek <jakub@redhat.com> 3.5.0-3
 - handle many more DW_OP_* ops that GCC now uses
 - handle the more compact form of DW_AT_data_member_location

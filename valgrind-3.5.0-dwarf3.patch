@@ -1,6 +1,14 @@
 --- valgrind/coregrind/m_debuginfo/readdwarf.c.jj	2009-08-19 15:37:44.000000000 +0200
 +++ valgrind/coregrind/m_debuginfo/readdwarf.c	2009-10-21 13:18:25.000000000 +0200
-@@ -3446,23 +3446,37 @@ static CIE the_CIEs[N_CIEs];
+@@ -37,6 +37,7 @@
+ #include "pub_core_libcprint.h"
+ #include "pub_core_options.h"
+ #include "pub_core_xarray.h"
++#include "pub_core_tooliface.h"    /* VG_(needs) */
+ #include "priv_misc.h"             /* dinfo_zalloc/free/strdup */
+ #include "priv_d3basics.h"
+ #include "priv_tytypes.h"
+@@ -3446,23 +3447,37 @@ static CIE the_CIEs[N_CIEs];
  
  
  void ML_(read_callframe_info_dwarf3)
@@ -44,7 +52,7 @@
        VG_(printf)("CFI info: name %s\n",
                    di->filename );
     }
-@@ -3495,11 +3509,11 @@ void ML_(read_callframe_info_dwarf3)
+@@ -3495,11 +3510,11 @@ void ML_(read_callframe_info_dwarf3)
        Bool   dw64;
  
        /* Are we done? */
@@ -58,7 +66,7 @@
           how = "overran the end of .eh_frame";
           goto bad;
        }
-@@ -3509,9 +3523,9 @@ void ML_(read_callframe_info_dwarf3)
+@@ -3509,9 +3524,9 @@ void ML_(read_callframe_info_dwarf3)
  
        ciefde_start = data;
        if (di->trace_cfi) 
@@ -70,7 +78,7 @@
  
        ciefde_len = (ULong) read_UInt(data); data += sizeof(UInt);
        if (di->trace_cfi) 
-@@ -3524,7 +3538,7 @@ void ML_(read_callframe_info_dwarf3)
+@@ -3524,7 +3539,7 @@ void ML_(read_callframe_info_dwarf3)
        if (ciefde_len == 0) {
           if (di->ddump_frames)
              VG_(printf)("%08lx ZERO terminator\n\n",
@@ -79,7 +87,7 @@
           return;
        }
  
-@@ -3550,8 +3564,10 @@ void ML_(read_callframe_info_dwarf3)
+@@ -3550,8 +3565,10 @@ void ML_(read_callframe_info_dwarf3)
        if (di->trace_cfi) 
           VG_(printf)("cie.pointer     = %lld\n", cie_pointer);
  
@@ -92,7 +100,7 @@
  
           Int    this_CIE;
           UChar  cie_version;
-@@ -3575,11 +3591,11 @@ void ML_(read_callframe_info_dwarf3)
+@@ -3575,11 +3592,11 @@ void ML_(read_callframe_info_dwarf3)
  
  	 /* Record its offset.  This is how we will find it again
              later when looking at an FDE. */
@@ -106,7 +114,7 @@
                          (Addr)ciefde_len,
                          (Addr)(UWord)cie_pointer );
  
-@@ -3623,8 +3639,13 @@ void ML_(read_callframe_info_dwarf3)
+@@ -3623,8 +3640,13 @@ void ML_(read_callframe_info_dwarf3)
              VG_(printf)("  Data alignment factor: %d\n",
                          (Int)the_CIEs[this_CIE].data_a_f);
  
@@ -122,7 +130,7 @@
           if (di->trace_cfi) 
              VG_(printf)("cie.ra_reg      = %d\n", 
                          the_CIEs[this_CIE].ra_reg);
-@@ -3702,7 +3723,7 @@ void ML_(read_callframe_info_dwarf3)
+@@ -3702,7 +3724,7 @@ void ML_(read_callframe_info_dwarf3)
  	 }
  
           if (the_CIEs[this_CIE].ilen < 0
@@ -131,7 +139,7 @@
              how = "implausible # cie initial insns";
              goto bad;
           }
-@@ -3717,8 +3738,8 @@ void ML_(read_callframe_info_dwarf3)
+@@ -3717,8 +3739,8 @@ void ML_(read_callframe_info_dwarf3)
           if (di->trace_cfi || di->ddump_frames) {
              AddressDecodingInfo adi;
              adi.encoding      = the_CIEs[this_CIE].address_encoding;
@@ -142,7 +150,7 @@
              adi.text_bias     = di->text_debug_bias;
              show_CF_instructions( the_CIEs[this_CIE].instrs, 
                                    the_CIEs[this_CIE].ilen, &adi,
-@@ -3747,9 +3768,12 @@ void ML_(read_callframe_info_dwarf3)
+@@ -3747,9 +3769,12 @@ void ML_(read_callframe_info_dwarf3)
              cie_pointer bytes back from here. */
  
           /* re sizeof(UInt) / sizeof(ULong), matches XXX above. */
@@ -158,7 +166,7 @@
  
           for (cie = 0; cie < n_CIEs; cie++) {
              if (0) VG_(printf)("look for %lld   %lld\n",
-@@ -3764,8 +3788,8 @@ void ML_(read_callframe_info_dwarf3)
+@@ -3764,8 +3789,8 @@ void ML_(read_callframe_info_dwarf3)
  	 }
  
           adi.encoding      = the_CIEs[cie].address_encoding;
@@ -169,7 +177,7 @@
           adi.text_bias     = di->text_debug_bias;
           fde_initloc = read_encoded_Addr(&nbytes, &adi, data);
           data += nbytes;
-@@ -3773,8 +3797,8 @@ void ML_(read_callframe_info_dwarf3)
+@@ -3773,8 +3798,8 @@ void ML_(read_callframe_info_dwarf3)
              VG_(printf)("fde.initloc     = %#lx\n", fde_initloc);
  
           adi.encoding      = the_CIEs[cie].address_encoding & 0xf;
@@ -180,7 +188,7 @@
           adi.text_bias     = di->text_debug_bias;
  
           /* WAS (incorrectly):
-@@ -3800,7 +3824,7 @@ void ML_(read_callframe_info_dwarf3)
+@@ -3800,7 +3825,7 @@ void ML_(read_callframe_info_dwarf3)
  
           if (di->ddump_frames)
              VG_(printf)("%08lx %08lx %08lx FDE cie=%08lx pc=%08lx..%08lx\n",
@@ -189,7 +197,7 @@
                          (Addr)ciefde_len,
                          (Addr)(UWord)cie_pointer,
                          (Addr)look_for, 
-@@ -3827,16 +3851,43 @@ void ML_(read_callframe_info_dwarf3)
+@@ -3827,16 +3852,43 @@ void ML_(read_callframe_info_dwarf3)
              VG_(printf)("fde.ilen        = %d\n", (Int)fde_ilen);
  	 }
  
