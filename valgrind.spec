@@ -1,7 +1,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 3.5.0
-Release: 4
+Release: 5
 Epoch: 1
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
 Patch1: valgrind-3.5.0-cachegrind-improvements.patch
@@ -14,6 +14,7 @@ Patch7: valgrind-3.5.0-dwarf3.patch
 Patch8: valgrind-3.5.0-pr40659.patch
 Patch9: valgrind-3.5.0-helgrind-race-supp.patch
 Patch10: valgrind-3.5.0-ppc-tests.patch
+Patch11: valgrind-3.5.0-amd64-loopnel.patch
 License: GPLv2
 URL: http://www.valgrind.org/
 Group: Development/Debuggers
@@ -77,6 +78,7 @@ or valgrind plugins.
 %patch8 -p1
 %patch9 -p1
 %patch10 -p1
+%patch11 -p1
 
 %build
 %ifarch x86_64 ppc64
@@ -162,6 +164,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/pkgconfig/*
 
 %changelog
+* Thu Oct 22 2009 Jakub Jelinek <jakub@redhat.com> 3.5.0-5
+- add emulation of 0x67 prefixed loop* insns on x86_64 (#530165)
+
 * Wed Oct 21 2009 Jakub Jelinek <jakub@redhat.com> 3.5.0-4
 - handle reading of .debug_frame in addition to .eh_frame
 - ignore unknown DWARF3 expressions in evaluate_trivial_GX
