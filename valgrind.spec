@@ -1,7 +1,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 3.5.0
-Release: 6
+Release: 7
 Epoch: 1
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
 Patch1: valgrind-3.5.0-cachegrind-improvements.patch
@@ -16,6 +16,8 @@ Patch9: valgrind-3.5.0-helgrind-race-supp.patch
 Patch10: valgrind-3.5.0-ppc-tests.patch
 Patch11: valgrind-3.5.0-amd64-loopnel.patch
 Patch12: valgrind-3.5.0-ppc-dwarf3.patch
+Patch13: valgrind-3.5.0-amd64-adcsbb.patch
+Patch14: valgrind-3.5.0-syscalls.patch
 License: GPLv2
 URL: http://www.valgrind.org/
 Group: Development/Debuggers
@@ -81,6 +83,8 @@ or valgrind plugins.
 %patch10 -p1
 %patch11 -p1
 %patch12 -p1
+%patch13 -p1
+%patch14 -p1
 
 %build
 %ifarch x86_64 ppc64
@@ -166,6 +170,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/pkgconfig/*
 
 %changelog
+* Tue Oct 27 2009 Jakub Jelinek <jakub@redhat.com> 3.5.0-7
+- add perf_counter_open syscall support (#531271)
+- add handling of some sbb/adc insn forms on x86_64 (KDE#211410)
+
 * Fri Oct 23 2009 Jakub Jelinek <jakub@redhat.com> 3.5.0-6
 - ppc and ppc64 fixes
 
