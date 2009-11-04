@@ -1,7 +1,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 3.5.0
-Release: 8
+Release: 9
 Epoch: 1
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
 Patch1: valgrind-3.5.0-cachegrind-improvements.patch
@@ -19,6 +19,7 @@ Patch12: valgrind-3.5.0-ppc-dwarf3.patch
 Patch13: valgrind-3.5.0-amd64-adcsbb.patch
 Patch14: valgrind-3.5.0-syscalls.patch
 Patch15: valgrind-3.5.0-preadv.patch
+Patch16: valgrind-3.5.0-glibc-2.11.patch
 License: GPLv2
 URL: http://www.valgrind.org/
 Group: Development/Debuggers
@@ -28,7 +29,7 @@ Obsoletes: valgrind-callgrind
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
 %endif
-BuildRequires: glibc-devel >= 2.10
+BuildRequires: glibc-devel >= 2.11
 ExclusiveArch: %{ix86} x86_64 ppc ppc64
 %ifarch %{ix86}
 %define valarch x86
@@ -87,6 +88,7 @@ or valgrind plugins.
 %patch13 -p1
 %patch14 -p1
 %patch15 -p1
+%patch16 -p1
 
 %build
 %ifarch x86_64 ppc64
@@ -172,6 +174,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/pkgconfig/*
 
 %changelog
+* Wed Nov  4 2009 Jakub Jelinek <jakub@redhat.com> 3.5.0-9
+- rebuilt against glibc 2.11
+- use upstream version of the ifunc support
+
 * Wed Oct 28 2009 Jakub Jelinek <jakub@redhat.com> 3.5.0-8
 - add preadv/pwritev syscall support
 
