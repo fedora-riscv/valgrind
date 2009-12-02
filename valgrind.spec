@@ -1,7 +1,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 3.5.0
-Release: 9
+Release: 10%{?dist}
 Epoch: 1
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
 Patch1: valgrind-3.5.0-cachegrind-improvements.patch
@@ -20,6 +20,8 @@ Patch13: valgrind-3.5.0-amd64-adcsbb.patch
 Patch14: valgrind-3.5.0-syscalls.patch
 Patch15: valgrind-3.5.0-preadv.patch
 Patch16: valgrind-3.5.0-glibc-2.11.patch
+Patch17: valgrind-3.5.0-syscalls2.patch
+Patch18: valgrind-3.5.0-dynbss.patch
 License: GPLv2
 URL: http://www.valgrind.org/
 Group: Development/Debuggers
@@ -89,6 +91,8 @@ or valgrind plugins.
 %patch14 -p1
 %patch15 -p1
 %patch16 -p1
+%patch17 -p1
+%patch18 -p1
 
 %build
 %ifarch x86_64 ppc64
@@ -174,6 +178,12 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/pkgconfig/*
 
 %changelog
+* Wed Dec  2 2009 Jakub Jelinek <jakub@redhat.com> 3.5.0-10
+- add handling of a bunch of recent syscalls and fix some
+  other syscall wrappers (Dodji Seketeli)
+- handle prelink created split of .bss into .dynbss and .bss
+  and similarly for .sbss and .sdynbss (#539874)
+
 * Wed Nov  4 2009 Jakub Jelinek <jakub@redhat.com> 3.5.0-9
 - rebuilt against glibc 2.11
 - use upstream version of the ifunc support
