@@ -1,7 +1,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 3.5.0
-Release: 11%{?dist}
+Release: 12%{?dist}
 Epoch: 1
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
 Patch1: valgrind-3.5.0-cachegrind-improvements.patch
@@ -180,7 +180,7 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/pkgconfig/*
 
 %changelog
-* Mon Dec 21 2009 Jakub Jelinek <jakub@redhat.com> 3.5.0-11
+* Mon Dec 21 2009 Jakub Jelinek <jakub@redhat.com> 3.5.0-12
 - don't require offset field to be set in adjtimex's
   ADJ_OFFSET_SS_READ mode (#545866)
 
