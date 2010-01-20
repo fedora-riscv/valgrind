@@ -1,7 +1,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 3.5.0
-Release: 12%{?dist}
+Release: 13%{?dist}
 Epoch: 1
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
 Patch1: valgrind-3.5.0-cachegrind-improvements.patch
@@ -23,6 +23,8 @@ Patch16: valgrind-3.5.0-glibc-2.11.patch
 Patch17: valgrind-3.5.0-syscalls2.patch
 Patch18: valgrind-3.5.0-dynbss.patch
 Patch19: valgrind-3.5.0-adjtimex.patch
+Patch20: valgrind-3.5.0-DW_OP_mod.patch
+Patch21: valgrind-3.5.0-pkgconfig.patch
 License: GPLv2
 URL: http://www.valgrind.org/
 Group: Development/Debuggers
@@ -95,6 +97,8 @@ or valgrind plugins.
 %patch17 -p1
 %patch18 -p1
 %patch19 -p1
+%patch20 -p1
+%patch21 -p1
 
 %build
 %ifarch x86_64 ppc64
@@ -180,6 +184,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/pkgconfig/*
 
 %changelog
+* Wed Jan 20 2010 Jakub Jelinek <jakub@redhat.com> 3.5.0-13
+- DW_OP_mod is unsigned modulus instead of signed
+- fix up valgrind.pc (#551277)
+
 * Mon Dec 21 2009 Jakub Jelinek <jakub@redhat.com> 3.5.0-12
 - don't require offset field to be set in adjtimex's
   ADJ_OFFSET_SS_READ mode (#545866)
