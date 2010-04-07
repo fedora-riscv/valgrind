@@ -1,7 +1,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 3.5.0
-Release: 14%{?dist}
+Release: 15%{?dist}
 Epoch: 1
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
 Patch1: valgrind-3.5.0-cachegrind-improvements.patch
@@ -26,6 +26,9 @@ Patch19: valgrind-3.5.0-adjtimex.patch
 Patch20: valgrind-3.5.0-DW_OP_mod.patch
 Patch21: valgrind-3.5.0-pkgconfig.patch
 Patch22: valgrind-3.5.0-stat_h.patch
+Patch23: valgrind-3.5.0-i686-nops.patch
+Patch24: valgrind-3.5.0-dwarf4.patch
+Patch25: valgrind-3.5.0-syscalls3.patch
 License: GPLv2
 URL: http://www.valgrind.org/
 Group: Development/Debuggers
@@ -101,6 +104,9 @@ or valgrind plugins.
 %patch20 -p1
 %patch21 -p1
 %patch22 -p1
+%patch23 -p1
+%patch24 -p1
+%patch25 -p1
 
 %build
 %ifarch x86_64 ppc64
@@ -186,6 +192,11 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/pkgconfig/*
 
 %changelog
+* Wed Apr  7 2010 Jakub Jelinek <jakub@redhat.com> 3.5.0-15
+- handle i686 nopw insns with more than one data16 prefix (#574889)
+- DWARF4 support
+- handle getcpu and splice syscalls
+
 * Wed Jan 20 2010 Jakub Jelinek <jakub@redhat.com> 3.5.0-14
 - fix build against latest glibc headers
 
