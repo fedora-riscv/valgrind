@@ -1,12 +1,34 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 3.5.0
-Release: 1
+Release: 15%{?dist}
 Epoch: 1
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
 Patch1: valgrind-3.5.0-cachegrind-improvements.patch
 Patch2: valgrind-3.5.0-openat.patch
 Patch3: valgrind-3.5.0-glibc-2.10.1.patch
+Patch4: valgrind-3.5.0-ifunc.patch
+Patch5: valgrind-3.5.0-inotify-init1.patch
+Patch6: valgrind-3.5.0-mmap-mprotect.patch
+Patch7: valgrind-3.5.0-dwarf3.patch
+Patch8: valgrind-3.5.0-pr40659.patch
+Patch9: valgrind-3.5.0-helgrind-race-supp.patch
+Patch10: valgrind-3.5.0-ppc-tests.patch
+Patch11: valgrind-3.5.0-amd64-loopnel.patch
+Patch12: valgrind-3.5.0-ppc-dwarf3.patch
+Patch13: valgrind-3.5.0-amd64-adcsbb.patch
+Patch14: valgrind-3.5.0-syscalls.patch
+Patch15: valgrind-3.5.0-preadv.patch
+Patch16: valgrind-3.5.0-glibc-2.11.patch
+Patch17: valgrind-3.5.0-syscalls2.patch
+Patch18: valgrind-3.5.0-dynbss.patch
+Patch19: valgrind-3.5.0-adjtimex.patch
+Patch20: valgrind-3.5.0-DW_OP_mod.patch
+Patch21: valgrind-3.5.0-pkgconfig.patch
+Patch22: valgrind-3.5.0-stat_h.patch
+Patch23: valgrind-3.5.0-i686-nops.patch
+Patch24: valgrind-3.5.0-dwarf4.patch
+Patch25: valgrind-3.5.0-syscalls3.patch
 License: GPLv2
 URL: http://www.valgrind.org/
 Group: Development/Debuggers
@@ -16,7 +38,7 @@ Obsoletes: valgrind-callgrind
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
 %endif
-BuildRequires: glibc-devel >= 2.10
+BuildRequires: glibc-devel >= 2.11
 ExclusiveArch: %{ix86} x86_64 ppc ppc64
 %ifarch %{ix86}
 %define valarch x86
@@ -63,13 +85,35 @@ or valgrind plugins.
 %patch1 -p1
 %patch2 -p1
 %patch3 -p1
+%patch4 -p1
+%patch5 -p1
+%patch6 -p1
+%patch7 -p1
+%patch8 -p1
+%patch9 -p1
+%patch10 -p1
+%patch11 -p1
+%patch12 -p1
+%patch13 -p1
+%patch14 -p1
+%patch15 -p1
+%patch16 -p1
+%patch17 -p1
+%patch18 -p1
+%patch19 -p1
+%patch20 -p1
+%patch21 -p1
+%patch22 -p1
+%patch23 -p1
+%patch24 -p1
+%patch25 -p1
 
 %build
 %ifarch x86_64 ppc64
 # Ugly hack - libgcc 32-bit package might not be installed
 mkdir -p libgcc/32
-touch libgcc/32/libgcc_s.a
-touch libgcc/libgcc_s_32.a
+ar r libgcc/32/libgcc_s.a
+ar r libgcc/libgcc_s_32.a
 %configure CC="gcc -B `pwd`/libgcc/" GDB=%{_bindir}/gdb
 %else
 %configure GDB=%{_bindir}/gdb
@@ -94,13 +138,6 @@ int main (int argc, char *const argv[])
 }
 EOF
 gcc $RPM_OPT_FLAGS -o close_fds close_fds.c
-
-for i in `find . -type f \( -name *-amd64-linux -o -name *-x86-linux -o -name *-ppc*-linux \)`; do
-  case "`file $i`" in
-    *ELF*executable*statically\ linked*)
-      objcopy -R .debug_loc -R .debug_frame -R .debug_ranges $i
-  esac
-done
 
 # XXX pth_cancel2 hangs on x86_64
 echo 'int main (void) { return 0; }' > none/tests/pth_cancel2.c
@@ -155,6 +192,61 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/pkgconfig/*
 
 %changelog
+* Wed Apr  7 2010 Jakub Jelinek <jakub@redhat.com> 3.5.0-15
+- handle i686 nopw insns with more than one data16 prefix (#574889)
+- DWARF4 support
+- handle getcpu and splice syscalls
+
+* Wed Jan 20 2010 Jakub Jelinek <jakub@redhat.com> 3.5.0-14
+- fix build against latest glibc headers
+
+* Wed Jan 20 2010 Jakub Jelinek <jakub@redhat.com> 3.5.0-13
+- DW_OP_mod is unsigned modulus instead of signed
+- fix up valgrind.pc (#551277)
+
+* Mon Dec 21 2009 Jakub Jelinek <jakub@redhat.com> 3.5.0-12
+- don't require offset field to be set in adjtimex's
+  ADJ_OFFSET_SS_READ mode (#545866)
+
+* Wed Dec  2 2009 Jakub Jelinek <jakub@redhat.com> 3.5.0-10
+- add handling of a bunch of recent syscalls and fix some
+  other syscall wrappers (Dodji Seketeli)
+- handle prelink created split of .bss into .dynbss and .bss
+  and similarly for .sbss and .sdynbss (#539874)
+
+* Wed Nov  4 2009 Jakub Jelinek <jakub@redhat.com> 3.5.0-9
+- rebuilt against glibc 2.11
+- use upstream version of the ifunc support
+
+* Wed Oct 28 2009 Jakub Jelinek <jakub@redhat.com> 3.5.0-8
+- add preadv/pwritev syscall support
+
+* Tue Oct 27 2009 Jakub Jelinek <jakub@redhat.com> 3.5.0-7
+- add perf_counter_open syscall support (#531271)
+- add handling of some sbb/adc insn forms on x86_64 (KDE#211410)
+
+* Fri Oct 23 2009 Jakub Jelinek <jakub@redhat.com> 3.5.0-6
+- ppc and ppc64 fixes
+
+* Thu Oct 22 2009 Jakub Jelinek <jakub@redhat.com> 3.5.0-5
+- add emulation of 0x67 prefixed loop* insns on x86_64 (#530165)
+
+* Wed Oct 21 2009 Jakub Jelinek <jakub@redhat.com> 3.5.0-4
+- handle reading of .debug_frame in addition to .eh_frame
+- ignore unknown DWARF3 expressions in evaluate_trivial_GX
+- suppress helgrind race errors in helgrind's own mythread_wrapper
+- fix compilation of x86 tests on x86_64 and ppc tests
+
+* Wed Oct 14 2009 Jakub Jelinek <jakub@redhat.com> 3.5.0-3
+- handle many more DW_OP_* ops that GCC now uses
+- handle the more compact form of DW_AT_data_member_location
+- don't strip .debug_loc etc. from valgrind binaries
+
+* Mon Oct 12 2009 Jakub Jelinek <jakub@redhat.com> 3.5.0-2
+- add STT_GNU_IFUNC support (Dodji Seketeli, #518247)
+- wrap inotify_init1 syscall (Dodji Seketeli, #527198)
+- fix mmap/mprotect handling in memcheck (KDE#210268)
+
 * Fri Aug 21 2009 Jakub Jelinek <jakub@redhat.com> 3.5.0-1
 - update to 3.5.0
 
