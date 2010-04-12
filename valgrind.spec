@@ -83,6 +83,16 @@ Requires: valgrind = %{epoch}:%{version}-%{release}
 Header files and libraries for development of valgrind aware programs
 or valgrind plugins.
 
+%package openmpi
+Summary: OpenMPI support for valgrind
+Group: Development/Debuggers
+Requires: valgrind = %{epoch}:%{version}-%{release}
+
+%description openmpi
+A wrapper library for debugging OpenMPI parallel programs with valgrind.
+See file:///usr/share/doc/valgrind-%{version}/html/mc-manual.html#mc-manual.mpiwrap
+for details.
+
 %prep
 %setup -q
 %patch1 -p1
@@ -110,7 +120,6 @@ or valgrind plugins.
 %patch23 -p1
 %patch24 -p1
 %patch25 -p1
-%patch26 -p1
 %patch27 -p1
 
 %build
@@ -177,6 +186,10 @@ popd
 
 rm -f $RPM_BUILD_ROOT%{_libdir}/valgrind/*.supp.in
 
+cd $RPM_BUILD_ROOT%{_includedir}/valgrind
+patch < %{PATCH26}
+rm -f *.orig
+
 %clean
 rm -rf $RPM_BUILD_ROOT
 
@@ -186,7 +199,8 @@ rm -rf $RPM_BUILD_ROOT
 %doc docs.installed/html docs.installed/*.pdf
 %{_bindir}/*
 %dir %{_libdir}/valgrind
-%{_libdir}/valgrind/*[^a]
+%{_libdir}/valgrind/*[^ao]
+%{_libdir}/valgrind/[^l]*o
 %{_mandir}/man1/*
 
 %files devel
@@ -196,10 +210,15 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/valgrind/*.a
 %{_libdir}/pkgconfig/*
 
+%files openmpi
+%defattr(-,root,root)
+%dir %{_libdir}/valgrind
+%{_libdir}/valgrind/libmpiwrap*.so
+
 %changelog
 * Mon Apr 12 2010 Jakub Jelinek <jakub@redhat.com> 3.5.0-16
 - change pub_tool_basics.h not to include config.h (#579283)
-- add openmpi support (#565541)
+- add valgrind-openmpi package for OpenMPI support (#565541)
 - allow NULL second argument to capget (#450976)
 
 * Wed Apr  7 2010 Jakub Jelinek <jakub@redhat.com> 3.5.0-15
