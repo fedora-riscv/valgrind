@@ -1,7 +1,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 3.5.0
-Release: 15%{?dist}
+Release: 16%{?dist}
 Epoch: 1
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
 Patch1: valgrind-3.5.0-cachegrind-improvements.patch
@@ -29,6 +29,8 @@ Patch22: valgrind-3.5.0-stat_h.patch
 Patch23: valgrind-3.5.0-i686-nops.patch
 Patch24: valgrind-3.5.0-dwarf4.patch
 Patch25: valgrind-3.5.0-syscalls3.patch
+Patch26: valgrind-3.5.0-config_h.patch
+Patch27: valgrind-3.5.0-capget.patch
 License: GPLv2
 URL: http://www.valgrind.org/
 Group: Development/Debuggers
@@ -39,6 +41,7 @@ Obsoletes: valgrind-callgrind
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
 %endif
 BuildRequires: glibc-devel >= 2.11
+BuildRequires: openmpi-devel >= 1.3.3
 ExclusiveArch: %{ix86} x86_64 ppc ppc64
 %ifarch %{ix86}
 %define valarch x86
@@ -107,6 +110,8 @@ or valgrind plugins.
 %patch23 -p1
 %patch24 -p1
 %patch25 -p1
+%patch26 -p1
+%patch27 -p1
 
 %build
 %ifarch x86_64 ppc64
@@ -114,9 +119,9 @@ or valgrind plugins.
 mkdir -p libgcc/32
 ar r libgcc/32/libgcc_s.a
 ar r libgcc/libgcc_s_32.a
-%configure CC="gcc -B `pwd`/libgcc/" GDB=%{_bindir}/gdb
+%configure CC="gcc -B `pwd`/libgcc/" GDB=%{_bindir}/gdb --with-mpicc=%{_libdir}/openmpi/bin/mpicc
 %else
-%configure GDB=%{_bindir}/gdb
+%configure GDB=%{_bindir}/gdb --with-mpicc=%{_libdir}/openmpi/bin/mpicc
 %endif
 
 make %{?_smp_mflags}
@@ -192,6 +197,11 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/pkgconfig/*
 
 %changelog
+* Mon Apr 12 2010 Jakub Jelinek <jakub@redhat.com> 3.5.0-16
+- change pub_tool_basics.h not to include config.h (#579283)
+- add openmpi support (#565541)
+- allow NULL second argument to capget (#450976)
+
 * Wed Apr  7 2010 Jakub Jelinek <jakub@redhat.com> 3.5.0-15
 - handle i686 nopw insns with more than one data16 prefix (#574889)
 - DWARF4 support
