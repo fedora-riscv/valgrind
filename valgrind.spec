@@ -1,7 +1,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 3.5.0
-Release: 16%{?dist}
+Release: 17%{?dist}
 Epoch: 1
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
 Patch1: valgrind-3.5.0-cachegrind-improvements.patch
@@ -31,6 +31,7 @@ Patch24: valgrind-3.5.0-dwarf4.patch
 Patch25: valgrind-3.5.0-syscalls3.patch
 Patch26: valgrind-3.5.0-config_h.patch
 Patch27: valgrind-3.5.0-capget.patch
+Patch28: valgrind-3.5.0-glibc-2.12.patch
 License: GPLv2
 URL: http://www.valgrind.org/
 Group: Development/Debuggers
@@ -40,7 +41,11 @@ Obsoletes: valgrind-callgrind
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
 %endif
+%if 0%{?fedora} >= 13
+BuildRequires: glibc-devel >= 2.12
+%else
 BuildRequires: glibc-devel >= 2.11
+%endif
 BuildRequires: openmpi-devel >= 1.3.3
 ExclusiveArch: %{ix86} x86_64 ppc ppc64
 %ifarch %{ix86}
@@ -121,6 +126,7 @@ for details.
 %patch24 -p1
 %patch25 -p1
 %patch27 -p1
+%patch28 -p1
 
 %build
 %ifarch x86_64 ppc64
@@ -216,6 +222,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/valgrind/libmpiwrap*.so
 
 %changelog
+* Tue May  4 2010 Jakub Jelinek <jakub@redhat.com> 3.5.0-17
+- rebuilt against glibc 2.12
+
 * Mon Apr 12 2010 Jakub Jelinek <jakub@redhat.com> 3.5.0-16
 - change pub_tool_basics.h not to include config.h (#579283)
 - add valgrind-openmpi package for OpenMPI support (#565541)
