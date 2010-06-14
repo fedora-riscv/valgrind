@@ -1,7 +1,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 3.5.0
-Release: 17%{?dist}
+Release: 18%{?dist}
 Epoch: 1
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
 Patch1: valgrind-3.5.0-cachegrind-improvements.patch
@@ -41,7 +41,7 @@ Obsoletes: valgrind-callgrind
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
 %endif
-%if 0%{?fedora} >= 13
+%if 0%{?fedora} >= 13 || 0%{?rhel} >= 6
 BuildRequires: glibc-devel >= 2.12
 %else
 BuildRequires: glibc-devel >= 2.11
@@ -222,7 +222,7 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/valgrind/libmpiwrap*.so
 
 %changelog
-* Tue May  4 2010 Jakub Jelinek <jakub@redhat.com> 3.5.0-17
+* Tue May 18 2010 Jakub Jelinek <jakub@redhat.com> 3.5.0-18
 - rebuilt against glibc 2.12
 
 * Mon Apr 12 2010 Jakub Jelinek <jakub@redhat.com> 3.5.0-16
