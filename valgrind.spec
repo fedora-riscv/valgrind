@@ -19,6 +19,7 @@ Patch12: valgrind-3.6.0-s390x-3.patch
 Patch13: valgrind-3.6.0-s390x-4.patch
 Patch14: valgrind-3.6.0-strcasecmp.patch
 Patch15: valgrind-3.6.0-xlc_dbl_u32-test-patch
+Patch16: valgrind-3.6.0-helgrind-tests.patch
 License: GPLv2
 URL: http://www.valgrind.org/
 Group: Development/Debuggers
@@ -108,6 +109,7 @@ for details.
 %patch13 -p1
 %patch14 -p1
 %patch15 -p1
+%patch16 -p1
 
 chmod 755 none/tests/s390x/filter_stderr
 
