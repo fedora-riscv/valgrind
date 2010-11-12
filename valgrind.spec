@@ -121,8 +121,8 @@ ar r libgcc/libgcc_s_32.a
 CC="gcc -B `pwd`/libgcc/"
 %endif
 %configure CC="$CC" \
-  CFLAGS="`echo " %{optflags} " | sed 's/ -m\(64\|3[21]\) / /g;s/^ //;s/ $//'`" \
-  CXXFLAGS="`echo " %{optflags} " | sed 's/ -m\(64\|3[21]\) / /g;s/^ //;s/ $//'`" \
+  CFLAGS="`echo " %{optflags} " | sed 's/ -m\(64\|3[21]\) / /g;s/ -fexceptions / /g;s/^ //;s/ $//'`" \
+  CXXFLAGS="`echo " %{optflags} " | sed 's/ -m\(64\|3[21]\) / /g;s/ -fexceptions / /g;s/^ //;s/ $//'`" \
 %ifnarch s390x
   --with-mpicc=%{_libdir}/openmpi/bin/mpicc
 %endif
