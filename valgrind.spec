@@ -1,37 +1,24 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
-Version: 3.5.0
-Release: 18%{?dist}
+Version: 3.6.0
+Release: 1%{?dist}
 Epoch: 1
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
-Patch1: valgrind-3.5.0-cachegrind-improvements.patch
-Patch2: valgrind-3.5.0-openat.patch
-Patch3: valgrind-3.5.0-glibc-2.10.1.patch
-Patch4: valgrind-3.5.0-ifunc.patch
-Patch5: valgrind-3.5.0-inotify-init1.patch
-Patch6: valgrind-3.5.0-mmap-mprotect.patch
-Patch7: valgrind-3.5.0-dwarf3.patch
-Patch8: valgrind-3.5.0-pr40659.patch
-Patch9: valgrind-3.5.0-helgrind-race-supp.patch
-Patch10: valgrind-3.5.0-ppc-tests.patch
-Patch11: valgrind-3.5.0-amd64-loopnel.patch
-Patch12: valgrind-3.5.0-ppc-dwarf3.patch
-Patch13: valgrind-3.5.0-amd64-adcsbb.patch
-Patch14: valgrind-3.5.0-syscalls.patch
-Patch15: valgrind-3.5.0-preadv.patch
-Patch16: valgrind-3.5.0-glibc-2.11.patch
-Patch17: valgrind-3.5.0-syscalls2.patch
-Patch18: valgrind-3.5.0-dynbss.patch
-Patch19: valgrind-3.5.0-adjtimex.patch
-Patch20: valgrind-3.5.0-DW_OP_mod.patch
-Patch21: valgrind-3.5.0-pkgconfig.patch
-Patch22: valgrind-3.5.0-stat_h.patch
-Patch23: valgrind-3.5.0-i686-nops.patch
-Patch24: valgrind-3.5.0-dwarf4.patch
-Patch25: valgrind-3.5.0-syscalls3.patch
-Patch26: valgrind-3.5.0-config_h.patch
-Patch27: valgrind-3.5.0-capget.patch
-Patch28: valgrind-3.5.0-glibc-2.12.patch
+Patch1: valgrind-3.6.0-cachegrind-improvements.patch
+Patch2: valgrind-3.6.0-openat.patch
+Patch3: valgrind-3.6.0-glibc-2.10.1.patch
+Patch4: valgrind-3.6.0-helgrind-race-supp.patch
+Patch5: valgrind-3.6.0-amd64-loopnel.patch
+Patch6: valgrind-3.6.0-stat_h.patch
+Patch7: valgrind-3.6.0-config_h.patch
+Patch8: valgrind-3.6.0-capget.patch
+Patch9: valgrind-3.6.0-glibc-2.13.patch
+Patch10: valgrind-3.6.0-s390x-1.patch
+Patch11: valgrind-3.6.0-s390x-2.patch
+Patch12: valgrind-3.6.0-s390x-3.patch
+Patch13: valgrind-3.6.0-s390x-4.patch
+Patch14: valgrind-3.6.0-strcasecmp.patch
+Patch15: valgrind-3.6.0-xlc_dbl_u32-test-patch
 License: GPLv2
 URL: http://www.valgrind.org/
 Group: Development/Debuggers
@@ -46,8 +33,10 @@ BuildRequires: glibc-devel >= 2.12
 %else
 BuildRequires: glibc-devel >= 2.11
 %endif
+%ifnarch s390x
 BuildRequires: openmpi-devel >= 1.3.3
-ExclusiveArch: %{ix86} x86_64 ppc ppc64
+%endif
+ExclusiveArch: %{ix86} x86_64 ppc ppc64 s390x
 %ifarch %{ix86}
 %define valarch x86
 %define valsecarch %{nil}
@@ -63,6 +52,10 @@ ExclusiveArch: %{ix86} x86_64 ppc ppc64
 %ifarch ppc64
 %define valarch ppc64
 %define valsecarch ppc32
+%endif
+%ifarch s390x
+%define valarch s390x
+%define valsecarch %{nil}
 %endif
 
 # Disable build root strip policy
@@ -115,29 +108,25 @@ for details.
 %patch13 -p1
 %patch14 -p1
 %patch15 -p1
-%patch16 -p1
-%patch17 -p1
-%patch18 -p1
-%patch19 -p1
-%patch20 -p1
-%patch21 -p1
-%patch22 -p1
-%patch23 -p1
-%patch24 -p1
-%patch25 -p1
-%patch27 -p1
-%patch28 -p1
+
+chmod 755 none/tests/s390x/filter_stderr
 
 %build
+CC=gcc
 %ifarch x86_64 ppc64
 # Ugly hack - libgcc 32-bit package might not be installed
 mkdir -p libgcc/32
 ar r libgcc/32/libgcc_s.a
 ar r libgcc/libgcc_s_32.a
-%configure CC="gcc -B `pwd`/libgcc/" GDB=%{_bindir}/gdb --with-mpicc=%{_libdir}/openmpi/bin/mpicc
-%else
-%configure GDB=%{_bindir}/gdb --with-mpicc=%{_libdir}/openmpi/bin/mpicc
+CC="gcc -B `pwd`/libgcc/"
 %endif
+%configure CC="$CC" \
+  CFLAGS="`echo " %{optflags} " | sed 's/ -m\(64\|3[21]\) / /g;s/^ //;s/ $//'`" \
+  CXXFLAGS="`echo " %{optflags} " | sed 's/ -m\(64\|3[21]\) / /g;s/^ //;s/ $//'`" \
+%ifnarch s390x
+  --with-mpicc=%{_libdir}/openmpi/bin/mpicc
+%endif
+  GDB=%{_bindir}/gdb \
 
 make %{?_smp_mflags}
 
@@ -192,10 +181,6 @@ popd
 
 rm -f $RPM_BUILD_ROOT%{_libdir}/valgrind/*.supp.in
 
-cd $RPM_BUILD_ROOT%{_includedir}/valgrind
-patch < %{PATCH26}
-rm -f *.orig
-
 %clean
 rm -rf $RPM_BUILD_ROOT
 
@@ -216,12 +201,19 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/valgrind/*.a
 %{_libdir}/pkgconfig/*
 
+%ifnarch s390x
 %files openmpi
 %defattr(-,root,root)
 %dir %{_libdir}/valgrind
 %{_libdir}/valgrind/libmpiwrap*.so
+%endif
 
 %changelog
+* Fri Nov 12 2010 Jakub Jelinek <jakub@redhat.com> 3.6.0-1
+- update to 3.6.0
+- add s390x support (#632354)
+- provide a replacement for str{,n}casecmp{,_l} (#626470)
+
 * Tue May 18 2010 Jakub Jelinek <jakub@redhat.com> 3.5.0-18
 - rebuilt against glibc 2.12
 
