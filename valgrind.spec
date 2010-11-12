@@ -1,7 +1,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 3.5.0
-Release: 18%{?dist}
+Release: 19%{?dist}
 Epoch: 1
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
 Patch1: valgrind-3.5.0-cachegrind-improvements.patch
@@ -32,6 +32,7 @@ Patch25: valgrind-3.5.0-syscalls3.patch
 Patch26: valgrind-3.5.0-config_h.patch
 Patch27: valgrind-3.5.0-capget.patch
 Patch28: valgrind-3.5.0-glibc-2.12.patch
+Patch29: valgrind-3.5.0-strcasecmp.patch
 License: GPLv2
 URL: http://www.valgrind.org/
 Group: Development/Debuggers
@@ -127,6 +128,7 @@ for details.
 %patch25 -p1
 %patch27 -p1
 %patch28 -p1
+%patch29 -p1
 
 %build
 %ifarch x86_64 ppc64
@@ -222,6 +224,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/valgrind/libmpiwrap*.so
 
 %changelog
+* Fri Nov 12 2010 Jakub Jelinek <jakub@redhat.com> 3.5.0-19
+- provide a replacement for str{,n}casecmp{,_l} (#626470)
+
 * Tue May 18 2010 Jakub Jelinek <jakub@redhat.com> 3.5.0-18
 - rebuilt against glibc 2.12
 
