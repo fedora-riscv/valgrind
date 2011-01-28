@@ -20,6 +20,8 @@ Patch13: valgrind-3.6.0-s390x-4.patch
 Patch14: valgrind-3.6.0-strcasecmp.patch
 Patch15: valgrind-3.6.0-xlc_dbl_u32-test-patch
 Patch16: valgrind-3.6.0-helgrind-tests.patch
+Patch17: valgrind-3.6.0-ppc64-pwrite64.patch
+Patch18: valgrind-3.6.0-pie.patch
 License: GPLv2
 URL: http://www.valgrind.org/
 Group: Development/Debuggers
@@ -29,10 +31,10 @@ Obsoletes: valgrind-callgrind
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
 %endif
-%if 0%{?fedora} >= 13 || 0%{?rhel} >= 6
-BuildRequires: glibc-devel >= 2.12
+%if 0%{?fedora} >= 15
+BuildRequires: glibc-devel >= 2.13
 %else
-BuildRequires: glibc-devel >= 2.11
+BuildRequires: glibc-devel >= 2.12
 %endif
 %ifnarch s390x
 BuildRequires: openmpi-devel >= 1.3.3
@@ -110,6 +112,8 @@ for details.
 %patch14 -p1
 %patch15 -p1
 %patch16 -p1
+%patch17 -p1
+%patch18 -p1
 
 chmod 755 none/tests/s390x/filter_stderr
 
@@ -211,6 +215,11 @@ rm -rf $RPM_BUILD_ROOT
 %endif
 
 %changelog
+* Fri Jan 28 2011 Jakub Jelinek <jakub@redhat.com> 3.6.0-2
+- rebuilt against glibc 2.13 (#673046)
+- hook in pwrite64 syscall on ppc64 (#672858)
+- fix PIE handling on ppc/ppc64 (#665289)
+
 * Fri Nov 12 2010 Jakub Jelinek <jakub@redhat.com> 3.6.0-1
 - update to 3.6.0
 - add s390x support (#632354)
