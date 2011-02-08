@@ -1,7 +1,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 3.6.0
-Release: 2%{?dist}
+Release: 3%{?dist}
 Epoch: 1
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
 Patch1: valgrind-3.6.0-cachegrind-improvements.patch
@@ -215,6 +215,9 @@ rm -rf $RPM_BUILD_ROOT
 %endif
 
 %changelog
+* Mon Feb 07 2011 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1:3.6.0-3
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_15_Mass_Rebuild
+
 * Fri Jan 28 2011 Jakub Jelinek <jakub@redhat.com> 3.6.0-2
 - rebuilt against glibc 2.13 (#673046)
 - hook in pwrite64 syscall on ppc64 (#672858)
