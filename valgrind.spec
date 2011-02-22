@@ -231,7 +231,7 @@ rm -rf $RPM_BUILD_ROOT
 
 %changelog
 * Tue Feb 22 2011 Jakub Jelinek <jakub@redhat.com> 3.5.0-20
-- rebuilt against glibc 2.13
+- rebuilt against glibc 2.13 (#676785)
 
 * Fri Nov 12 2010 Jakub Jelinek <jakub@redhat.com> 3.5.0-19
 - provide a replacement for str{,n}casecmp{,_l} (#626470)
