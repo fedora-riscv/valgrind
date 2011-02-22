@@ -1,7 +1,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 3.5.0
-Release: 19%{?dist}
+Release: 20%{?dist}
 Epoch: 1
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
 Patch1: valgrind-3.5.0-cachegrind-improvements.patch
@@ -33,6 +33,7 @@ Patch26: valgrind-3.5.0-config_h.patch
 Patch27: valgrind-3.5.0-capget.patch
 Patch28: valgrind-3.5.0-glibc-2.12.patch
 Patch29: valgrind-3.5.0-strcasecmp.patch
+Patch30: valgrind-3.5.0-glibc-2.13.patch
 License: GPLv2
 URL: http://www.valgrind.org/
 Group: Development/Debuggers
@@ -42,10 +43,14 @@ Obsoletes: valgrind-callgrind
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
 %endif
+%if 0%{?fedora} >= 14
+BuildRequires: glibc-devel >= 2.13
+%else
 %if 0%{?fedora} >= 13 || 0%{?rhel} >= 6
 BuildRequires: glibc-devel >= 2.12
 %else
 BuildRequires: glibc-devel >= 2.11
+%endif
 %endif
 BuildRequires: openmpi-devel >= 1.3.3
 ExclusiveArch: %{ix86} x86_64 ppc ppc64
@@ -129,6 +134,7 @@ for details.
 %patch27 -p1
 %patch28 -p1
 %patch29 -p1
+%patch30 -p1
 
 %build
 %ifarch x86_64 ppc64
@@ -224,6 +230,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/valgrind/libmpiwrap*.so
 
 %changelog
+* Tue Feb 22 2011 Jakub Jelinek <jakub@redhat.com> 3.5.0-20
+- rebuilt against glibc 2.13
+
 * Fri Nov 12 2010 Jakub Jelinek <jakub@redhat.com> 3.5.0-19
 - provide a replacement for str{,n}casecmp{,_l} (#626470)
 
