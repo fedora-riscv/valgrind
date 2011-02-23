@@ -1,27 +1,27 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
-Version: 3.6.0
-Release: 3%{?dist}
+Version: 3.6.1
+Release: 1%{?dist}
 Epoch: 1
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
-Patch1: valgrind-3.6.0-cachegrind-improvements.patch
-Patch2: valgrind-3.6.0-openat.patch
-Patch3: valgrind-3.6.0-glibc-2.10.1.patch
-Patch4: valgrind-3.6.0-helgrind-race-supp.patch
-Patch5: valgrind-3.6.0-amd64-loopnel.patch
-Patch6: valgrind-3.6.0-stat_h.patch
-Patch7: valgrind-3.6.0-config_h.patch
-Patch8: valgrind-3.6.0-capget.patch
-Patch9: valgrind-3.6.0-glibc-2.13.patch
-Patch10: valgrind-3.6.0-s390x-1.patch
-Patch11: valgrind-3.6.0-s390x-2.patch
-Patch12: valgrind-3.6.0-s390x-3.patch
-Patch13: valgrind-3.6.0-s390x-4.patch
-Patch14: valgrind-3.6.0-strcasecmp.patch
-Patch15: valgrind-3.6.0-xlc_dbl_u32-test-patch
-Patch16: valgrind-3.6.0-helgrind-tests.patch
-Patch17: valgrind-3.6.0-ppc64-pwrite64.patch
-Patch18: valgrind-3.6.0-pie.patch
+Patch1: valgrind-3.6.1-cachegrind-improvements.patch
+Patch2: valgrind-3.6.1-openat.patch
+Patch3: valgrind-3.6.1-glibc-2.10.1.patch
+Patch4: valgrind-3.6.1-helgrind-race-supp.patch
+Patch5: valgrind-3.6.1-stat_h.patch
+Patch6: valgrind-3.6.1-config_h.patch
+Patch7: valgrind-3.6.1-capget.patch
+Patch8: valgrind-3.6.1-glibc-2.14.patch
+Patch9: valgrind-3.6.1-s390x-1.patch
+Patch10: valgrind-3.6.1-s390x-2.patch
+Patch11: valgrind-3.6.1-s390x-3.patch
+Patch12: valgrind-3.6.1-s390x-4.patch
+Patch13: valgrind-3.6.1-xlc_dbl_u32-test.patch
+Patch14: valgrind-3.6.1-helgrind-tests.patch
+Patch15: valgrind-3.6.1-ppc64-pwrite64.patch
+Patch16: valgrind-3.6.1-pie.patch
+Patch17: valgrind-3.6.1-gen_insn_test.patch
+Patch18: valgrind-3.6.1-x86-ldso-strlen.patch
 License: GPLv2
 URL: http://www.valgrind.org/
 Group: Development/Debuggers
@@ -215,6 +215,9 @@ rm -rf $RPM_BUILD_ROOT
 %endif
 
 %changelog
+* Wed Feb 23 2011 Jakub Jelinek <jakub@redhat.com> 3.6.1-1
+- update to 3.6.1
+
 * Mon Feb 07 2011 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1:3.6.0-3
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_15_Mass_Rebuild
 
