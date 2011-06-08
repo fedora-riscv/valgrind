@@ -1,7 +1,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 3.6.1
-Release: 2%{?dist}
+Release: 3%{?dist}
 Epoch: 1
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
 Patch1: valgrind-3.6.1-cachegrind-improvements.patch
@@ -23,6 +23,7 @@ Patch16: valgrind-3.6.1-pie.patch
 Patch17: valgrind-3.6.1-gen_insn_test.patch
 Patch18: valgrind-3.6.1-x86-ldso-strlen.patch
 Patch19: valgrind-3.6.1-ppc64-build.patch
+Patch20: valgrind-3.6.1-tests-_GNU_SOURCE.patch
 License: GPLv2
 URL: http://www.valgrind.org/
 Group: Development/Debuggers
@@ -116,6 +117,7 @@ for details.
 %patch17 -p1
 %patch18 -p1
 %patch19 -p1
+%patch20 -p1
 
 chmod 755 none/tests/s390x/filter_stderr || :
 
@@ -217,6 +219,9 @@ rm -rf $RPM_BUILD_ROOT
 %endif
 
 %changelog
+* Wed Jun  8 2011 Jakub Jelinek <jakub@redhat.com> 3.6.1-3
+- fix testing against glibc 2.14
+
 * Wed Jun  8 2011 Jakub Jelinek <jakub@redhat.com> 3.6.1-2
 - fix build on ppc64 (#711608)
 - don't fail if s390x support patch hasn't been applied,
