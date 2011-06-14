@@ -1,7 +1,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 3.6.1
-Release: 1%{?dist}
+Release: 4%{?dist}
 Epoch: 1
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
 Patch1: valgrind-3.6.1-cachegrind-improvements.patch
@@ -22,6 +22,9 @@ Patch15: valgrind-3.6.1-ppc64-pwrite64.patch
 Patch16: valgrind-3.6.1-pie.patch
 Patch17: valgrind-3.6.1-gen_insn_test.patch
 Patch18: valgrind-3.6.1-x86-ldso-strlen.patch
+Patch19: valgrind-3.6.1-ppc64-build.patch
+Patch20: valgrind-3.6.1-tests-_GNU_SOURCE.patch
+Patch21: valgrind-3.6.1-x86_64-memcpy-memmove.patch
 License: GPLv2
 URL: http://www.valgrind.org/
 Group: Development/Debuggers
@@ -32,7 +35,7 @@ Obsoletes: valgrind-callgrind
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
 %endif
 %if 0%{?fedora} >= 15
-BuildRequires: glibc-devel >= 2.13
+BuildRequires: glibc-devel >= 2.14
 %else
 BuildRequires: glibc-devel >= 2.12
 %endif
@@ -114,8 +117,11 @@ for details.
 %patch16 -p1
 %patch17 -p1
 %patch18 -p1
+%patch19 -p1
+%patch20 -p1
+%patch21 -p1
 
-chmod 755 none/tests/s390x/filter_stderr
+chmod 755 none/tests/s390x/filter_stderr || :
 
 %build
 CC=gcc
@@ -157,12 +163,6 @@ gcc $RPM_OPT_FLAGS -o close_fds close_fds.c
 # XXX pth_cancel2 hangs on x86_64
 echo 'int main (void) { return 0; }' > none/tests/pth_cancel2.c
 
-# test
-make check || :
-echo ===============TESTING===================
-./close_fds make regtest || :
-echo ===============END TESTING===============
-
 %install
 rm -rf $RPM_BUILD_ROOT
 
@@ -186,6 +186,12 @@ popd
 %endif
 
 rm -f $RPM_BUILD_ROOT%{_libdir}/valgrind/*.supp.in
+
+%check
+make %{?_smp_mflags} check || :
+echo ===============TESTING===================
+./close_fds make regtest || :
+echo ===============END TESTING===============
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -215,6 +221,18 @@ rm -rf $RPM_BUILD_ROOT
 %endif
 
 %changelog
+* Mon Jun 13 2011 Jakub Jelinek <jakub@redhat.com> 3.6.1-4
+- fix memcpy/memmove redirection on x86_64 (#705790)
+
+* Wed Jun  8 2011 Jakub Jelinek <jakub@redhat.com> 3.6.1-3
+- fix testing against glibc 2.14
+
+* Wed Jun  8 2011 Jakub Jelinek <jakub@redhat.com> 3.6.1-2
+- fix build on ppc64 (#711608)
+- don't fail if s390x support patch hasn't been applied,
+  move testing into %%check (#708522)
+- rebuilt against glibc 2.14
+
 * Wed Feb 23 2011 Jakub Jelinek <jakub@redhat.com> 3.6.1-1
 - update to 3.6.1
 
