@@ -1,7 +1,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 3.6.1
-Release: 4%{?dist}
+Release: 5%{?dist}
 Epoch: 1
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
 Patch1: valgrind-3.6.1-cachegrind-improvements.patch
@@ -25,6 +25,7 @@ Patch18: valgrind-3.6.1-x86-ldso-strlen.patch
 Patch19: valgrind-3.6.1-ppc64-build.patch
 Patch20: valgrind-3.6.1-tests-_GNU_SOURCE.patch
 Patch21: valgrind-3.6.1-x86_64-memcpy-memmove.patch
+Patch22: valgrind-3.6.1-plt-unwind-info.patch
 License: GPLv2
 URL: http://www.valgrind.org/
 Group: Development/Debuggers
@@ -120,6 +121,7 @@ for details.
 %patch19 -p1
 %patch20 -p1
 %patch21 -p1
+%patch22 -p1
 
 chmod 755 none/tests/s390x/filter_stderr || :
 
@@ -221,6 +223,9 @@ rm -rf $RPM_BUILD_ROOT
 %endif
 
 %changelog
+* Thu Jul 21 2011 Jakub Jelinek <jakub@redhat.com> 3.6.1-5
+- handle PLT unwind info (#723790, KDE#277045)
+
 * Mon Jun 13 2011 Jakub Jelinek <jakub@redhat.com> 3.6.1-4
 - fix memcpy/memmove redirection on x86_64 (#705790)
 
