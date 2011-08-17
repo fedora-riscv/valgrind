@@ -1,7 +1,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 3.6.1
-Release: 5%{?dist}
+Release: 6%{?dist}
 Epoch: 1
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
 Patch1: valgrind-3.6.1-cachegrind-improvements.patch
@@ -223,6 +223,9 @@ rm -rf $RPM_BUILD_ROOT
 %endif
 
 %changelog
+* Wed Aug 17 2011 Adam Jackson <ajax@redhat.com> 3.6.1-6
+- rebuild for rpm 4.9.1 trailing / bug
+
 * Thu Jul 21 2011 Jakub Jelinek <jakub@redhat.com> 3.6.1-5
 - handle PLT unwind info (#723790, KDE#277045)
 
