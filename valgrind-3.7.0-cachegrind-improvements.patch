@@ -1,5 +1,5 @@
---- valgrind-3.4.0/cachegrind/cg_sim.c.jj	2007-01-08 02:43:10.000000000 -0500
-+++ valgrind-3.4.0/cachegrind/cg_sim.c	2007-02-13 07:15:46.000000000 -0500
+--- valgrind-3.7.0/cachegrind/cg_sim.c.jj	2011-10-26 23:24:32.000000000 +0200
++++ valgrind-3.7.0/cachegrind/cg_sim.c	2011-12-09 17:31:19.256023683 +0100
 @@ -42,27 +42,30 @@ typedef struct {
     Int          size;                   /* bytes */
     Int          assoc;
@@ -52,13 +52,3 @@
  }
  
  /* This is done as a macro rather than by passing in the cache_t2 as an 
-@@ -138,8 +138,7 @@ void cachesim_##L##_doref(Addr a, UChar 
-       return;                                                               \
-                                                                             \
-    /* Second case: word straddles two lines. */                             \
--   /* Nb: this is a fast way of doing ((set1+1) % L.sets) */                \
--   } else if (((set1 + 1) & (L.sets-1)) == set2) {                          \
-+   } else if (((set1 + 1) & (L.sets_min_1)) == set2) {                      \
-       set = &(L.tags[set1 * L.assoc]);                                      \
-       if (tag == set[0]) {                                                  \
-          goto block2;                                                       \

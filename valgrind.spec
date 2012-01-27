@@ -1,31 +1,20 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
-Version: 3.6.1
-Release: 7%{?dist}
+Version: 3.7.0
+Release: 1%{?dist}
 Epoch: 1
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
-Patch1: valgrind-3.6.1-cachegrind-improvements.patch
-Patch2: valgrind-3.6.1-openat.patch
-Patch3: valgrind-3.6.1-glibc-2.10.1.patch
-Patch4: valgrind-3.6.1-helgrind-race-supp.patch
-Patch5: valgrind-3.6.1-stat_h.patch
-Patch6: valgrind-3.6.1-config_h.patch
-Patch7: valgrind-3.6.1-capget.patch
-Patch8: valgrind-3.6.1-glibc-2.14.patch
-Patch9: valgrind-3.6.1-s390x-1.patch
-Patch10: valgrind-3.6.1-s390x-2.patch
-Patch11: valgrind-3.6.1-s390x-3.patch
-Patch12: valgrind-3.6.1-s390x-4.patch
-Patch13: valgrind-3.6.1-xlc_dbl_u32-test.patch
-Patch14: valgrind-3.6.1-helgrind-tests.patch
-Patch15: valgrind-3.6.1-ppc64-pwrite64.patch
-Patch16: valgrind-3.6.1-pie.patch
-Patch17: valgrind-3.6.1-gen_insn_test.patch
-Patch18: valgrind-3.6.1-x86-ldso-strlen.patch
-Patch19: valgrind-3.6.1-ppc64-build.patch
-Patch20: valgrind-3.6.1-tests-_GNU_SOURCE.patch
-Patch21: valgrind-3.6.1-x86_64-memcpy-memmove.patch
-Patch22: valgrind-3.6.1-plt-unwind-info.patch
+Patch1: valgrind-3.7.0-cachegrind-improvements.patch
+Patch2: valgrind-3.7.0-openat.patch
+Patch3: valgrind-3.7.0-helgrind-race-supp.patch
+Patch4: valgrind-3.7.0-stat_h.patch
+Patch5: valgrind-3.7.0-config_h.patch
+Patch6: valgrind-3.7.0-capget.patch
+Patch7: valgrind-3.7.0-glibc-2.15.patch
+Patch8: valgrind-3.7.0-pie.patch
+Patch9: valgrind-3.7.0-tests.patch
+Patch10: valgrind-3.7.0-f-sgetown-ex.patch
+Patch11: valgrind-3.7.0-scsi-ioctls.patch
 License: GPLv2
 URL: http://www.valgrind.org/
 Group: Development/Debuggers
@@ -111,19 +100,6 @@ for details.
 %patch9 -p1
 %patch10 -p1
 %patch11 -p1
-%patch12 -p1
-%patch13 -p1
-%patch14 -p1
-%patch15 -p1
-%patch16 -p1
-%patch17 -p1
-%patch18 -p1
-%patch19 -p1
-%patch20 -p1
-%patch21 -p1
-%patch22 -p1
-
-chmod 755 none/tests/s390x/filter_stderr || :
 
 %build
 CC=gcc
@@ -223,8 +199,10 @@ rm -rf $RPM_BUILD_ROOT
 %endif
 
 %changelog
-* Sat Jan 14 2012 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1:3.6.1-7
-- Rebuilt for https://fedoraproject.org/wiki/Fedora_17_Mass_Rebuild
+* Fri Jan 27 2012 Jakub Jelinek <jakub@redhat.com> 3.7.0-1
+- update to 3.7.0 (#769213, #782910, #772343)
+- handle some further SCSI ioctls (#783936)
+- handle fcntl F_SETOWN_EX and F_GETOWN_EX (#770746)
 
 * Wed Aug 17 2011 Adam Jackson <ajax@redhat.com> 3.6.1-6
 - rebuild for rpm 4.9.1 trailing / bug
