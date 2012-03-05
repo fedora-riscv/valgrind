@@ -1,8 +1,12 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 3.7.0
-Release: 1%{?dist}
+Release: 2%{?dist}
 Epoch: 1
+License: GPLv2
+URL: http://www.valgrind.org/
+Group: Development/Debuggers
+
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
 Patch1: valgrind-3.7.0-cachegrind-improvements.patch
 Patch2: valgrind-3.7.0-openat.patch
@@ -15,10 +19,8 @@ Patch8: valgrind-3.7.0-pie.patch
 Patch9: valgrind-3.7.0-tests.patch
 Patch10: valgrind-3.7.0-f-sgetown-ex.patch
 Patch11: valgrind-3.7.0-scsi-ioctls.patch
-License: GPLv2
-URL: http://www.valgrind.org/
-Group: Development/Debuggers
-BuildRoot: %{_tmppath}/%{name}-root
+Patch12: valgrind-3.7.0-enable-armv5.patch
+
 Obsoletes: valgrind-callgrind
 %ifarch x86_64 ppc64
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -29,10 +31,10 @@ BuildRequires: glibc-devel >= 2.14
 %else
 BuildRequires: glibc-devel >= 2.12
 %endif
-%ifnarch s390x
+%ifarch %{ix86} x86_64 ppc ppc64
 BuildRequires: openmpi-devel >= 1.3.3
 %endif
-ExclusiveArch: %{ix86} x86_64 ppc ppc64 s390x
+ExclusiveArch: %{ix86} x86_64 ppc ppc64 s390x %{arm}
 %ifarch %{ix86}
 %define valarch x86
 %define valsecarch %{nil}
@@ -51,6 +53,14 @@ ExclusiveArch: %{ix86} x86_64 ppc ppc64 s390x
 %endif
 %ifarch s390x
 %define valarch s390x
+%define valsecarch %{nil}
+%endif
+%ifarch armv7hl
+%define valarch armv7hl
+%define valsecarch %{nil}
+%endif
+%ifarch armv5tel
+%define valarch armv5tel
 %define valsecarch %{nil}
 %endif
 
@@ -100,6 +110,7 @@ for details.
 %patch9 -p1
 %patch10 -p1
 %patch11 -p1
+%patch12 -p1 -b .arm
 
 %build
 CC=gcc
@@ -113,7 +124,7 @@ CC="gcc -B `pwd`/libgcc/"
 %configure CC="$CC" \
   CFLAGS="`echo " %{optflags} " | sed 's/ -m\(64\|3[21]\) / /g;s/ -fexceptions / /g;s/^ //;s/ $//'`" \
   CXXFLAGS="`echo " %{optflags} " | sed 's/ -m\(64\|3[21]\) / /g;s/ -fexceptions / /g;s/^ //;s/ $//'`" \
-%ifnarch s390x
+%ifarch %{ix86} x86_64 ppc ppc64
   --with-mpicc=%{_libdir}/openmpi/bin/mpicc
 %endif
   GDB=%{_bindir}/gdb \
@@ -142,8 +153,6 @@ gcc $RPM_OPT_FLAGS -o close_fds close_fds.c
 echo 'int main (void) { return 0; }' > none/tests/pth_cancel2.c
 
 %install
-rm -rf $RPM_BUILD_ROOT
-
 %makeinstall
 mkdir docs.installed
 mv $RPM_BUILD_ROOT%{_datadir}/doc/valgrind/* docs.installed/
@@ -171,9 +180,6 @@ echo ===============TESTING===================
 ./close_fds make regtest || :
 echo ===============END TESTING===============
 
-%clean
-rm -rf $RPM_BUILD_ROOT
-
 %files
 %defattr(-,root,root)
 %doc COPYING NEWS README_*
@@ -191,7 +197,7 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/valgrind/*.a
 %{_libdir}/pkgconfig/*
 
-%ifnarch s390x
+%ifarch %{ix86} x86_64 ppc ppc64
 %files openmpi
 %defattr(-,root,root)
 %dir %{_libdir}/valgrind
@@ -199,6 +205,9 @@ rm -rf $RPM_BUILD_ROOT
 %endif
 
 %changelog
+* Sun Mar  4 2012 Peter Robinson <pbrobinson@fedoraproject.org> - 3.7.0-2
+- Fix building on ARM platform
+
 * Fri Jan 27 2012 Jakub Jelinek <jakub@redhat.com> 3.7.0-1
 - update to 3.7.0 (#769213, #782910, #772343)
 - handle some further SCSI ioctls (#783936)
