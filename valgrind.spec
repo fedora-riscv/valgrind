@@ -1,7 +1,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 3.7.0
-Release: 2%{?dist}
+Release: 3%{?dist}
 Epoch: 1
 License: GPLv2
 URL: http://www.valgrind.org/
@@ -20,6 +20,9 @@ Patch9: valgrind-3.7.0-tests.patch
 Patch10: valgrind-3.7.0-f-sgetown-ex.patch
 Patch11: valgrind-3.7.0-scsi-ioctls.patch
 Patch12: valgrind-3.7.0-enable-armv5.patch
+Patch13: valgrind-3.7.0-ldso-supp.patch
+Patch14: valgrind-3.7.0-unspecified-type.patch
+Patch15: valgrind-3.7.0-debug-types.patch
 
 Obsoletes: valgrind-callgrind
 %ifarch x86_64 ppc64
@@ -110,7 +113,10 @@ for details.
 %patch9 -p1
 %patch10 -p1
 %patch11 -p1
-%patch12 -p1 -b .arm
+%patch12 -p1
+%patch13 -p1
+%patch14 -p1
+%patch15 -p1
 
 %build
 CC=gcc
@@ -205,7 +211,12 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
-* Sun Mar  4 2012 Peter Robinson <pbrobinson@fedoraproject.org> - 3.7.0-2
+* Mon May  7 2012 Jakub Jelinek <jakub@redhat.com> 3.7.0-3
+- adjust suppressions so that it works even with ld-2.15.so (#806854)
+- handle DW_TAG_unspecified_type (#810284, KDE#278313)
+- handle .debug_types sections (#810286, KDE#284124)
+
+* Sun Mar  4 2012 Peter Robinson <pbrobinson@fedoraproject.org> 3.7.0-2
 - Fix building on ARM platform
 
 * Fri Jan 27 2012 Jakub Jelinek <jakub@redhat.com> 3.7.0-1
