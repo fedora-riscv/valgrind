@@ -213,11 +213,12 @@
            UChar* debug_str_img,  Word debug_str_sz ); /* .debug_str */
 --- valgrind-3.7.0/coregrind/m_debuginfo/readdwarf3.c	(revision 12490)
 +++ valgrind-3.7.0/coregrind/m_debuginfo/readdwarf3.c	(revision 12491)
-@@ -140,6 +140,7 @@
+@@ -140,6 +140,8 @@
  #include "pub_core_libcassert.h"
  #include "pub_core_libcprint.h"
  #include "pub_core_libcsetjmp.h"   // setjmp facilities
 +#include "pub_core_hashtable.h"
++#include "pub_core_mallocfree.h"
  #include "pub_core_options.h"
  #include "pub_core_tooliface.h"    /* VG_(needs) */
  #include "pub_core_xarray.h"
