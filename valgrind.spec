@@ -1,7 +1,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 3.7.0
-Release: 3%{?dist}
+Release: 4%{?dist}
 Epoch: 1
 License: GPLv2
 URL: http://www.valgrind.org/
@@ -125,6 +125,7 @@ for details.
 %patch17 -p1
 %patch18 -p1
 %patch19 -p1
+touch memcheck/tests/dw4.stdout.exp
 
 %build
 CC=gcc
@@ -219,7 +220,7 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
-* Mon May  7 2012 Jakub Jelinek <jakub@redhat.com> 3.7.0-3
+* Mon May  7 2012 Jakub Jelinek <jakub@redhat.com> 3.7.0-4
 - adjust suppressions so that it works even with ld-2.15.so (#806854)
 - handle DW_TAG_unspecified_type and DW_TAG_rvalue_reference_type
   (#810284, KDE#278313)
