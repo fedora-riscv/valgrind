@@ -334,8 +334,8 @@
 +                                     ULong type_signature,
 +                                     UWord die )
 +{
-+   D3SignatureType *dstype = ML_(dinfo_zalloc) ( "di.readdwarf3.sigtype",
-+                                                 sizeof(D3SignatureType) );
++   D3SignatureType *dstype = VG_(calloc) ( "di.readdwarf3.sigtype",
++                                           1, sizeof(D3SignatureType) );
 +   dstype->data = (UWord) type_signature;
 +   dstype->type_signature = type_signature;
 +   dstype->die = die;
@@ -962,7 +962,7 @@
 +   vg_assert( varparser.filenameTable == NULL );
 +
 +   /* And the signatured type hash.  */
-+   VG_(HT_destruct) ( signature_types, ML_(dinfo_free) );
++   VG_(HT_destruct) ( signature_types );
  
     /* record the GExprs in di so they can be freed later */
     vg_assert(!di->admin_gexprs);
