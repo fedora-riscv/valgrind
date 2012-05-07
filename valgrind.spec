@@ -22,7 +22,11 @@ Patch11: valgrind-3.7.0-scsi-ioctls.patch
 Patch12: valgrind-3.7.0-enable-armv5.patch
 Patch13: valgrind-3.7.0-ldso-supp.patch
 Patch14: valgrind-3.7.0-unspecified-type.patch
-Patch15: valgrind-3.7.0-debug-types.patch
+Patch15: valgrind-3.7.0-rvalue-ref.patch
+Patch16: valgrind-3.7.0-debug-leak1.patch
+Patch17: valgrind-3.7.0-debug-leak2.patch
+Patch18: valgrind-3.7.0-addToXA.patch
+Patch19: valgrind-3.7.0-debug-types.patch
 
 Obsoletes: valgrind-callgrind
 %ifarch x86_64 ppc64
@@ -117,6 +121,10 @@ for details.
 %patch13 -p1
 %patch14 -p1
 %patch15 -p1
+%patch16 -p1
+%patch17 -p1
+%patch18 -p1
+%patch19 -p1
 
 %build
 CC=gcc
@@ -213,7 +221,8 @@ echo ===============END TESTING===============
 %changelog
 * Mon May  7 2012 Jakub Jelinek <jakub@redhat.com> 3.7.0-3
 - adjust suppressions so that it works even with ld-2.15.so (#806854)
-- handle DW_TAG_unspecified_type (#810284, KDE#278313)
+- handle DW_TAG_unspecified_type and DW_TAG_rvalue_reference_type
+  (#810284, KDE#278313)
 - handle .debug_types sections (#810286, KDE#284124)
 
 * Sun Mar  4 2012 Peter Robinson <pbrobinson@fedoraproject.org> 3.7.0-2
