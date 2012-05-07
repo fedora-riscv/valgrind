@@ -1010,3 +1010,199 @@
     UChar* debug_abbv_img,   SizeT debug_abbv_sz,
     UChar* debug_line_img,   SizeT debug_line_sz,
     UChar* debug_str_img,    SizeT debug_str_sz,
+--- valgrind-3.7.0/memcheck/tests/Makefile.in.jj	2011-11-05 12:26:53.000000000 +0100
++++ valgrind-3.7.0/memcheck/tests/Makefile.in	2012-05-07 12:23:12.109680621 +0200
+@@ -105,9 +105,11 @@ check_PROGRAMS = addressable$(EXEEXT) at
+ 	vcpu_fbench$(EXEEXT) vcpu_fnfns$(EXEEXT) xml1$(EXEEXT) \
+ 	wrap1$(EXEEXT) wrap2$(EXEEXT) wrap3$(EXEEXT) wrap4$(EXEEXT) \
+ 	wrap5$(EXEEXT) wrap6$(EXEEXT) wrap7$(EXEEXT) \
+-	wrap7so.so$(EXEEXT) wrap8$(EXEEXT) writev1$(EXEEXT)
+-@VGCONF_PLATFORMS_INCLUDE_ARM_LINUX_TRUE@am__append_9 = -mfloat-abi=softfp
++	wrap7so.so$(EXEEXT) wrap8$(EXEEXT) writev1$(EXEEXT) \
++	$(am__EXEEXT_1)
++@DWARF4_TRUE@am__append_9 = dw4
+ @VGCONF_PLATFORMS_INCLUDE_ARM_LINUX_TRUE@am__append_10 = -mfloat-abi=softfp
++@VGCONF_PLATFORMS_INCLUDE_ARM_LINUX_TRUE@am__append_11 = -mfloat-abi=softfp
+ subdir = memcheck/tests
+ ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
+ am__aclocal_m4_deps = $(top_srcdir)/configure.in
+@@ -117,6 +119,7 @@ mkinstalldirs = $(install_sh) -d
+ CONFIG_HEADER = $(top_builddir)/config.h
+ CONFIG_CLEAN_FILES =
+ CONFIG_CLEAN_VPATH_FILES =
++@DWARF4_TRUE@am__EXEEXT_1 = dw4$(EXEEXT)
+ addressable_SOURCES = addressable.c
+ addressable_OBJECTS = addressable.$(OBJEXT)
+ addressable_LDADD = $(LDADD)
+@@ -178,6 +181,11 @@ describe_block_LDADD = $(LDADD)
+ doublefree_SOURCES = doublefree.c
+ doublefree_OBJECTS = doublefree.$(OBJEXT)
+ doublefree_LDADD = $(LDADD)
++dw4_SOURCES = dw4.c
++dw4_OBJECTS = dw4-dw4.$(OBJEXT)
++dw4_LDADD = $(LDADD)
++dw4_LINK = $(CCLD) $(dw4_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o \
++	$@
+ err_disable1_SOURCES = err_disable1.c
+ err_disable1_OBJECTS = err_disable1.$(OBJEXT)
+ err_disable1_LDADD = $(LDADD)
+@@ -548,7 +556,7 @@ SOURCES = addressable.c atomic_incs.c ba
+ 	badjump.c badjump2.c badloop.c badpoll.c badrw.c \
+ 	big_blocks_freed_list.c brk2.c buflen_check.c \
+ 	calloc-overflow.c clientperm.c custom-overlap.c custom_alloc.c \
+-	$(deep_templates_SOURCES) describe-block.c doublefree.c \
++	$(deep_templates_SOURCES) describe-block.c doublefree.c dw4.c \
+ 	err_disable1.c err_disable2.c err_disable3.c err_disable4.c \
+ 	erringfds.c error_counts.c errs1.c execve1.c execve2.c \
+ 	exitprog.c file_locking.c fprw.c fwrite.c \
+@@ -578,7 +586,7 @@ DIST_SOURCES = addressable.c atomic_incs
+ 	badjump.c badjump2.c badloop.c badpoll.c badrw.c \
+ 	big_blocks_freed_list.c brk2.c buflen_check.c \
+ 	calloc-overflow.c clientperm.c custom-overlap.c custom_alloc.c \
+-	$(deep_templates_SOURCES) describe-block.c doublefree.c \
++	$(deep_templates_SOURCES) describe-block.c doublefree.c dw4.c \
+ 	err_disable1.c err_disable2.c err_disable3.c err_disable4.c \
+ 	erringfds.c error_counts.c errs1.c execve1.c execve2.c \
+ 	exitprog.c file_locking.c fprw.c fwrite.c \
+@@ -920,9 +928,9 @@ AM_CPPFLAGS = -I$(top_srcdir) -I$(top_sr
+ # Nb: Tools need to augment these flags with an arch-selection option, such
+ # as $(AM_FLAG_M3264_PRI).
+ AM_CFLAGS = -Winline -Wall -Wshadow -g $(AM_FLAG_M3264_PRI) \
+-	$(am__append_9)
+-AM_CXXFLAGS = -Winline -Wall -Wshadow -g $(AM_FLAG_M3264_PRI) \
+ 	$(am__append_10)
++AM_CXXFLAGS = -Winline -Wall -Wshadow -g $(AM_FLAG_M3264_PRI) \
++	$(am__append_11)
+ # Include AM_CPPFLAGS in AM_CCASFLAGS to allow for older versions of
+ # automake;  see comments in Makefile.all.am for more detail.
+ AM_CCASFLAGS = $(AM_CPPFLAGS)
+@@ -968,6 +976,7 @@ EXTRA_DIST = \
+ 	deep_templates.stdout.exp deep_templates.stderr.exp \
+ 	describe-block.stderr.exp describe-block.vgtest \
+ 	doublefree.stderr.exp doublefree.vgtest \
++	dw4.vgtest dw4.stderr.exp dw4.stdout.exp \
+ 	err_disable1.vgtest err_disable1.stderr.exp \
+ 	err_disable2.vgtest err_disable2.stderr.exp \
+ 	err_disable3.vgtest err_disable3.stderr.exp \
+@@ -1108,6 +1117,7 @@ EXTRA_DIST = \
+ @VGCONF_OS_IS_DARWIN_TRUE@atomic_incs_CFLAGS = $(AM_CFLAGS) -mdynamic-no-pic
+ deep_templates_SOURCES = deep_templates.cpp
+ deep_templates_CXXFLAGS = $(AM_CFLAGS) -O -gstabs
++dw4_CFLAGS = $(AM_CFLAGS) -gdwarf-4 -fdebug-types-section
+ err_disable3_LDADD = -lpthread
+ err_disable4_LDADD = -lpthread
+ error_counts_CFLAGS = $(AM_CFLAGS) @FLAG_W_NO_UNINITIALIZED@
+@@ -1281,6 +1291,9 @@ describe-block$(EXEEXT): $(describe_bloc
+ doublefree$(EXEEXT): $(doublefree_OBJECTS) $(doublefree_DEPENDENCIES) 
+ 	@rm -f doublefree$(EXEEXT)
+ 	$(LINK) $(doublefree_OBJECTS) $(doublefree_LDADD) $(LIBS)
++dw4$(EXEEXT): $(dw4_OBJECTS) $(dw4_DEPENDENCIES) 
++	@rm -f dw4$(EXEEXT)
++	$(dw4_LINK) $(dw4_OBJECTS) $(dw4_LDADD) $(LIBS)
+ err_disable1$(EXEEXT): $(err_disable1_OBJECTS) $(err_disable1_DEPENDENCIES) 
+ 	@rm -f err_disable1$(EXEEXT)
+ 	$(LINK) $(err_disable1_OBJECTS) $(err_disable1_LDADD) $(LIBS)
+@@ -1610,6 +1623,7 @@ distclean-compile:
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/deep_templates-deep_templates.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/describe-block.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/doublefree.Po@am__quote@
++@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dw4-dw4.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/err_disable1.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/err_disable2.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/err_disable3.Po@am__quote@
+@@ -1738,6 +1752,20 @@ atomic_incs-atomic_incs.obj: atomic_incs
+ @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+ @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(atomic_incs_CFLAGS) $(CFLAGS) -c -o atomic_incs-atomic_incs.obj `if test -f 'atomic_incs.c'; then $(CYGPATH_W) 'atomic_incs.c'; else $(CYGPATH_W) '$(srcdir)/atomic_incs.c'; fi`
+ 
++dw4-dw4.o: dw4.c
++@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(dw4_CFLAGS) $(CFLAGS) -MT dw4-dw4.o -MD -MP -MF $(DEPDIR)/dw4-dw4.Tpo -c -o dw4-dw4.o `test -f 'dw4.c' || echo '$(srcdir)/'`dw4.c
++@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/dw4-dw4.Tpo $(DEPDIR)/dw4-dw4.Po
++@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='dw4.c' object='dw4-dw4.o' libtool=no @AMDEPBACKSLASH@
++@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
++@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(dw4_CFLAGS) $(CFLAGS) -c -o dw4-dw4.o `test -f 'dw4.c' || echo '$(srcdir)/'`dw4.c
++
++dw4-dw4.obj: dw4.c
++@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(dw4_CFLAGS) $(CFLAGS) -MT dw4-dw4.obj -MD -MP -MF $(DEPDIR)/dw4-dw4.Tpo -c -o dw4-dw4.obj `if test -f 'dw4.c'; then $(CYGPATH_W) 'dw4.c'; else $(CYGPATH_W) '$(srcdir)/dw4.c'; fi`
++@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/dw4-dw4.Tpo $(DEPDIR)/dw4-dw4.Po
++@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='dw4.c' object='dw4-dw4.obj' libtool=no @AMDEPBACKSLASH@
++@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
++@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(dw4_CFLAGS) $(CFLAGS) -c -o dw4-dw4.obj `if test -f 'dw4.c'; then $(CYGPATH_W) 'dw4.c'; else $(CYGPATH_W) '$(srcdir)/dw4.c'; fi`
++
+ error_counts-error_counts.o: error_counts.c
+ @am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(error_counts_CFLAGS) $(CFLAGS) -MT error_counts-error_counts.o -MD -MP -MF $(DEPDIR)/error_counts-error_counts.Tpo -c -o error_counts-error_counts.o `test -f 'error_counts.c' || echo '$(srcdir)/'`error_counts.c
+ @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/error_counts-error_counts.Tpo $(DEPDIR)/error_counts-error_counts.Po
+--- valgrind-3.7.0/configure.jj	2012-05-07 11:35:16.000000000 +0200
++++ valgrind-3.7.0/configure	2012-05-07 12:23:03.219647763 +0200
+@@ -631,6 +631,8 @@ BUILD_SSSE3_TESTS_TRUE
+ BUILD_SSE3_TESTS_FALSE
+ BUILD_SSE3_TESTS_TRUE
+ FLAG_NO_BUILD_ID
++DWARF4_FALSE
++DWARF4_TRUE
+ FLAG_UNLIMITED_INLINE_UNIT_GROWTH
+ FLAG_FNO_STACK_PROTECTOR
+ FLAG_W_EXTRA
+@@ -7580,6 +7582,52 @@ rm -f core conftest.err conftest.$ac_obj
+ CFLAGS=$safe_CFLAGS
+ 
+ 
++# does this compiler support -gdwarf-4 -fdebug-types-section ?
++
++{ $as_echo "$as_me:${as_lineno-$LINENO}: checking if gcc accepts -gdwarf-4 -fdebug-types-section" >&5
++$as_echo_n "checking if gcc accepts -gdwarf-4 -fdebug-types-section... " >&6; }
++
++safe_CFLAGS=$CFLAGS
++CFLAGS="-gdwarf-4 -fdebug-types-section"
++
++cat confdefs.h - <<_ACEOF >conftest.$ac_ext
++/* end confdefs.h.  */
++
++int
++main ()
++{
++
++  return 0;
++
++  ;
++  return 0;
++}
++_ACEOF
++if ac_fn_c_try_compile "$LINENO"; then :
++
++ac_have_dwarf4=yes
++{ $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
++$as_echo "yes" >&6; }
++
++else
++
++ac_have_dwarf4=no
++{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
++$as_echo "no" >&6; }
++
++fi
++rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
++ if test x$ac_have_dwarf4 = xyes; then
++  DWARF4_TRUE=
++  DWARF4_FALSE='#'
++else
++  DWARF4_TRUE='#'
++  DWARF4_FALSE=
++fi
++
++CFLAGS=$safe_CFLAGS
++
++
+ # does the linker support -Wl,--build-id=none ?  Note, it's
+ # important that we test indirectly via whichever C compiler
+ # is selected, rather than testing /usr/bin/ld or whatever
+@@ -9292,6 +9340,10 @@ if test -z "${HAVE_PTHREAD_CREATE_GLIBC_
+   as_fn_error "conditional \"HAVE_PTHREAD_CREATE_GLIBC_2_0\" was never defined.
+ Usually this means the macro was only invoked conditionally." "$LINENO" 5
+ fi
++if test -z "${DWARF4_TRUE}" && test -z "${DWARF4_FALSE}"; then
++  as_fn_error "conditional \"DWARF4\" was never defined.
++Usually this means the macro was only invoked conditionally." "$LINENO" 5
++fi
+ if test -z "${BUILD_SSE3_TESTS_TRUE}" && test -z "${BUILD_SSE3_TESTS_FALSE}"; then
+   as_fn_error "conditional \"BUILD_SSE3_TESTS\" was never defined.
+ Usually this means the macro was only invoked conditionally." "$LINENO" 5
