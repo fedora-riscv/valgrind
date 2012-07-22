@@ -1,7 +1,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 3.7.0
-Release: 4%{?dist}
+Release: 5%{?dist}
 Epoch: 1
 License: GPLv2
 URL: http://www.valgrind.org/
@@ -220,6 +220,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Sun Jul 22 2012 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1:3.7.0-5
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_18_Mass_Rebuild
+
 * Mon May  7 2012 Jakub Jelinek <jakub@redhat.com> 3.7.0-4
 - adjust suppressions so that it works even with ld-2.15.so (#806854)
 - handle DW_TAG_unspecified_type and DW_TAG_rvalue_reference_type
