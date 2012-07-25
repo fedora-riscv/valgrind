@@ -1,7 +1,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 3.7.0
-Release: 5%{?dist}
+Release: 6%{?dist}
 Epoch: 1
 License: GPLv2
 URL: http://www.valgrind.org/
@@ -27,6 +27,7 @@ Patch16: valgrind-3.7.0-debug-leak1.patch
 Patch17: valgrind-3.7.0-debug-leak2.patch
 Patch18: valgrind-3.7.0-addToXA.patch
 Patch19: valgrind-3.7.0-debug-types.patch
+Patch20: valgrind-3.7.0-dwz.patch
 
 Obsoletes: valgrind-callgrind
 %ifarch x86_64 ppc64
@@ -125,6 +126,7 @@ for details.
 %patch17 -p1
 %patch18 -p1
 %patch19 -p1
+%patch20 -p1
 touch memcheck/tests/dw4.stdout.exp
 
 %build
@@ -220,6 +222,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Mon Jul 25 2012 Mark Wielaard <mjw@redhat.com> 3.7.0-6
+- handle dwz DWARF compressor output (#842659, KDE#302901)
+
 * Sun Jul 22 2012 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1:3.7.0-5
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_18_Mass_Rebuild
 
