@@ -1,0 +1,57 @@
+diff -ur valgrind-3.7.0.orig/configure valgrind-3.7.0/configure
+--- valgrind-3.7.0.orig/configure	2012-07-25 15:08:56.846744849 +0200
++++ valgrind-3.7.0/configure	2012-07-25 15:12:59.690471999 +0200
+@@ -6414,6 +6426,16 @@
+ 	DEFAULT_SUPP="glibc-2.34567-NPTL-helgrind.supp ${DEFAULT_SUPP}"
+ 	DEFAULT_SUPP="glibc-2.X-drd.supp ${DEFAULT_SUPP}"
+ 	;;
++     2.16)
++	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: 2.16 family" >&5
++$as_echo "2.16 family" >&6; }
++
++$as_echo "#define GLIBC_2_16 1" >>confdefs.h
++
++	DEFAULT_SUPP="glibc-2.X.supp ${DEFAULT_SUPP}"
++	DEFAULT_SUPP="glibc-2.34567-NPTL-helgrind.supp ${DEFAULT_SUPP}"
++	DEFAULT_SUPP="glibc-2.X-drd.supp ${DEFAULT_SUPP}"
++	;;
+      darwin)
+ 	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: Darwin" >&5
+ $as_echo "Darwin" >&6; }
+@@ -6434,8 +6456,8 @@
+      *)
+ 	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: unsupported version ${GLIBC_VERSION}" >&5
+ $as_echo "unsupported version ${GLIBC_VERSION}" >&6; }
+-	as_fn_error "Valgrind requires glibc version 2.2 - 2.15" "$LINENO" 5
+-	as_fn_error "or Darwin libc" "$LINENO" 5
++	as_fn_error "Valgrind requires glibc version 2.2 - 2.16" "$LINENO" 5
++	as_fn_error "or Darwin libc" "$LINENO" 5
+ 	;;
+ esac
+ 
+diff -ur valgrind-3.7.0.orig/configure.in valgrind-3.7.0/configure.in
+--- valgrind-3.7.0.orig/configure.in	2012-07-25 15:08:56.757743484 +0200
++++ valgrind-3.7.0/configure.in	2012-07-25 15:11:40.138250933 +0200
+@@ -782,6 +782,13 @@
+ 	DEFAULT_SUPP="glibc-2.34567-NPTL-helgrind.supp ${DEFAULT_SUPP}"
+ 	DEFAULT_SUPP="glibc-2.X-drd.supp ${DEFAULT_SUPP}"
+ 	;;
++     2.16)
++	AC_MSG_RESULT(2.16 family)
++	AC_DEFINE([GLIBC_2_16], 1, [Define to 1 if you're using glibc 2.16.x])
++	DEFAULT_SUPP="glibc-2.X.supp ${DEFAULT_SUPP}"
++	DEFAULT_SUPP="glibc-2.34567-NPTL-helgrind.supp ${DEFAULT_SUPP}"
++	DEFAULT_SUPP="glibc-2.X-drd.supp ${DEFAULT_SUPP}"
++	;;
+      darwin)
+ 	AC_MSG_RESULT(Darwin)
+ 	AC_DEFINE([DARWIN_LIBC], 1, [Define to 1 if you're using Darwin])
+@@ -795,7 +802,7 @@
+ 
+      *)
+ 	AC_MSG_RESULT([unsupported version ${GLIBC_VERSION}])
+-	AC_MSG_ERROR([Valgrind requires glibc version 2.2 - 2.15])
++	AC_MSG_ERROR([Valgrind requires glibc version 2.2 - 2.16])
+ 	AC_MSG_ERROR([or Darwin libc])
+ 	;;
+ esac
