@@ -581,16 +581,16 @@ diff -ru valgrind-3.7.0.orig/coregrind/m_debuginfo/readelf.c valgrind-3.7.0/core
 +               ElfXX_Nhdr* note = (ElfXX_Nhdr*)(image + offset);
 +               Char* name = (Char *)note + sizeof(ElfXX_Nhdr);
 +               UChar *desc = (UChar *)name + ((note->n_namesz + 3) & ~3);
-+               Word j;
++               Word j2;
 +
 +               if (VG_(strcmp)(name, ELF_NOTE_GNU) == 0 &&
 +                   note->n_type == NT_GNU_BUILD_ID) {
 +                  buildid = ML_(dinfo_zalloc)("di.fbi.1",
 +                                              note->n_descsz * 2 + 1);
 +                  
-+                  for (j = 0; j < note->n_descsz; j++) {
++                  for (j2 = 0; j2 < note->n_descsz; j2++) {
 +                     VG_(sprintf)(buildid + VG_(strlen)(buildid), 
-+                                  "%02x", desc[j]);
++                                  "%02x", desc[j2]);
 +                  }
 +               }
 +
@@ -668,7 +668,7 @@ diff -ru valgrind-3.7.0.orig/coregrind/m_debuginfo/readelf.c valgrind-3.7.0/core
     Bool          res, ok;
     SysRes        fd, sres;
 -   Word          i;
-+   Word          i, j;
++   Word          i, i2;
     Bool          dynbss_present = False;
     Bool          sdynbss_present = False;
  
@@ -798,9 +798,9 @@ diff -ru valgrind-3.7.0.orig/coregrind/m_debuginfo/readelf.c valgrind-3.7.0/core
 +                                (debugaltlink_sz - buildid_offset)
 +                                * 2 + 1);
 +
-+         for (j = 0; j < debugaltlink_sz - buildid_offset; j++)
-+            VG_(sprintf)(altbuildid + 2 * j, 
-+                         "%02x", debugaltlink_img[buildid_offset + j]);
++         for (i2 = 0; i2 < debugaltlink_sz - buildid_offset; i2++)
++            VG_(sprintf)(altbuildid + 2 * i2, 
++                         "%02x", debugaltlink_img[buildid_offset + i2]);
 +
 +         /* See if we can find a matching debug file */
 +         find_debug_file( di, di->fsm.filename, altbuildid,

@@ -1,7 +1,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 3.7.0
-Release: 6%{?dist}
+Release: 7%{?dist}
 Epoch: 1
 License: GPLv2
 URL: http://www.valgrind.org/
@@ -29,6 +29,7 @@ Patch18: valgrind-3.7.0-addToXA.patch
 Patch19: valgrind-3.7.0-debug-types.patch
 Patch20: valgrind-3.7.0-dwz.patch
 Patch21: valgrind-3.7.0-glibc-2.16.patch
+Patch22: valgrind-3.7.0-ref_addr.patch
 
 Obsoletes: valgrind-callgrind
 %ifarch x86_64 ppc64
@@ -129,6 +130,7 @@ for details.
 %patch19 -p1
 %patch20 -p1
 %patch21 -p1
+%patch22 -p1
 touch memcheck/tests/dw4.stdout.exp
 
 %build
@@ -224,6 +226,10 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Fri Aug 03 2012 Mark Wielaard <mjw@redhat.com> 3.7.0-7
+- Fixup shadowing warnings valgrind-3.7.0-dwz.patch
+- Add valgrind-3.7.0-ref_addr.patch (#842659, KDE#298864)
+
 * Mon Jul 25 2012 Mark Wielaard <mjw@redhat.com> 3.7.0-6
 - handle dwz DWARF compressor output (#842659, KDE#302901)
 - allow glibc 2.16.
