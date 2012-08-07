@@ -146,9 +146,9 @@ CC="gcc -B `pwd`/libgcc/"
   CFLAGS="`echo " %{optflags} " | sed 's/ -m\(64\|3[21]\) / /g;s/ -fexceptions / /g;s/^ //;s/ $//'`" \
   CXXFLAGS="`echo " %{optflags} " | sed 's/ -m\(64\|3[21]\) / /g;s/ -fexceptions / /g;s/^ //;s/ $//'`" \
 %ifarch %{ix86} x86_64 ppc ppc64
-  --with-mpicc=%{_libdir}/openmpi/bin/mpicc
+  --with-mpicc=%{_libdir}/openmpi/bin/mpicc \
 %endif
-  GDB=%{_bindir}/gdb \
+  GDB=%{_bindir}/gdb
 
 make %{?_smp_mflags}
 
