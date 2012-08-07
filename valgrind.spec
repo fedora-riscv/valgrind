@@ -1,35 +1,24 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
-Version: 3.7.0
-Release: 7%{?dist}
+Version: 3.8.0
+Release: 0.1.TEST1.svn12858%{?dist}
 Epoch: 1
 License: GPLv2
 URL: http://www.valgrind.org/
 Group: Development/Debuggers
 
-Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
-Patch1: valgrind-3.7.0-cachegrind-improvements.patch
-Patch2: valgrind-3.7.0-openat.patch
-Patch3: valgrind-3.7.0-helgrind-race-supp.patch
-Patch4: valgrind-3.7.0-stat_h.patch
-Patch5: valgrind-3.7.0-config_h.patch
-Patch6: valgrind-3.7.0-capget.patch
-Patch7: valgrind-3.7.0-glibc-2.15.patch
-Patch8: valgrind-3.7.0-pie.patch
-Patch9: valgrind-3.7.0-tests.patch
-Patch10: valgrind-3.7.0-f-sgetown-ex.patch
-Patch11: valgrind-3.7.0-scsi-ioctls.patch
-Patch12: valgrind-3.7.0-enable-armv5.patch
-Patch13: valgrind-3.7.0-ldso-supp.patch
-Patch14: valgrind-3.7.0-unspecified-type.patch
-Patch15: valgrind-3.7.0-rvalue-ref.patch
-Patch16: valgrind-3.7.0-debug-leak1.patch
-Patch17: valgrind-3.7.0-debug-leak2.patch
-Patch18: valgrind-3.7.0-addToXA.patch
-Patch19: valgrind-3.7.0-debug-types.patch
-Patch20: valgrind-3.7.0-dwz.patch
-Patch21: valgrind-3.7.0-glibc-2.16.patch
-Patch22: valgrind-3.7.0-ref_addr.patch
+#Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
+Source0: valgrind-%{version}-TEST1.tar.bz2
+Patch1: valgrind-3.8.0-cachegrind-improvements.patch
+Patch2: valgrind-3.8.0-openat.patch
+Patch3: valgrind-3.8.0-helgrind-race-supp.patch
+Patch4: valgrind-3.8.0-stat_h.patch
+Patch5: valgrind-3.8.0-config_h.patch
+Patch6: valgrind-3.8.0-capget.patch
+Patch7: valgrind-3.8.0-pie.patch
+Patch8: valgrind-3.8.0-tests.patch
+Patch9: valgrind-3.8.0-enable-armv5.patch
+Patch10: valgrind-3.8.0-ldso-supp.patch
 
 Obsoletes: valgrind-callgrind
 %ifarch x86_64 ppc64
@@ -119,19 +108,6 @@ for details.
 %patch8 -p1
 %patch9 -p1
 %patch10 -p1
-%patch11 -p1
-%patch12 -p1
-%patch13 -p1
-%patch14 -p1
-%patch15 -p1
-%patch16 -p1
-%patch17 -p1
-%patch18 -p1
-%patch19 -p1
-%patch20 -p1
-%patch21 -p1
-%patch22 -p1
-touch memcheck/tests/dw4.stdout.exp
 
 %build
 CC=gcc
@@ -225,6 +201,11 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Tue Aug 07 2012 Mark Wielaard <mjw@redhat.com> 3.8.0-0.1.TEST1.svn12858
+- Update to 3.8.0-TEST1
+- Clear CFLAGS CXXFLAGS LDFLAGS.
+- Fix \ line continuation in configure line.
+
 * Fri Aug 03 2012 Mark Wielaard <mjw@redhat.com> 3.7.0-7
 - Fixup shadowing warnings valgrind-3.7.0-dwz.patch
 - Add valgrind-3.7.0-ref_addr.patch (#842659, KDE#298864)
