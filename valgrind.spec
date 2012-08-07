@@ -143,8 +143,7 @@ ar r libgcc/libgcc_s_32.a
 CC="gcc -B `pwd`/libgcc/"
 %endif
 %configure CC="$CC" \
-  CFLAGS="`echo " %{optflags} " | sed 's/ -m\(64\|3[21]\) / /g;s/ -fexceptions / /g;s/^ //;s/ $//'`" \
-  CXXFLAGS="`echo " %{optflags} " | sed 's/ -m\(64\|3[21]\) / /g;s/ -fexceptions / /g;s/^ //;s/ $//'`" \
+	CFLAGS="" CXXFLAGS="" LDFLAGS="" \
 %ifarch %{ix86} x86_64 ppc ppc64
   --with-mpicc=%{_libdir}/openmpi/bin/mpicc \
 %endif
