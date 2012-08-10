@@ -18,6 +18,7 @@ Patch7: valgrind-3.8.0-pie.patch
 Patch8: valgrind-3.8.0-tests.patch
 Patch9: valgrind-3.8.0-enable-armv5.patch
 Patch10: valgrind-3.8.0-ldso-supp.patch
+Patch11: valgrind-3.8.0-x86-backtrace.patch
 
 Obsoletes: valgrind-callgrind
 %ifarch x86_64 ppc64
@@ -107,6 +108,7 @@ for details.
 %patch8 -p1
 %patch9 -p1
 %patch10 -p1
+%patch11 -p1
 
 %build
 CC=gcc
@@ -208,6 +210,8 @@ echo ===============END TESTING===============
 - update to 3.8.0 release
 - from CFLAGS/CXXFLAGS filter just fortification flags, not arch
   specific flags
+- on i?86 prefer to use CFI over %ebp unwinding, as GCC 4.6+
+  defaults to -fomit-frame-pointer
 
 * Tue Aug 07 2012 Mark Wielaard <mjw@redhat.com> 3.8.0-0.1.TEST1.svn12858
 - Update to 3.8.0-TEST1
