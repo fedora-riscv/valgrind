@@ -117,7 +117,11 @@ ar r libgcc/32/libgcc_s.a
 ar r libgcc/libgcc_s_32.a
 CC="gcc -B `pwd`/libgcc/"
 %endif
-OPTFLAGS="`echo " %{optflags} " | sed 's/ -m\(64\|3[21]\) / /g;s/ -fexceptions / /g;s/ -fstack-protector / / g;s/ -Wp,-D_FORTIFY_SOURCE=2 / /g;s/^ //;s/ $//'`"
+# Filter out some flags that cause lots of valgrind test failures.
+# Also filter away -O2, valgrind adds it wherever suitable, but
+# not for tests which should be -O0, as they aren't meant to be
+# compiled with -O2 unless explicitely requested.
+OPTFLAGS="`echo " %{optflags} " | sed 's/ -m\(64\|3[21]\) / /g;s/ -fexceptions / /g;s/ -fstack-protector / / g;s/ -Wp,-D_FORTIFY_SOURCE=2 / /g;s/ -O2 / /g;s/^ //;s/ $//'`"
 %configure CC="$CC" CFLAGS="$OPTFLAGS" CXXFLAGS="$OPTFLAGS" \
 %ifarch %{ix86} x86_64 ppc ppc64
   --with-mpicc=%{_libdir}/openmpi/bin/mpicc \
