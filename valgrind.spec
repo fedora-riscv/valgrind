@@ -1,14 +1,13 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 3.8.0
-Release: 0.1.TEST1.svn12858%{?dist}
+Release: 1%{?dist}
 Epoch: 1
 License: GPLv2
 URL: http://www.valgrind.org/
 Group: Development/Debuggers
 
-#Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
-Source0: valgrind-%{version}-TEST1.tar.bz2
+Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
 Patch1: valgrind-3.8.0-cachegrind-improvements.patch
 Patch2: valgrind-3.8.0-openat.patch
 Patch3: valgrind-3.8.0-helgrind-race-supp.patch
@@ -119,7 +118,8 @@ ar r libgcc/libgcc_s_32.a
 CC="gcc -B `pwd`/libgcc/"
 %endif
 %configure CC="$CC" \
-	CFLAGS="" CXXFLAGS="" LDFLAGS="" \
+  CFLAGS="`echo " %{optflags} " | sed 's/ -m\(64\|3[21]\) / /g;s/ \(-fexceptions\|-fstack-protector\|-Wp,-D_FORTIFY_SOURCE=2\) / /g;s/^ //;s/ $//'`" \
+  CXXFLAGS="`echo " %{optflags} " | sed 's/ -m\(64\|3[21]\) / /g;s/ \(-fexceptions\|-fstack-protector\|-Wp,-D_FORTIFY_SOURCE=2\) / /g;s/^ //;s/ $//'`" \
 %ifarch %{ix86} x86_64 ppc ppc64
   --with-mpicc=%{_libdir}/openmpi/bin/mpicc \
 %endif
@@ -201,6 +201,11 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Fri Aug 10 2012 Jakub Jelinek <jakub@redhat.com> 3.8.0-1
+- update to 3.8.0 release
+- from CFLAGS/CXXFLAGS filter just fortification flags, not arch
+  specific flags
+
 * Tue Aug 07 2012 Mark Wielaard <mjw@redhat.com> 3.8.0-0.1.TEST1.svn12858
 - Update to 3.8.0-TEST1
 - Clear CFLAGS CXXFLAGS LDFLAGS.
