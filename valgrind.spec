@@ -1,7 +1,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 3.8.0
-Release: 1%{?dist}
+Release: 2%{?dist}
 Epoch: 1
 License: GPLv2
 URL: http://www.valgrind.org/
@@ -175,6 +175,19 @@ popd
 
 rm -f $RPM_BUILD_ROOT%{_libdir}/valgrind/*.supp.in
 
+%ifarch %{ix86} x86_64
+# To avoid multilib clashes in between i?86 and x86_64,
+# tweak installed <valgrind/config.h> a little bit.
+for i in HAVE_PTHREAD_CREATE_GLIBC_2_0 \
+%if 0%{?rhel} <= 5
+         HAVE_BUILTIN_ATOMIC HAVE_BUILTIN_ATOMIC_CXX \
+%endif
+         ; do
+  sed -i -e 's,^\(#define '$i' 1\|/\* #undef '$i' \*/\)$,#ifdef __x86_64__\n# define '$i' 1\n#endif,' \
+    $RPM_BUILD_ROOT%{_includedir}/valgrind/config.h
+done
+%endif
+
 %check
 make %{?_smp_mflags} check || :
 echo ===============TESTING===================
@@ -206,6 +219,10 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Wed Aug 15 2012 Jakub Jelinek <jakub@redhat.com> 3.8.0-2
+- tweak up <valgrind/config.h> to allow simultaneous installation
+  of valgrind-devel.{i686,x86_64} (#848146)
+
 * Fri Aug 10 2012 Jakub Jelinek <jakub@redhat.com> 3.8.0-1
 - update to 3.8.0 release
 - from CFLAGS/CXXFLAGS filter just fortification flags, not arch
