@@ -1,7 +1,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 3.8.0
-Release: 2%{?dist}
+Release: 3%{?dist}
 Epoch: 1
 License: GPLv2
 URL: http://www.valgrind.org/
@@ -179,7 +179,7 @@ rm -f $RPM_BUILD_ROOT%{_libdir}/valgrind/*.supp.in
 # To avoid multilib clashes in between i?86 and x86_64,
 # tweak installed <valgrind/config.h> a little bit.
 for i in HAVE_PTHREAD_CREATE_GLIBC_2_0 \
-%if 0%{?rhel} <= 5
+%if 0%{?rhel} == 5
          HAVE_BUILTIN_ATOMIC HAVE_BUILTIN_ATOMIC_CXX \
 %endif
          ; do
@@ -219,6 +219,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Wed Aug 15 2012 Jakub Jelinek <jakub@redhat.com> 3.8.0-3
+- fix up last change
+
 * Wed Aug 15 2012 Jakub Jelinek <jakub@redhat.com> 3.8.0-2
 - tweak up <valgrind/config.h> to allow simultaneous installation
   of valgrind-devel.{i686,x86_64} (#848146)
