@@ -1,7 +1,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 3.8.0
-Release: 4%{?dist}
+Release: 5%{?dist}
 Epoch: 1
 License: GPLv2
 URL: http://www.valgrind.org/
@@ -20,6 +20,7 @@ Patch9: valgrind-3.8.0-enable-armv5.patch
 Patch10: valgrind-3.8.0-ldso-supp.patch
 Patch11: valgrind-3.8.0-x86-backtrace.patch
 Patch12: valgrind-3.8.0-find-buildid.patch
+Patch13: valgrind-3.8.0-abbrev-parsing.patch
 
 Obsoletes: valgrind-callgrind
 %ifarch x86_64 ppc64
@@ -111,6 +112,7 @@ for details.
 %patch10 -p1
 %patch11 -p1
 %patch12 -p1
+%patch13 -p1
 
 %build
 CC=gcc
@@ -221,6 +223,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Mon Aug 27 2012 Mark Wielaard <mjw@redhat.com> 3.8.0-5
+- Add valgrind-3.8.0-abbrev-parsing.patch for #849783 (KDE#305513).
+
 * Sun Aug 19 2012 Mark Wielaard <mjw@redhat.com> 3.8.0-4
 - Add valgrind-3.8.0-find-buildid.patch workaround bug #849435 (KDE#305431).
 

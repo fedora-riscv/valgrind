@@ -1,0 +1,92 @@
+Index: coregrind/m_debuginfo/readdwarf.c
+===================================================================
+--- valgrind-3.8.0/coregrind/m_debuginfo/readdwarf.c	(revision 12871)
++++ valgrind-3.8.0/coregrind/m_debuginfo/readdwarf.c	(working copy)
+@@ -1115,7 +1115,8 @@
+             case 0x01: /* FORM_addr */      p += addr_size; break;
+             case 0x03: /* FORM_block2 */    p += ML_(read_UShort)(p) + 2; break;
+             case 0x04: /* FORM_block4 */    p += ML_(read_UInt)(p) + 4; break;
+-            case 0x09: /* FORM_block */     p += read_leb128U( &p ); break;
++            case 0x09: /* FORM_block */     /* fallthrough */
++            case 0x18: /* FORM_exprloc */   { ULong block_len = read_leb128U( &p ); p += block_len; break; }
+             case 0x0a: /* FORM_block1 */    p += *p + 1; break;
+             case 0x0c: /* FORM_flag */      p++; break;
+             case 0x0d: /* FORM_sdata */     read_leb128S( &p ); break;
+@@ -1126,7 +1127,6 @@
+             case 0x13: /* FORM_ref4 */      p += 4; break;
+             case 0x14: /* FORM_ref8 */      p += 8; break;
+             case 0x15: /* FORM_ref_udata */ read_leb128U( &p ); break;
+-            case 0x18: /* FORM_exprloc */   p += read_leb128U( &p ); break;
+             case 0x19: /* FORM_flag_present */break;
+             case 0x20: /* FORM_ref_sig8 */  p += 8; break;
+             case 0x1f20: /* FORM_GNU_ref_alt */ p += ui->dw64 ? 8 : 4; break;
+Index: coregrind/m_debuginfo/readdwarf.c
+===================================================================
+--- valgrind-3.8.0/coregrind/m_debuginfo/readdwarf.c	(revision 12871)
++++ valgrind-3.8.0/coregrind/m_debuginfo/readdwarf.c	(working copy)
+@@ -945,11 +945,11 @@
+ /* Return abbrev for given code 
+  * Returned pointer points to the tag
+  * */
+-static UChar* lookup_abbrev( UChar* p, UInt acode )
++static UChar* lookup_abbrev( UChar* p, UInt acode, UChar* end_img )
+ {
+    UInt code;
+    UInt name;
+-   for( ; ; ) {
++   while( p < end_img ) {
+       code = read_leb128U( &p );
+       if ( code == acode )
+          return p;
+@@ -959,7 +959,7 @@
+          name = read_leb128U( &p ); /* name */
+          read_leb128U( &p );   /* form */
+       }
+-      while( name != 0 ); /* until name == form == 0 */
++      while( name != 0 && p < end_img ); /* until name == form == 0 */
+    }
+    return NULL;
+ }
+@@ -985,6 +985,7 @@
+ void read_unitinfo_dwarf2( /*OUT*/UnitInfo* ui,
+                                   UChar*    unitblock_img,
+                                   UChar*    debugabbrev_img,
++                                  Word      debug_abbv_sz,
+                                   UChar*    debugstr_img,
+                                   UChar*    debugstr_alt_img )
+ {
+@@ -1046,7 +1047,12 @@
+           * not triggered since we shortcut the parsing once we have
+           * read the compile_unit block.  This should only occur when
+           * level > 0 */
+-         abbrev_img = lookup_abbrev( debugabbrev_img + atoffs, acode );
++         abbrev_img = lookup_abbrev( debugabbrev_img + atoffs, acode,
++				     debugabbrev_img + debug_abbv_sz );
++	 if ( abbrev_img == NULL ) {
++	     VG_(printf)( "### unknown abbrev 0x%x\n", acode );
++	     break;
++	 }
+       }
+ 
+       tag = read_leb128U( &abbrev_img );
+@@ -1056,7 +1062,7 @@
+          level++;
+ 
+       /* And loop on entries */
+-      for ( ; ; ) {
++      while( p < end_img ) {
+          /* Read entry definition */
+          UInt  name, form;
+          ULong cval = -1LL;  /* Constant value read */
+@@ -1226,9 +1232,9 @@
+       /* Fill ui with offset in .debug_line and compdir */
+       if (0)
+          VG_(printf)( "Reading UnitInfo at 0x%lx.....\n",
+-                      block_img - debug_info_img + 0UL );
++                      block_img - debug_info_img + 0UL, blklen, blklen_is_64 );
+       read_unitinfo_dwarf2( &ui, block_img, 
+-                                 debug_abbv_img, debug_str_img,
++                                 debug_abbv_img, debug_abbv_sz, debug_str_img,
+                                  debug_str_alt_img );
+       if (0)
+          VG_(printf)( "   => LINES=0x%llx    NAME=%s     DIR=%s\n", 
