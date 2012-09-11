@@ -22,6 +22,7 @@ Patch11: valgrind-3.8.0-x86-backtrace.patch
 Patch12: valgrind-3.8.0-find-buildid.patch
 Patch13: valgrind-3.8.0-abbrev-parsing.patch
 Patch14: valgrind-3.8.0-lzcnt-tzcnt-bugfix.patch
+Patch15: valgrind-3.8.0-avx-alignment-check.patch
 
 Obsoletes: valgrind-callgrind
 %ifarch x86_64 ppc64
@@ -115,6 +116,7 @@ for details.
 %patch12 -p1
 %patch13 -p1
 %patch14 -p1
+%patch15 -p1
 
 %build
 CC=gcc
@@ -227,6 +229,7 @@ echo ===============END TESTING===============
 %changelog
 * Tue Sep 11 2012 Mark Wielaard <mjw@redhat.com>
 - Add valgrind-3.8.0-lzcnt-tzcnt-bugfix.patch (KDE#295808)
+- Add valgrind-3.8.0-avx-alignment-check.patch (KDE#305926)
 
 * Mon Aug 27 2012 Mark Wielaard <mjw@redhat.com> 3.8.0-5
 - Add valgrind-3.8.0-abbrev-parsing.patch for #849783 (KDE#305513).
