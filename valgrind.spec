@@ -1,7 +1,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 3.8.0
-Release: 5%{?dist}
+Release: 6%{?dist}
 Epoch: 1
 License: GPLv2
 URL: http://www.valgrind.org/
@@ -227,7 +227,7 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
-* Tue Sep 11 2012 Mark Wielaard <mjw@redhat.com>
+* Tue Sep 11 2012 Mark Wielaard <mjw@redhat.com> 3.8.0-6
 - Add valgrind-3.8.0-lzcnt-tzcnt-bugfix.patch (KDE#295808)
 - Add valgrind-3.8.0-avx-alignment-check.patch (KDE#305926)
 
