@@ -1,7 +1,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 3.8.0
-Release: 7%{?dist}
+Release: 8%{?dist}
 Epoch: 1
 License: GPLv2
 URL: http://www.valgrind.org/
@@ -45,6 +45,9 @@ Patch15: valgrind-3.8.0-avx-alignment-check.patch
 # ./none/tests/amd64/fma.stderr.exp
 # ./none/tests/amd64/bmi.stderr.exp
 Patch16: valgrind-3.8.0-avx2-bmi-fma.patch.gz
+# Small fixup for above patch, just a configure check.
+# This is equivalent to valgrind-bmi-5.patch from KDE#305728
+Patch17: valgrind-3.8.0-bmi-conf-check.patch
 
 Obsoletes: valgrind-callgrind
 %ifarch x86_64 ppc64
@@ -144,6 +147,7 @@ for details.
 touch ./none/tests/amd64/avx2-1.stderr.exp
 touch ./none/tests/amd64/fma.stderr.exp
 touch ./none/tests/amd64/bmi.stderr.exp
+%patch17 -p1
 
 %build
 CC=gcc
@@ -254,6 +258,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Wed Sep 12 2012 Mark Wielaard <mjw@redhat.com> 3.8.0-8
+- Add configure fixup valgrind-3.8.0-bmi-conf-check.patch
+
 * Wed Sep 12 2012 Mark Wielaard <mjw@redhat.com> 3.8.0-7
 - Add valgrind-3.8.0-avx2-bmi-fma.patch (KDE#305728)
 
