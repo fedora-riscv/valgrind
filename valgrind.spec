@@ -1,7 +1,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: valgrind
 Version: 3.8.0
-Release: 6%{?dist}
+Release: 7%{?dist}
 Epoch: 1
 License: GPLv2
 URL: http://www.valgrind.org/
@@ -23,6 +23,28 @@ Patch12: valgrind-3.8.0-find-buildid.patch
 Patch13: valgrind-3.8.0-abbrev-parsing.patch
 Patch14: valgrind-3.8.0-lzcnt-tzcnt-bugfix.patch
 Patch15: valgrind-3.8.0-avx-alignment-check.patch
+
+# KDE#305728 - Add support for AVX2, BMI1, BMI2 and FMA instructions 
+# Combined patch for:
+# - valgrind-avx2-1.patch
+# - valgrind-avx2-2.patch
+# - valgrind-avx2-3.patch
+# - valgrind-avx2-4.patch
+# - valgrind-bmi-1.patch
+# - valgrind-bmi-2.patch
+# - valgrind-bmi-3.patch
+# - valgrind-fma-1.patch
+# - valgrind-memcheck-avx2-bmi-fma.patch
+# - valgrind-vmaskmov-load.patch
+# - valgrind-avx2-5.patch
+# - valgrind-bmi-4.patch
+# - valgrind-avx2-bmi-fma-tests.tar.bz2
+#
+# NOTE: Need to touch empty files from tar file:
+# ./none/tests/amd64/avx2-1.stderr.exp
+# ./none/tests/amd64/fma.stderr.exp
+# ./none/tests/amd64/bmi.stderr.exp
+Patch16: valgrind-3.8.0-avx2-bmi-fma.patch.gz
 
 Obsoletes: valgrind-callgrind
 %ifarch x86_64 ppc64
@@ -117,6 +139,11 @@ for details.
 %patch13 -p1
 %patch14 -p1
 %patch15 -p1
+
+%patch16 -p1
+touch ./none/tests/amd64/avx2-1.stderr.exp
+touch ./none/tests/amd64/fma.stderr.exp
+touch ./none/tests/amd64/bmi.stderr.exp
 
 %build
 CC=gcc
@@ -227,6 +254,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Wed Sep 12 2012 Mark Wielaard <mjw@redhat.com> 3.8.0-7
+- Add valgrind-3.8.0-avx2-bmi-fma.patch (KDE#305728)
+
 * Tue Sep 11 2012 Mark Wielaard <mjw@redhat.com> 3.8.0-6
 - Add valgrind-3.8.0-lzcnt-tzcnt-bugfix.patch (KDE#295808)
 - Add valgrind-3.8.0-avx-alignment-check.patch (KDE#305926)
