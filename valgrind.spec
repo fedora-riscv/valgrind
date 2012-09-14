@@ -48,6 +48,9 @@ Patch16: valgrind-3.8.0-avx2-bmi-fma.patch.gz
 # Small fixup for above patch, just a configure check.
 # This is equivalent to valgrind-bmi-5.patch from KDE#305728
 Patch17: valgrind-3.8.0-bmi-conf-check.patch
+# Partial backport of upstream revision 12884 without it AVX2 VPBROADCASTB
+# insn is broken under memcheck.
+Patch18: valgrind-3.8.0-memcheck-mc_translate-Iop_8HLto16.patch
 
 Obsoletes: valgrind-callgrind
 %ifarch x86_64 ppc64
@@ -148,6 +151,7 @@ touch ./none/tests/amd64/avx2-1.stderr.exp
 touch ./none/tests/amd64/fma.stderr.exp
 touch ./none/tests/amd64/bmi.stderr.exp
 %patch17 -p1
+%patch18 -p1
 
 %build
 CC=gcc
@@ -258,6 +262,11 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Wed Sep 12 2012 Mark Wielaard <mjw@redhat.com>
+- Add partial backport of upstream revision 12884
+  valgrind-3.8.0-memcheck-mc_translate-Iop_8HLto16.patch
+  without it AVX2 VPBROADCASTB insn is broken under memcheck.
+
 * Wed Sep 12 2012 Mark Wielaard <mjw@redhat.com> 3.8.0-8
 - Add configure fixup valgrind-3.8.0-bmi-conf-check.patch
 
