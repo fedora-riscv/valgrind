@@ -51,8 +51,9 @@ Patch17: valgrind-3.8.0-bmi-conf-check.patch
 # Partial backport of upstream revision 12884 without it AVX2 VPBROADCASTB
 # insn is broken under memcheck.
 Patch18: valgrind-3.8.0-memcheck-mc_translate-Iop_8HLto16.patch
+Patch19: valgrind-3.8.0-avx2-prereq.patch
 
-Patch19: valgrind-3.8.0-cfi_dw_ops.patch
+Patch20: valgrind-3.8.0-cfi_dw_ops.patch
 
 Obsoletes: valgrind-callgrind
 %ifarch x86_64 ppc64
@@ -154,8 +155,9 @@ touch ./none/tests/amd64/fma.stderr.exp
 touch ./none/tests/amd64/bmi.stderr.exp
 %patch17 -p1
 %patch18 -p1
-
 %patch19 -p1
+
+%patch20 -p1
 
 %build
 CC=gcc
@@ -272,6 +274,7 @@ echo ===============END TESTING===============
   without it AVX2 VPBROADCASTB insn is broken under memcheck.
 - Add valgrind-3.8.0-cfi_dw_ops.patch (KDE#307038)
   DWARF2 CFI reader: unhandled DW_OP_ opcode 0x8 (DW_OP_const1u and friends)
+- Add valgrind-3.8.0-avx2-prereq.patch.
 
 * Wed Sep 12 2012 Mark Wielaard <mjw@redhat.com> 3.8.0-8
 - Add configure fixup valgrind-3.8.0-bmi-conf-check.patch
