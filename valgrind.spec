@@ -20,7 +20,7 @@ Patch4: valgrind-3.8.0-stat_h.patch
 Patch5: valgrind-3.8.0-config_h.patch
 Patch6: valgrind-3.8.0-capget.patch
 Patch7: valgrind-3.8.0-pie.patch
-Patch8: valgrind-3.8.0-tests.patch
+
 Patch9: valgrind-3.8.0-enable-armv5.patch
 Patch10: valgrind-3.8.0-ldso-supp.patch
 Patch11: valgrind-3.8.0-x86-backtrace.patch
@@ -157,7 +157,7 @@ for details.
 %patch5 -p1
 %patch6 -p1
 %patch7 -p1
-%patch8 -p1
+
 %patch9 -p1
 %patch10 -p1
 %patch11 -p1
@@ -310,8 +310,7 @@ echo ===============END TESTING===============
 - Add valgrind-3.8.0-avx2-prereq.patch.
 - Remove accidentially included diffs for gdbserver_tests and helgrind/tests
   Makefile.in from valgrind-3.8.0-avx2-bmi-fma.patch.gz
-- Remove gdbserver_tests Makefile changes from /valgrind-3.8.0-tests.patch
-  tests no longer hang.
+- Remove valgrind-3.8.0-tests.patch tests no longer hang.
 - Added SCL macros to support building as part of a Software Collection.
 
 * Wed Sep 12 2012 Mark Wielaard <mjw@redhat.com> 3.8.0-8
