@@ -1,5 +1,5 @@
---- valgrind-3.8.0/coregrind/m_debuginfo/readdwarf.c	(revision 12990)
-+++ valgrind-3.8.0/coregrind/m_debuginfo/readdwarf.c	(working copy)
+--- valgrind/coregrind/m_debuginfo/readdwarf.c	(revision 12990)
++++ valgrind/coregrind/m_debuginfo/readdwarf.c	(working copy)
 @@ -2733,6 +2733,7 @@
     Word   sw;
     UWord  uw;
@@ -80,8 +80,8 @@
           case DW_OP_minus:
              op = Cop_Sub; opname = "minus"; goto binop;
           case DW_OP_plus:
---- valgrind-3.8.0/coregrind/m_debuginfo/debuginfo.c	(revision 12990)
-+++ valgrind-3.8.0/coregrind/m_debuginfo/debuginfo.c	(working copy)
+--- valgrind/coregrind/m_debuginfo/debuginfo.c	(revision 12990)
++++ valgrind/coregrind/m_debuginfo/debuginfo.c	(working copy)
 @@ -2051,7 +2051,7 @@
  UWord evalCfiExpr ( XArray* exprs, Int ix, 
                      CfiExprEvalContext* eec, Bool* ok )
@@ -108,8 +108,8 @@
        default: 
           goto unhandled;
     }
---- valgrind-3.8.0/coregrind/m_debuginfo/storage.c	(revision 12990)
-+++ valgrind-3.8.0/coregrind/m_debuginfo/storage.c	(working copy)
+--- valgrind/coregrind/m_debuginfo/storage.c	(revision 12990)
++++ valgrind/coregrind/m_debuginfo/storage.c	(working copy)
 @@ -595,6 +595,16 @@
     e.Cex.Binop.ixR = ixR;
     return (Int)VG_(addToXA)( dst, &e );
@@ -127,8 +127,8 @@
  Int ML_(CfiExpr_CfiReg)( XArray* dst, CfiReg reg )
  {
     CfiExpr e;
---- valgrind-3.8.0/coregrind/m_debuginfo/priv_storage.h	(revision 12990)
-+++ valgrind-3.8.0/coregrind/m_debuginfo/priv_storage.h	(working copy)
+--- valgrind/coregrind/m_debuginfo/priv_storage.h	(revision 12990)
++++ valgrind/coregrind/m_debuginfo/priv_storage.h	(working copy)
 @@ -296,6 +296,14 @@
  
  typedef

@@ -1,5 +1,5 @@
---- valgrind-3.8.0/memcheck/mc_translate.c	(revision 12883)
-+++ valgrind-3.8.0/memcheck/mc_translate.c	(revision 12884)
+--- valgrind/memcheck/mc_translate.c	(revision 12883)
++++ valgrind/memcheck/mc_translate.c	(revision 12884)
 @@ -3313,6 +3313,8 @@
        case Iop_DivModS128to64:
           return mkLazy2(mce, Ity_I128, vatom1, vatom2);

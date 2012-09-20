@@ -2,8 +2,8 @@
 
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
-Version: 3.8.0
-Release: 8%{?dist}
+Version: 3.8.1
+Release: 1%{?dist}
 Epoch: 1
 License: GPLv2
 URL: http://www.valgrind.org/
@@ -13,21 +13,45 @@ Group: Development/Debuggers
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
-Patch1: valgrind-3.8.0-cachegrind-improvements.patch
-Patch2: valgrind-3.8.0-openat.patch
-Patch3: valgrind-3.8.0-helgrind-race-supp.patch
-Patch4: valgrind-3.8.0-stat_h.patch
-Patch5: valgrind-3.8.0-config_h.patch
-Patch6: valgrind-3.8.0-capget.patch
-Patch7: valgrind-3.8.0-pie.patch
 
-Patch9: valgrind-3.8.0-enable-armv5.patch
-Patch10: valgrind-3.8.0-ldso-supp.patch
-Patch11: valgrind-3.8.0-x86-backtrace.patch
-Patch12: valgrind-3.8.0-find-buildid.patch
-Patch13: valgrind-3.8.0-abbrev-parsing.patch
-Patch14: valgrind-3.8.0-lzcnt-tzcnt-bugfix.patch
-Patch15: valgrind-3.8.0-avx-alignment-check.patch
+Patch1: valgrind-3.8.1-cachegrind-improvements.patch
+
+# KDE#307103 - sys_openat If pathname is absolute, then dirfd is ignored.
+Patch2: valgrind-3.8.1-openat.patch
+
+# KDE#211352 - helgrind races in helgrind's own mythread_wrapper
+Patch3: valgrind-3.8.1-helgrind-race-supp.patch
+
+Patch4: valgrind-3.8.1-stat_h.patch
+
+# Support really ancient gcc. Check __GNUC__ >= 3 for __builtin_expect.
+Patch5: valgrind-3.8.1-config_h.patch
+
+# KDE#307101 - sys_capget second argument can be NULL 
+Patch6: valgrind-3.8.1-capget.patch
+
+# KDE#263034 - Crash when loading some PPC64 binaries 
+Patch7: valgrind-3.8.1-pie.patch
+
+# configure detection change from armv7* to armv[57]*.
+Patch8: valgrind-3.8.1-enable-armv5.patch
+
+Patch9: valgrind-3.8.1-ldso-supp.patch
+
+# On x86 GCC 4.6 and later now defaults to -fomit-frame-pointer
+# together with emitting unwind info (-fasynchronous-unwind-tables).
+# So, try CF info first.
+Patch10: valgrind-3.8.1-x86-backtrace.patch
+
+# KDE#305431 - Use find_buildid shdr fallback for separate .debug files
+Patch11: valgrind-3.8.1-find-buildid.patch
+
+# KDE#305513 - Robustify abbrev reading (part already upstream).
+Patch12: valgrind-3.8.1-abbrev-parsing.patch
+
+# KDE#307038 - DWARF2 CFI reader: unhandled DW_OP_ opcode 0x8 (DW_OP_const1u) 
+Patch13: valgrind-3.8.1-cfi_dw_ops.patch
+
 
 # KDE#305728 - Add support for AVX2, BMI1, BMI2 and FMA instructions 
 # Combined patch for:
@@ -49,16 +73,16 @@ Patch15: valgrind-3.8.0-avx-alignment-check.patch
 # ./none/tests/amd64/avx2-1.stderr.exp
 # ./none/tests/amd64/fma.stderr.exp
 # ./none/tests/amd64/bmi.stderr.exp
-Patch16: valgrind-3.8.0-avx2-bmi-fma.patch.gz
+Patch21: valgrind-3.8.1-avx2-bmi-fma.patch.gz
 # Small fixup for above patch, just a configure check.
 # This is equivalent to valgrind-bmi-5.patch from KDE#305728
-Patch17: valgrind-3.8.0-bmi-conf-check.patch
+Patch22: valgrind-3.8.1-bmi-conf-check.patch
 # Partial backport of upstream revision 12884 without it AVX2 VPBROADCASTB
 # insn is broken under memcheck.
-Patch18: valgrind-3.8.0-memcheck-mc_translate-Iop_8HLto16.patch
-Patch19: valgrind-3.8.0-avx2-prereq.patch
+Patch23: valgrind-3.8.1-memcheck-mc_translate-Iop_8HLto16.patch
+# vgtest files should prereq that the binary is there (for old binutils).
+Patch24: valgrind-3.8.1-avx2-prereq.patch
 
-Patch20: valgrind-3.8.0-cfi_dw_ops.patch
 
 Obsoletes: valgrind-callgrind
 %ifarch x86_64 ppc64
@@ -150,6 +174,7 @@ for details.
 
 %prep
 %setup -q %{?scl:-n %{pkg_name}-%{version}}
+
 %patch1 -p1
 %patch2 -p1
 %patch3 -p1
@@ -157,24 +182,21 @@ for details.
 %patch5 -p1
 %patch6 -p1
 %patch7 -p1
-
+%patch8 -p1
 %patch9 -p1
 %patch10 -p1
 %patch11 -p1
 %patch12 -p1
 %patch13 -p1
-%patch14 -p1
-%patch15 -p1
 
-%patch16 -p1
+# Add support for AVX2, BMI1, BMI2 and FMA instructions
+%patch21 -p1
 touch ./none/tests/amd64/avx2-1.stderr.exp
 touch ./none/tests/amd64/fma.stderr.exp
 touch ./none/tests/amd64/bmi.stderr.exp
-%patch17 -p1
-%patch18 -p1
-%patch19 -p1
-
-%patch20 -p1
+%patch22 -p1
+%patch23 -p1
+%patch24 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -301,7 +323,7 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
-* Thu Sep 20 2012 Mark Wielaard <mjw@redhat.com>
+* Thu Sep 20 2012 Mark Wielaard <mjw@redhat.com> 3.8.1-1
 - Add partial backport of upstream revision 12884
   valgrind-3.8.0-memcheck-mc_translate-Iop_8HLto16.patch
   without it AVX2 VPBROADCASTB insn is broken under memcheck.
@@ -312,6 +334,7 @@ echo ===============END TESTING===============
   Makefile.in from valgrind-3.8.0-avx2-bmi-fma.patch.gz
 - Remove valgrind-3.8.0-tests.patch tests no longer hang.
 - Added SCL macros to support building as part of a Software Collection.
+- Upgrade to valgrind 3.8.1.
 
 * Wed Sep 12 2012 Mark Wielaard <mjw@redhat.com> 3.8.0-8
 - Add configure fixup valgrind-3.8.0-bmi-conf-check.patch
