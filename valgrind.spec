@@ -1,11 +1,16 @@
+%{?scl:%scl_package valgrind}
+
 Summary: Tool for finding memory management bugs in programs
-Name: valgrind
+Name: %{?scl_prefix}valgrind
 Version: 3.8.0
 Release: 8%{?dist}
 Epoch: 1
 License: GPLv2
 URL: http://www.valgrind.org/
 Group: Development/Debuggers
+
+# Only necessary for RHEL, will be ignored on Fedora
+BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
 Patch1: valgrind-3.8.0-cachegrind-improvements.patch
@@ -63,11 +68,23 @@ BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.
 %if 0%{?fedora} >= 15
 BuildRequires: glibc-devel >= 2.14
 %else
+%if 0%{?rhel} >= 6
 BuildRequires: glibc-devel >= 2.12
+%else
+BuildRequires: glibc-devel >= 2.5
+%endif
 %endif
 %ifarch %{ix86} x86_64 ppc ppc64
 BuildRequires: openmpi-devel >= 1.3.3
 %endif
+
+# For %%build and %%check.
+# In case of a software collection, pick the matching gdb and binutils.
+BuildRequires: %{?scl_prefix}gdb
+BuildRequires: %{?scl_prefix}binutils
+
+%{?scl:Requires:%scl_runtime}
+
 ExclusiveArch: %{ix86} x86_64 ppc ppc64 s390x %{arm}
 %ifarch %{ix86}
 %define valarch x86
@@ -115,7 +132,7 @@ find/diagnose.
 %package devel
 Summary: Development files for valgrind
 Group: Development/Debuggers
-Requires: valgrind = %{epoch}:%{version}-%{release}
+Requires: %{?scl_prefix}valgrind = %{epoch}:%{version}-%{release}
 
 %description devel
 Header files and libraries for development of valgrind aware programs
@@ -124,15 +141,15 @@ or valgrind plugins.
 %package openmpi
 Summary: OpenMPI support for valgrind
 Group: Development/Debuggers
-Requires: valgrind = %{epoch}:%{version}-%{release}
+Requires: %{?scl_prefix}valgrind = %{epoch}:%{version}-%{release}
 
 %description openmpi
 A wrapper library for debugging OpenMPI parallel programs with valgrind.
-See file:///usr/share/doc/valgrind-%{version}/html/mc-manual.html#mc-manual.mpiwrap
+See file:///usr/share/doc/%{?scl_prefix}valgrind-%{version}/html/mc-manual.html#mc-manual.mpiwrap
 for details.
 
 %prep
-%setup -q
+%setup -q %{?scl:-n %{pkg_name}-%{version}}
 %patch1 -p1
 %patch2 -p1
 %patch3 -p1
@@ -160,6 +177,11 @@ touch ./none/tests/amd64/bmi.stderr.exp
 %patch20 -p1
 
 %build
+# We need to use the software collection compiler and binutils if available.
+# The configure checks might otherwise miss support for various newer
+# assembler instructions.
+%{?scl:PATH=%{_bindir}${PATH:+:${PATH}}}
+
 CC=gcc
 %ifarch x86_64 ppc64
 # Ugly hack - libgcc 32-bit package might not be installed
@@ -168,6 +190,14 @@ ar r libgcc/32/libgcc_s.a
 ar r libgcc/libgcc_s_32.a
 CC="gcc -B `pwd`/libgcc/"
 %endif
+
+# Old openmpi-devel has version depended paths for mpicc.
+%if 0%{?fedora} >= 13 || 0%{?rhel} >= 6
+%define mpiccpath %{!?scl:%{_libdir}}%{?scl:%{_root_libdir}}/openmpi/bin/mpicc
+%else
+%define mpiccpath %{!?scl:%{_libdir}}%{?scl:%{_root_libdir}}/openmpi/*/bin/mpicc
+%endif
+
 # Filter out some flags that cause lots of valgrind test failures.
 # Also filter away -O2, valgrind adds it wherever suitable, but
 # not for tests which should be -O0, as they aren't meant to be
@@ -175,7 +205,7 @@ CC="gcc -B `pwd`/libgcc/"
 OPTFLAGS="`echo " %{optflags} " | sed 's/ -m\(64\|3[21]\) / /g;s/ -fexceptions / /g;s/ -fstack-protector / / g;s/ -Wp,-D_FORTIFY_SOURCE=2 / /g;s/ -O2 / /g;s/^ //;s/ $//'`"
 %configure CC="$CC" CFLAGS="$OPTFLAGS" CXXFLAGS="$OPTFLAGS" \
 %ifarch %{ix86} x86_64 ppc ppc64
-  --with-mpicc=%{_libdir}/openmpi/bin/mpicc \
+  --with-mpicc=%{mpiccpath} \
 %endif
   GDB=%{_bindir}/gdb
 
@@ -203,7 +233,8 @@ gcc $RPM_OPT_FLAGS -o close_fds close_fds.c
 echo 'int main (void) { return 0; }' > none/tests/pth_cancel2.c
 
 %install
-%makeinstall
+rm -rf $RPM_BUILD_ROOT
+make DESTDIR=$RPM_BUILD_ROOT install
 mkdir docs.installed
 mv $RPM_BUILD_ROOT%{_datadir}/doc/valgrind/* docs.installed/
 rm -f docs.installed/*.ps
@@ -238,6 +269,8 @@ done
 %endif
 
 %check
+# Build the test files with the software collection compiler if available.
+%{?scl:PATH=%{_bindir}${PATH:+:${PATH}}}
 make %{?_smp_mflags} check || :
 echo ===============TESTING===================
 ./close_fds make regtest || :
@@ -279,6 +312,7 @@ echo ===============END TESTING===============
   Makefile.in from valgrind-3.8.0-avx2-bmi-fma.patch.gz
 - Remove gdbserver_tests Makefile changes from /valgrind-3.8.0-tests.patch
   tests no longer hang.
+- Added SCL macros to support building as part of a Software Collection.
 
 * Wed Sep 12 2012 Mark Wielaard <mjw@redhat.com> 3.8.0-8
 - Add configure fixup valgrind-3.8.0-bmi-conf-check.patch
