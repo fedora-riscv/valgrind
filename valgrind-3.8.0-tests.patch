@@ -22,27 +22,3 @@ Disable some hanging tests.
  	hg01_all_ok$(EXEEXT) hg02_deadlock$(EXEEXT) \
  	hg03_inherit$(EXEEXT) hg04_race$(EXEEXT) hg05_race2$(EXEEXT) \
  	hg06_readshared$(EXEEXT) locked_vs_unlocked1$(EXEEXT) \
---- valgrind-3.8.0/gdbserver_tests/Makefile.am.jj	2011-10-26 23:24:26.000000000 +0200
-+++ valgrind-3.8.0/gdbserver_tests/Makefile.am	2012-01-27 14:56:43.369465872 +0100
-@@ -106,9 +106,7 @@ check_PROGRAMS = \
- 	clean_after_fork \
- 	fork_chain \
- 	passsigalrm \
--	sleepers \
- 	main_pic \
--	t \
- 	watchpoints
- 
- AM_CFLAGS   += $(AM_FLAG_M3264_PRI)
---- valgrind-3.8.0/gdbserver_tests/Makefile.in.jj	2011-11-05 12:26:51.000000000 +0100
-+++ valgrind-3.8.0/gdbserver_tests/Makefile.in	2012-01-27 14:57:30.278191493 +0100
-@@ -55,8 +55,7 @@
- @VGCONF_HAVE_PLATFORM_SEC_TRUE@		-DVGP_SEC_@VGCONF_ARCH_PRI@_@VGCONF_OS@=1
- 
- check_PROGRAMS = clean_after_fork$(EXEEXT) fork_chain$(EXEEXT) \
--	passsigalrm$(EXEEXT) sleepers$(EXEEXT) main_pic$(EXEEXT) \
--	t$(EXEEXT) watchpoints$(EXEEXT)
-+	passsigalrm$(EXEEXT) main_pic$(EXEEXT) watchpoints$(EXEEXT)
- subdir = gdbserver_tests
- ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
- am__aclocal_m4_deps = $(top_srcdir)/configure.in

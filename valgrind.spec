@@ -268,13 +268,17 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
-* Wed Sep 19 2012 Mark Wielaard <mjw@redhat.com>
+* Thu Sep 20 2012 Mark Wielaard <mjw@redhat.com>
 - Add partial backport of upstream revision 12884
   valgrind-3.8.0-memcheck-mc_translate-Iop_8HLto16.patch
   without it AVX2 VPBROADCASTB insn is broken under memcheck.
 - Add valgrind-3.8.0-cfi_dw_ops.patch (KDE#307038)
   DWARF2 CFI reader: unhandled DW_OP_ opcode 0x8 (DW_OP_const1u and friends)
 - Add valgrind-3.8.0-avx2-prereq.patch.
+- Remove accidentially included diffs for gdbserver_tests and helgrind/tests
+  Makefile.in from valgrind-3.8.0-avx2-bmi-fma.patch.gz
+- Remove gdbserver_tests Makefile changes from /valgrind-3.8.0-tests.patch
+  tests no longer hang.
 
 * Wed Sep 12 2012 Mark Wielaard <mjw@redhat.com> 3.8.0-8
 - Add configure fixup valgrind-3.8.0-bmi-conf-check.patch
