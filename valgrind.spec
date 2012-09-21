@@ -331,6 +331,7 @@ echo ===============END TESTING===============
 - Add valgrind-3.8.1-gdbserver_tests-mcinvoke-ppc64.patch
 - Replace valgrind-3.8.1-cfi_dw_ops.patch with version as committed upstream.
 - Remove erroneous printf change from valgrind-3.8.1-abbrev-parsing.patch.
+- Add scalar testcase change to valgrind-3.8.1-capget.patch.
 
 * Thu Sep 20 2012 Mark Wielaard <mjw@redhat.com> 3.8.1-1
 - Add partial backport of upstream revision 12884
