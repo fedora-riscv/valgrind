@@ -52,6 +52,9 @@ Patch12: valgrind-3.8.1-abbrev-parsing.patch
 # KDE#307038 - DWARF2 CFI reader: unhandled DW_OP_ opcode 0x8 (DW_OP_const1u) 
 Patch13: valgrind-3.8.1-cfi_dw_ops.patch
 
+# On some ppc64 installs these test just hangs
+Patch14: valgrind-3.8.1-gdbserver_tests-mcinvoke-ppc64.patch
+
 
 # KDE#305728 - Add support for AVX2, BMI1, BMI2 and FMA instructions 
 # Combined patch for:
@@ -188,6 +191,7 @@ for details.
 %patch11 -p1
 %patch12 -p1
 %patch13 -p1
+%patch14 -p1
 
 # Add support for AVX2, BMI1, BMI2 and FMA instructions
 %patch21 -p1
@@ -323,6 +327,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Fri Sep 20 2012 Mark Wielaard <mjw@redhat.com>
+- Add valgrind-3.8.1-gdbserver_tests-mcinvoke-ppc64.patch
+
 * Thu Sep 20 2012 Mark Wielaard <mjw@redhat.com> 3.8.1-1
 - Add partial backport of upstream revision 12884
   valgrind-3.8.0-memcheck-mc_translate-Iop_8HLto16.patch
