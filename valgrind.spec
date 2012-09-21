@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.8.1
-Release: 1%{?dist}
+Release: 2%{?dist}
 Epoch: 1
 License: GPLv2
 URL: http://www.valgrind.org/
@@ -327,7 +327,7 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
-* Fri Sep 20 2012 Mark Wielaard <mjw@redhat.com>
+* Fri Sep 20 2012 Mark Wielaard <mjw@redhat.com> 3.8.1-2
 - Add valgrind-3.8.1-gdbserver_tests-mcinvoke-ppc64.patch
 - Replace valgrind-3.8.1-cfi_dw_ops.patch with version as committed upstream.
 - Remove erroneous printf change from valgrind-3.8.1-abbrev-parsing.patch.
