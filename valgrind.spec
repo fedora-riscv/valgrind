@@ -59,6 +59,10 @@ Patch14: valgrind-3.8.1-gdbserver_tests-mcinvoke-ppc64.patch
 # Should test OSXSAVE first before executing XGETBV.
 Patch15: valgrind-3.8.1-x86_amd64_features-avx.patch
 
+# KDE#307155 - gdbserver_tests/filter_gdb should filter out syscall-template.S
+# This is only a real issue when glibc-debuginfo is installed.
+Patch16: valgrind-3.8.1-gdbserver_tests-syscall-template-source.patch
+
 
 # KDE#305728 - Add support for AVX2, BMI1, BMI2 and FMA instructions 
 # Combined patch for:
@@ -197,6 +201,7 @@ for details.
 %patch13 -p1
 %patch14 -p1
 %patch15 -p1
+%patch16 -p1
 
 # Add support for AVX2, BMI1, BMI2 and FMA instructions
 %patch21 -p1
@@ -332,8 +337,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
-* Mon Sep 24 2012 Mark Wielaard <mjw@redhat.com>
+* Tue Sep 25 2012 Mark Wielaard <mjw@redhat.com>
 - Add valgrind-3.8.1-x86_amd64_features-avx.patch (KDE#307285)
+- Add valgrind-3.8.1-gdbserver_tests-syscall-template-source.patch (KDE#307155)
 
 * Fri Sep 20 2012 Mark Wielaard <mjw@redhat.com> 3.8.1-2
 - Add valgrind-3.8.1-gdbserver_tests-mcinvoke-ppc64.patch
