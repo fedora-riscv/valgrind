@@ -63,6 +63,10 @@ Patch15: valgrind-3.8.1-x86_amd64_features-avx.patch
 # This is only a real issue when glibc-debuginfo is installed.
 Patch16: valgrind-3.8.1-gdbserver_tests-syscall-template-source.patch
 
+# KDE#307290 - memcheck overlap testcase needs memcpy version filter
+Patch17: valgrind-3.8.1-overlap_memcpy_filter.patch
+# Note: Need to make memcheck/tests/filter_memcpy executable
+
 
 # KDE#305728 - Add support for AVX2, BMI1, BMI2 and FMA instructions 
 # Combined patch for:
@@ -202,6 +206,8 @@ for details.
 %patch14 -p1
 %patch15 -p1
 %patch16 -p1
+%patch17 -p1
+chmod 755 memcheck/tests/filter_memcpy
 
 # Add support for AVX2, BMI1, BMI2 and FMA instructions
 %patch21 -p1
@@ -340,6 +346,7 @@ echo ===============END TESTING===============
 * Tue Sep 25 2012 Mark Wielaard <mjw@redhat.com>
 - Add valgrind-3.8.1-x86_amd64_features-avx.patch (KDE#307285)
 - Add valgrind-3.8.1-gdbserver_tests-syscall-template-source.patch (KDE#307155)
+- Add valgrind-3.8.1-overlap_memcpy_filter.patch (KDE#307290)
 
 * Fri Sep 20 2012 Mark Wielaard <mjw@redhat.com> 3.8.1-2
 - Add valgrind-3.8.1-gdbserver_tests-mcinvoke-ppc64.patch
