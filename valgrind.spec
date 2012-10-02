@@ -67,6 +67,9 @@ Patch16: valgrind-3.8.1-gdbserver_tests-syscall-template-source.patch
 Patch17: valgrind-3.8.1-overlap_memcpy_filter.patch
 # Note: Need to make memcheck/tests/filter_memcpy executable
 
+# KDE#307729 - pkgconfig support broken valgrind.pc
+# valt_load_address=@VALT_LOAD_ADDRESS@
+Patch18: valgrind-3.8.1-pkg-config.patch
 
 # KDE#305728 - Add support for AVX2, BMI1, BMI2 and FMA instructions 
 # Combined patch for:
@@ -208,6 +211,7 @@ for details.
 %patch16 -p1
 %patch17 -p1
 chmod 755 memcheck/tests/filter_memcpy
+%patch18 -p1
 
 # Add support for AVX2, BMI1, BMI2 and FMA instructions
 %patch21 -p1
@@ -343,10 +347,11 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
-* Tue Sep 25 2012 Mark Wielaard <mjw@redhat.com>
+* Tue Oct 02 2012 Mark Wielaard <mjw@redhat.com>
 - Add valgrind-3.8.1-x86_amd64_features-avx.patch (KDE#307285)
 - Add valgrind-3.8.1-gdbserver_tests-syscall-template-source.patch (KDE#307155)
 - Add valgrind-3.8.1-overlap_memcpy_filter.patch (KDE#307290)
+- Add valgrind-3.8.1-pkg-config.patch (#827219, KDE#307729)
 
 * Fri Sep 20 2012 Mark Wielaard <mjw@redhat.com> 3.8.1-2
 - Add valgrind-3.8.1-gdbserver_tests-mcinvoke-ppc64.patch
