@@ -74,6 +74,10 @@ Patch18: valgrind-3.8.1-pkg-config.patch
 # KDE#253519 - Memcheck reports auxv pointer accesses as invalid reads. 
 Patch19: valgrind-3.8.1-proc-auxv.patch
 
+# KDE#307828 - SSE optimized wcscpy, wcscmp, wcsrchr and wcschr trigger
+# uninitialised value and/or invalid read warnings
+Patch20: valgrind-3.8.1-wcs.patch
+
 # KDE#305728 - Add support for AVX2, BMI1, BMI2 and FMA instructions 
 # Combined patch for:
 # - valgrind-avx2-1.patch
@@ -216,6 +220,7 @@ for details.
 chmod 755 memcheck/tests/filter_memcpy
 %patch18 -p1
 %patch19 -p1
+%patch20 -p1
 
 # Add support for AVX2, BMI1, BMI2 and FMA instructions
 %patch21 -p1
@@ -351,12 +356,13 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
-* Tue Oct 03 2012 Mark Wielaard <mjw@redhat.com>
+* Thu Oct 04 2012 Mark Wielaard <mjw@redhat.com>
 - Add valgrind-3.8.1-x86_amd64_features-avx.patch (KDE#307285)
 - Add valgrind-3.8.1-gdbserver_tests-syscall-template-source.patch (KDE#307155)
 - Add valgrind-3.8.1-overlap_memcpy_filter.patch (KDE#307290)
 - Add valgrind-3.8.1-pkg-config.patch (#827219, KDE#307729)
 - Add valgrind-3.8.1-proc-auxv.patch (KDE#253519)
+- Add valgrind-3.8.1-wcs.patch (#755242, KDE#307828)
 
 * Fri Sep 20 2012 Mark Wielaard <mjw@redhat.com> 3.8.1-2
 - Add valgrind-3.8.1-gdbserver_tests-mcinvoke-ppc64.patch
