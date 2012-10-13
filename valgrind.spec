@@ -240,6 +240,9 @@ touch ./none/tests/amd64/bmi.stderr.exp
 %patch25 -p1
 %patch26 -p1
 
+# To suppress eventual automake warnings/errors
+rm -f gdbserver_tests/filter_gdb.orig
+
 %build
 # We need to use the software collection compiler and binutils if available.
 # The configure checks might otherwise miss support for various newer
@@ -338,6 +341,26 @@ done
 make %{?_smp_mflags} check || :
 echo ===============TESTING===================
 ./close_fds make regtest || :
+# Make sure test failures show up in build.log
+# Gather up the diffs (at most the first 20 lines for each one)
+MAX_LINES=20
+diff_files=`find . -name '*.diff' | sort`
+if [ z"$diff_files" = z ] ; then
+   echo "Congratulations, all tests passed!" >> diffs
+else
+   for i in $diff_files ; do
+      echo "=================================================" >> diffs
+      echo $i                                                  >> diffs
+      echo "=================================================" >> diffs
+      if [ `wc -l < $i` -le $MAX_LINES ] ; then
+         cat $i                                                >> diffs
+      else
+         head -n $MAX_LINES $i                                 >> diffs
+         echo "<truncated beyond $MAX_LINES lines>"            >> diffs
+      fi
+   done
+fi
+cat diffs
 echo ===============END TESTING===============
 
 %files
