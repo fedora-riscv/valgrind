@@ -111,6 +111,9 @@ Patch24: valgrind-3.8.1-avx2-prereq.patch
 # KDE#308321 - testsuite memcheck filter interferes with gdb_filter
 Patch25: valgrind-3.8.1-filter_gdb.patch
 
+# KDE#308341 - vgdb should report process exit (or fatal signal) 
+Patch26: valgrind-3.8.1-gdbserver_exit.patch
+
 
 Obsoletes: valgrind-callgrind
 %ifarch x86_64 ppc64
@@ -235,6 +238,7 @@ touch ./none/tests/amd64/bmi.stderr.exp
 %patch24 -p1
 
 %patch25 -p1
+%patch26 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -369,6 +373,7 @@ echo ===============END TESTING===============
 - Add valgrind-3.8.1-proc-auxv.patch (KDE#253519)
 - Add valgrind-3.8.1-wcs.patch (#755242, KDE#307828)
 - Add valgrind-3.8.1-filter_gdb.patch (KDE#308321)
+- Add valgrind-3.8.1-gdbserver_exit.patch (#862795, KDE#308341)
 
 * Fri Sep 20 2012 Mark Wielaard <mjw@redhat.com> 3.8.1-2
 - Add valgrind-3.8.1-gdbserver_tests-mcinvoke-ppc64.patch
