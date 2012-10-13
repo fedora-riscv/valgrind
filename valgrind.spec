@@ -108,6 +108,9 @@ Patch23: valgrind-3.8.1-memcheck-mc_translate-Iop_8HLto16.patch
 # vgtest files should prereq that the binary is there (for old binutils).
 Patch24: valgrind-3.8.1-avx2-prereq.patch
 
+# KDE#308321 - testsuite memcheck filter interferes with gdb_filter
+Patch25: valgrind-3.8.1-filter_gdb.patch
+
 
 Obsoletes: valgrind-callgrind
 %ifarch x86_64 ppc64
@@ -230,6 +233,8 @@ touch ./none/tests/amd64/bmi.stderr.exp
 %patch22 -p1
 %patch23 -p1
 %patch24 -p1
+
+%patch25 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -356,13 +361,14 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
-* Thu Oct 04 2012 Mark Wielaard <mjw@redhat.com>
+* Sat Oct 13 2012 Mark Wielaard <mjw@redhat.com>
 - Add valgrind-3.8.1-x86_amd64_features-avx.patch (KDE#307285)
 - Add valgrind-3.8.1-gdbserver_tests-syscall-template-source.patch (KDE#307155)
 - Add valgrind-3.8.1-overlap_memcpy_filter.patch (KDE#307290)
 - Add valgrind-3.8.1-pkg-config.patch (#827219, KDE#307729)
 - Add valgrind-3.8.1-proc-auxv.patch (KDE#253519)
 - Add valgrind-3.8.1-wcs.patch (#755242, KDE#307828)
+- Add valgrind-3.8.1-filter_gdb.patch (KDE#308321)
 
 * Fri Sep 20 2012 Mark Wielaard <mjw@redhat.com> 3.8.1-2
 - Add valgrind-3.8.1-gdbserver_tests-mcinvoke-ppc64.patch
