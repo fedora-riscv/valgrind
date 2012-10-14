@@ -114,6 +114,8 @@ Patch25: valgrind-3.8.1-filter_gdb.patch
 # KDE#308341 - vgdb should report process exit (or fatal signal) 
 Patch26: valgrind-3.8.1-gdbserver_exit.patch
 
+# KDE#164485 - VG_N_SEGNAMES and VG_N_SEGMENTS are (still) too small
+Patch27: valgrind-3.8.1-aspacemgr_VG_N_SEGs.patch
 
 Obsoletes: valgrind-callgrind
 %ifarch x86_64 ppc64
@@ -239,6 +241,7 @@ touch ./none/tests/amd64/bmi.stderr.exp
 
 %patch25 -p1
 %patch26 -p1
+%patch27 -p1
 
 # To suppress eventual automake warnings/errors
 rm -f gdbserver_tests/filter_gdb.orig
@@ -397,6 +400,7 @@ echo ===============END TESTING===============
 - Add valgrind-3.8.1-wcs.patch (#755242, KDE#307828)
 - Add valgrind-3.8.1-filter_gdb.patch (KDE#308321)
 - Add valgrind-3.8.1-gdbserver_exit.patch (#862795, KDE#308341)
+- Add valgrind-3.8.1-aspacemgr_VG_N_SEGs.patch (#730303, KDE#164485)
 
 * Fri Sep 20 2012 Mark Wielaard <mjw@redhat.com> 3.8.1-2
 - Add valgrind-3.8.1-gdbserver_tests-mcinvoke-ppc64.patch
