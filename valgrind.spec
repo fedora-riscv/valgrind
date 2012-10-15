@@ -117,6 +117,10 @@ Patch26: valgrind-3.8.1-gdbserver_exit.patch
 # KDE#164485 - VG_N_SEGNAMES and VG_N_SEGMENTS are (still) too small
 Patch27: valgrind-3.8.1-aspacemgr_VG_N_SEGs.patch
 
+# KDE#308427 - s390 memcheck reports tsearch conditional jump or move
+#              depends on uninitialized value [workaround, suppression]
+Patch28: valgrind-3.8.1-s390_tsearch_supp.patch
+
 Obsoletes: valgrind-callgrind
 %ifarch x86_64 ppc64
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -242,6 +246,9 @@ touch ./none/tests/amd64/bmi.stderr.exp
 %patch25 -p1
 %patch26 -p1
 %patch27 -p1
+%ifarch s390x
+%patch28 -p1
+%endif
 
 # To suppress eventual automake warnings/errors
 rm -f gdbserver_tests/filter_gdb.orig
@@ -391,7 +398,7 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
-* Sat Oct 13 2012 Mark Wielaard <mjw@redhat.com>
+* Mon Oct 15 2012 Mark Wielaard <mjw@redhat.com>
 - Add valgrind-3.8.1-x86_amd64_features-avx.patch (KDE#307285)
 - Add valgrind-3.8.1-gdbserver_tests-syscall-template-source.patch (KDE#307155)
 - Add valgrind-3.8.1-overlap_memcpy_filter.patch (KDE#307290)
@@ -401,6 +408,7 @@ echo ===============END TESTING===============
 - Add valgrind-3.8.1-filter_gdb.patch (KDE#308321)
 - Add valgrind-3.8.1-gdbserver_exit.patch (#862795, KDE#308341)
 - Add valgrind-3.8.1-aspacemgr_VG_N_SEGs.patch (#730303, KDE#164485)
+- Add valgrind-3.8.1-s390_tsearch_supp.patch (#816244, KDE#308427)
 
 * Fri Sep 20 2012 Mark Wielaard <mjw@redhat.com> 3.8.1-2
 - Add valgrind-3.8.1-gdbserver_tests-mcinvoke-ppc64.patch
