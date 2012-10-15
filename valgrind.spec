@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.8.1
-Release: 2%{?dist}
+Release: 3%{?dist}
 Epoch: 1
 License: GPLv2
 URL: http://www.valgrind.org/
@@ -398,7 +398,7 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
-* Mon Oct 15 2012 Mark Wielaard <mjw@redhat.com>
+* Mon Oct 15 2012 Mark Wielaard <mjw@redhat.com> 3.8.1-3
 - Add valgrind-3.8.1-x86_amd64_features-avx.patch (KDE#307285)
 - Add valgrind-3.8.1-gdbserver_tests-syscall-template-source.patch (KDE#307155)
 - Add valgrind-3.8.1-overlap_memcpy_filter.patch (KDE#307290)
