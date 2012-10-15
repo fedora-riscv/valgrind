@@ -1,32 +1,125 @@
+%{?scl:%scl_package valgrind}
+
 Summary: Tool for finding memory management bugs in programs
-Name: valgrind
-Version: 3.7.0
-Release: 4%{?dist}
+Name: %{?scl_prefix}valgrind
+Version: 3.8.1
+Release: 3%{?dist}
 Epoch: 1
 License: GPLv2
 URL: http://www.valgrind.org/
 Group: Development/Debuggers
 
+# Only necessary for RHEL, will be ignored on Fedora
+BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
+
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
-Patch1: valgrind-3.7.0-cachegrind-improvements.patch
-Patch2: valgrind-3.7.0-openat.patch
-Patch3: valgrind-3.7.0-helgrind-race-supp.patch
-Patch4: valgrind-3.7.0-stat_h.patch
-Patch5: valgrind-3.7.0-config_h.patch
-Patch6: valgrind-3.7.0-capget.patch
-Patch7: valgrind-3.7.0-glibc-2.15.patch
-Patch8: valgrind-3.7.0-pie.patch
-Patch9: valgrind-3.7.0-tests.patch
-Patch10: valgrind-3.7.0-f-sgetown-ex.patch
-Patch11: valgrind-3.7.0-scsi-ioctls.patch
-Patch12: valgrind-3.7.0-enable-armv5.patch
-Patch13: valgrind-3.7.0-ldso-supp.patch
-Patch14: valgrind-3.7.0-unspecified-type.patch
-Patch15: valgrind-3.7.0-rvalue-ref.patch
-Patch16: valgrind-3.7.0-debug-leak1.patch
-Patch17: valgrind-3.7.0-debug-leak2.patch
-Patch18: valgrind-3.7.0-addToXA.patch
-Patch19: valgrind-3.7.0-debug-types.patch
+
+Patch1: valgrind-3.8.1-cachegrind-improvements.patch
+
+# KDE#307103 - sys_openat If pathname is absolute, then dirfd is ignored.
+Patch2: valgrind-3.8.1-openat.patch
+
+# KDE#211352 - helgrind races in helgrind's own mythread_wrapper
+Patch3: valgrind-3.8.1-helgrind-race-supp.patch
+
+Patch4: valgrind-3.8.1-stat_h.patch
+
+# Support really ancient gcc. Check __GNUC__ >= 3 for __builtin_expect.
+Patch5: valgrind-3.8.1-config_h.patch
+
+# KDE#307101 - sys_capget second argument can be NULL 
+Patch6: valgrind-3.8.1-capget.patch
+
+# KDE#263034 - Crash when loading some PPC64 binaries 
+Patch7: valgrind-3.8.1-pie.patch
+
+# configure detection change from armv7* to armv[57]*.
+Patch8: valgrind-3.8.1-enable-armv5.patch
+
+Patch9: valgrind-3.8.1-ldso-supp.patch
+
+# On x86 GCC 4.6 and later now defaults to -fomit-frame-pointer
+# together with emitting unwind info (-fasynchronous-unwind-tables).
+# So, try CF info first.
+Patch10: valgrind-3.8.1-x86-backtrace.patch
+
+# KDE#305431 - Use find_buildid shdr fallback for separate .debug files
+Patch11: valgrind-3.8.1-find-buildid.patch
+
+# KDE#305513 - Robustify abbrev reading (part already upstream).
+Patch12: valgrind-3.8.1-abbrev-parsing.patch
+
+# KDE#307038 - DWARF2 CFI reader: unhandled DW_OP_ opcode 0x8 (DW_OP_const1u) 
+Patch13: valgrind-3.8.1-cfi_dw_ops.patch
+
+# On some ppc64 installs these test just hangs
+Patch14: valgrind-3.8.1-gdbserver_tests-mcinvoke-ppc64.patch
+
+# KDE#307285 - x86_amd64 feature test for avx in test suite is wrong
+# Should test OSXSAVE first before executing XGETBV.
+Patch15: valgrind-3.8.1-x86_amd64_features-avx.patch
+
+# KDE#307155 - gdbserver_tests/filter_gdb should filter out syscall-template.S
+# This is only a real issue when glibc-debuginfo is installed.
+Patch16: valgrind-3.8.1-gdbserver_tests-syscall-template-source.patch
+
+# KDE#307290 - memcheck overlap testcase needs memcpy version filter
+Patch17: valgrind-3.8.1-overlap_memcpy_filter.patch
+# Note: Need to make memcheck/tests/filter_memcpy executable
+
+# KDE#307729 - pkgconfig support broken valgrind.pc
+# valt_load_address=@VALT_LOAD_ADDRESS@
+Patch18: valgrind-3.8.1-pkg-config.patch
+
+# KDE#253519 - Memcheck reports auxv pointer accesses as invalid reads. 
+Patch19: valgrind-3.8.1-proc-auxv.patch
+
+# KDE#307828 - SSE optimized wcscpy, wcscmp, wcsrchr and wcschr trigger
+# uninitialised value and/or invalid read warnings
+Patch20: valgrind-3.8.1-wcs.patch
+
+# KDE#305728 - Add support for AVX2, BMI1, BMI2 and FMA instructions 
+# Combined patch for:
+# - valgrind-avx2-1.patch
+# - valgrind-avx2-2.patch
+# - valgrind-avx2-3.patch
+# - valgrind-avx2-4.patch
+# - valgrind-bmi-1.patch
+# - valgrind-bmi-2.patch
+# - valgrind-bmi-3.patch
+# - valgrind-fma-1.patch
+# - valgrind-memcheck-avx2-bmi-fma.patch
+# - valgrind-vmaskmov-load.patch
+# - valgrind-avx2-5.patch
+# - valgrind-bmi-4.patch
+# - valgrind-avx2-bmi-fma-tests.tar.bz2
+#
+# NOTE: Need to touch empty files from tar file:
+# ./none/tests/amd64/avx2-1.stderr.exp
+# ./none/tests/amd64/fma.stderr.exp
+# ./none/tests/amd64/bmi.stderr.exp
+Patch21: valgrind-3.8.1-avx2-bmi-fma.patch.gz
+# Small fixup for above patch, just a configure check.
+# This is equivalent to valgrind-bmi-5.patch from KDE#305728
+Patch22: valgrind-3.8.1-bmi-conf-check.patch
+# Partial backport of upstream revision 12884 without it AVX2 VPBROADCASTB
+# insn is broken under memcheck.
+Patch23: valgrind-3.8.1-memcheck-mc_translate-Iop_8HLto16.patch
+# vgtest files should prereq that the binary is there (for old binutils).
+Patch24: valgrind-3.8.1-avx2-prereq.patch
+
+# KDE#308321 - testsuite memcheck filter interferes with gdb_filter
+Patch25: valgrind-3.8.1-filter_gdb.patch
+
+# KDE#308341 - vgdb should report process exit (or fatal signal) 
+Patch26: valgrind-3.8.1-gdbserver_exit.patch
+
+# KDE#164485 - VG_N_SEGNAMES and VG_N_SEGMENTS are (still) too small
+Patch27: valgrind-3.8.1-aspacemgr_VG_N_SEGs.patch
+
+# KDE#308427 - s390 memcheck reports tsearch conditional jump or move
+#              depends on uninitialized value [workaround, suppression]
+Patch28: valgrind-3.8.1-s390_tsearch_supp.patch
 
 Obsoletes: valgrind-callgrind
 %ifarch x86_64 ppc64
@@ -36,11 +129,23 @@ BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.
 %if 0%{?fedora} >= 15
 BuildRequires: glibc-devel >= 2.14
 %else
+%if 0%{?rhel} >= 6
 BuildRequires: glibc-devel >= 2.12
+%else
+BuildRequires: glibc-devel >= 2.5
+%endif
 %endif
 %ifarch %{ix86} x86_64 ppc ppc64
 BuildRequires: openmpi-devel >= 1.3.3
 %endif
+
+# For %%build and %%check.
+# In case of a software collection, pick the matching gdb and binutils.
+BuildRequires: %{?scl_prefix}gdb
+BuildRequires: %{?scl_prefix}binutils
+
+%{?scl:Requires:%scl_runtime}
+
 ExclusiveArch: %{ix86} x86_64 ppc ppc64 s390x %{arm}
 %ifarch %{ix86}
 %define valarch x86
@@ -88,7 +193,7 @@ find/diagnose.
 %package devel
 Summary: Development files for valgrind
 Group: Development/Debuggers
-Requires: valgrind = %{epoch}:%{version}-%{release}
+Requires: %{?scl_prefix}valgrind = %{epoch}:%{version}-%{release}
 
 %description devel
 Header files and libraries for development of valgrind aware programs
@@ -97,15 +202,16 @@ or valgrind plugins.
 %package openmpi
 Summary: OpenMPI support for valgrind
 Group: Development/Debuggers
-Requires: valgrind = %{epoch}:%{version}-%{release}
+Requires: %{?scl_prefix}valgrind = %{epoch}:%{version}-%{release}
 
 %description openmpi
 A wrapper library for debugging OpenMPI parallel programs with valgrind.
-See file:///usr/share/doc/valgrind-%{version}/html/mc-manual.html#mc-manual.mpiwrap
+See file:///usr/share/doc/%{?scl_prefix}valgrind-%{version}/html/mc-manual.html#mc-manual.mpiwrap
 for details.
 
 %prep
-%setup -q
+%setup -q %{?scl:-n %{pkg_name}-%{version}}
+
 %patch1 -p1
 %patch2 -p1
 %patch3 -p1
@@ -123,11 +229,36 @@ for details.
 %patch15 -p1
 %patch16 -p1
 %patch17 -p1
+chmod 755 memcheck/tests/filter_memcpy
 %patch18 -p1
 %patch19 -p1
-touch memcheck/tests/dw4.stdout.exp
+%patch20 -p1
+
+# Add support for AVX2, BMI1, BMI2 and FMA instructions
+%patch21 -p1
+touch ./none/tests/amd64/avx2-1.stderr.exp
+touch ./none/tests/amd64/fma.stderr.exp
+touch ./none/tests/amd64/bmi.stderr.exp
+%patch22 -p1
+%patch23 -p1
+%patch24 -p1
+
+%patch25 -p1
+%patch26 -p1
+%patch27 -p1
+%ifarch s390x
+%patch28 -p1
+%endif
+
+# To suppress eventual automake warnings/errors
+rm -f gdbserver_tests/filter_gdb.orig
 
 %build
+# We need to use the software collection compiler and binutils if available.
+# The configure checks might otherwise miss support for various newer
+# assembler instructions.
+%{?scl:PATH=%{_bindir}${PATH:+:${PATH}}}
+
 CC=gcc
 %ifarch x86_64 ppc64
 # Ugly hack - libgcc 32-bit package might not be installed
@@ -136,13 +267,24 @@ ar r libgcc/32/libgcc_s.a
 ar r libgcc/libgcc_s_32.a
 CC="gcc -B `pwd`/libgcc/"
 %endif
-%configure CC="$CC" \
-  CFLAGS="`echo " %{optflags} " | sed 's/ -m\(64\|3[21]\) / /g;s/ -fexceptions / /g;s/^ //;s/ $//'`" \
-  CXXFLAGS="`echo " %{optflags} " | sed 's/ -m\(64\|3[21]\) / /g;s/ -fexceptions / /g;s/^ //;s/ $//'`" \
-%ifarch %{ix86} x86_64 ppc ppc64
-  --with-mpicc=%{_libdir}/openmpi/bin/mpicc
+
+# Old openmpi-devel has version depended paths for mpicc.
+%if 0%{?fedora} >= 13 || 0%{?rhel} >= 6
+%define mpiccpath %{!?scl:%{_libdir}}%{?scl:%{_root_libdir}}/openmpi/bin/mpicc
+%else
+%define mpiccpath %{!?scl:%{_libdir}}%{?scl:%{_root_libdir}}/openmpi/*/bin/mpicc
 %endif
-  GDB=%{_bindir}/gdb \
+
+# Filter out some flags that cause lots of valgrind test failures.
+# Also filter away -O2, valgrind adds it wherever suitable, but
+# not for tests which should be -O0, as they aren't meant to be
+# compiled with -O2 unless explicitely requested.
+OPTFLAGS="`echo " %{optflags} " | sed 's/ -m\(64\|3[21]\) / /g;s/ -fexceptions / /g;s/ -fstack-protector / / g;s/ -Wp,-D_FORTIFY_SOURCE=2 / /g;s/ -O2 / /g;s/^ //;s/ $//'`"
+%configure CC="$CC" CFLAGS="$OPTFLAGS" CXXFLAGS="$OPTFLAGS" \
+%ifarch %{ix86} x86_64 ppc ppc64
+  --with-mpicc=%{mpiccpath} \
+%endif
+  GDB=%{_bindir}/gdb
 
 make %{?_smp_mflags}
 
@@ -168,7 +310,8 @@ gcc $RPM_OPT_FLAGS -o close_fds close_fds.c
 echo 'int main (void) { return 0; }' > none/tests/pth_cancel2.c
 
 %install
-%makeinstall
+rm -rf $RPM_BUILD_ROOT
+make DESTDIR=$RPM_BUILD_ROOT install
 mkdir docs.installed
 mv $RPM_BUILD_ROOT%{_datadir}/doc/valgrind/* docs.installed/
 rm -f docs.installed/*.ps
@@ -189,10 +332,45 @@ popd
 
 rm -f $RPM_BUILD_ROOT%{_libdir}/valgrind/*.supp.in
 
+%ifarch %{ix86} x86_64
+# To avoid multilib clashes in between i?86 and x86_64,
+# tweak installed <valgrind/config.h> a little bit.
+for i in HAVE_PTHREAD_CREATE_GLIBC_2_0 \
+%if 0%{?rhel} == 5
+         HAVE_BUILTIN_ATOMIC HAVE_BUILTIN_ATOMIC_CXX \
+%endif
+         ; do
+  sed -i -e 's,^\(#define '$i' 1\|/\* #undef '$i' \*/\)$,#ifdef __x86_64__\n# define '$i' 1\n#endif,' \
+    $RPM_BUILD_ROOT%{_includedir}/valgrind/config.h
+done
+%endif
+
 %check
+# Build the test files with the software collection compiler if available.
+%{?scl:PATH=%{_bindir}${PATH:+:${PATH}}}
 make %{?_smp_mflags} check || :
 echo ===============TESTING===================
 ./close_fds make regtest || :
+# Make sure test failures show up in build.log
+# Gather up the diffs (at most the first 20 lines for each one)
+MAX_LINES=20
+diff_files=`find . -name '*.diff' | sort`
+if [ z"$diff_files" = z ] ; then
+   echo "Congratulations, all tests passed!" >> diffs
+else
+   for i in $diff_files ; do
+      echo "=================================================" >> diffs
+      echo $i                                                  >> diffs
+      echo "=================================================" >> diffs
+      if [ `wc -l < $i` -le $MAX_LINES ] ; then
+         cat $i                                                >> diffs
+      else
+         head -n $MAX_LINES $i                                 >> diffs
+         echo "<truncated beyond $MAX_LINES lines>"            >> diffs
+      fi
+   done
+fi
+cat diffs
 echo ===============END TESTING===============
 
 %files
@@ -220,6 +398,83 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Mon Oct 15 2012 Mark Wielaard <mjw@redhat.com> 3.8.1-3
+- Add valgrind-3.8.1-x86_amd64_features-avx.patch (KDE#307285)
+- Add valgrind-3.8.1-gdbserver_tests-syscall-template-source.patch (KDE#307155)
+- Add valgrind-3.8.1-overlap_memcpy_filter.patch (KDE#307290)
+- Add valgrind-3.8.1-pkg-config.patch (#827219, KDE#307729)
+- Add valgrind-3.8.1-proc-auxv.patch (KDE#253519)
+- Add valgrind-3.8.1-wcs.patch (#755242, KDE#307828)
+- Add valgrind-3.8.1-filter_gdb.patch (KDE#308321)
+- Add valgrind-3.8.1-gdbserver_exit.patch (#862795, KDE#308341)
+- Add valgrind-3.8.1-aspacemgr_VG_N_SEGs.patch (#730303, KDE#164485)
+- Add valgrind-3.8.1-s390_tsearch_supp.patch (#816244, KDE#308427)
+
+* Fri Sep 20 2012 Mark Wielaard <mjw@redhat.com> 3.8.1-2
+- Add valgrind-3.8.1-gdbserver_tests-mcinvoke-ppc64.patch
+- Replace valgrind-3.8.1-cfi_dw_ops.patch with version as committed upstream.
+- Remove erroneous printf change from valgrind-3.8.1-abbrev-parsing.patch.
+- Add scalar testcase change to valgrind-3.8.1-capget.patch.
+
+* Thu Sep 20 2012 Mark Wielaard <mjw@redhat.com> 3.8.1-1
+- Add partial backport of upstream revision 12884
+  valgrind-3.8.0-memcheck-mc_translate-Iop_8HLto16.patch
+  without it AVX2 VPBROADCASTB insn is broken under memcheck.
+- Add valgrind-3.8.0-cfi_dw_ops.patch (KDE#307038)
+  DWARF2 CFI reader: unhandled DW_OP_ opcode 0x8 (DW_OP_const1u and friends)
+- Add valgrind-3.8.0-avx2-prereq.patch.
+- Remove accidentially included diffs for gdbserver_tests and helgrind/tests
+  Makefile.in from valgrind-3.8.0-avx2-bmi-fma.patch.gz
+- Remove valgrind-3.8.0-tests.patch tests no longer hang.
+- Added SCL macros to support building as part of a Software Collection.
+- Upgrade to valgrind 3.8.1.
+
+* Wed Sep 12 2012 Mark Wielaard <mjw@redhat.com> 3.8.0-8
+- Add configure fixup valgrind-3.8.0-bmi-conf-check.patch
+
+* Wed Sep 12 2012 Mark Wielaard <mjw@redhat.com> 3.8.0-7
+- Add valgrind-3.8.0-avx2-bmi-fma.patch (KDE#305728)
+
+* Tue Sep 11 2012 Mark Wielaard <mjw@redhat.com> 3.8.0-6
+- Add valgrind-3.8.0-lzcnt-tzcnt-bugfix.patch (KDE#295808)
+- Add valgrind-3.8.0-avx-alignment-check.patch (KDE#305926)
+
+* Mon Aug 27 2012 Mark Wielaard <mjw@redhat.com> 3.8.0-5
+- Add valgrind-3.8.0-abbrev-parsing.patch for #849783 (KDE#305513).
+
+* Sun Aug 19 2012 Mark Wielaard <mjw@redhat.com> 3.8.0-4
+- Add valgrind-3.8.0-find-buildid.patch workaround bug #849435 (KDE#305431).
+
+* Wed Aug 15 2012 Jakub Jelinek <jakub@redhat.com> 3.8.0-3
+- fix up last change
+
+* Wed Aug 15 2012 Jakub Jelinek <jakub@redhat.com> 3.8.0-2
+- tweak up <valgrind/config.h> to allow simultaneous installation
+  of valgrind-devel.{i686,x86_64} (#848146)
+
+* Fri Aug 10 2012 Jakub Jelinek <jakub@redhat.com> 3.8.0-1
+- update to 3.8.0 release
+- from CFLAGS/CXXFLAGS filter just fortification flags, not arch
+  specific flags
+- on i?86 prefer to use CFI over %ebp unwinding, as GCC 4.6+
+  defaults to -fomit-frame-pointer
+
+* Tue Aug 07 2012 Mark Wielaard <mjw@redhat.com> 3.8.0-0.1.TEST1.svn12858
+- Update to 3.8.0-TEST1
+- Clear CFLAGS CXXFLAGS LDFLAGS.
+- Fix \ line continuation in configure line.
+
+* Fri Aug 03 2012 Mark Wielaard <mjw@redhat.com> 3.7.0-7
+- Fixup shadowing warnings valgrind-3.7.0-dwz.patch
+- Add valgrind-3.7.0-ref_addr.patch (#842659, KDE#298864)
+
+* Mon Jul 25 2012 Mark Wielaard <mjw@redhat.com> 3.7.0-6
+- handle dwz DWARF compressor output (#842659, KDE#302901)
+- allow glibc 2.16.
+
+* Sun Jul 22 2012 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1:3.7.0-5
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_18_Mass_Rebuild
+
 * Mon May  7 2012 Jakub Jelinek <jakub@redhat.com> 3.7.0-4
 - adjust suppressions so that it works even with ld-2.15.so (#806854)
 - handle DW_TAG_unspecified_type and DW_TAG_rvalue_reference_type
