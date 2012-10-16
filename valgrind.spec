@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.8.1
-Release: 3%{?dist}
+Release: 4%{?dist}
 Epoch: 1
 License: GPLv2
 URL: http://www.valgrind.org/
@@ -120,6 +120,9 @@ Patch27: valgrind-3.8.1-aspacemgr_VG_N_SEGs.patch
 # KDE#308427 - s390 memcheck reports tsearch conditional jump or move
 #              depends on uninitialized value [workaround, suppression]
 Patch28: valgrind-3.8.1-s390_tsearch_supp.patch
+
+# KDE#307106 - unhandled instruction bytes: f0 0f c0 02 (lock xadd)
+Patch29: valgrind-3.8.1-xaddb.patch
 
 Obsoletes: valgrind-callgrind
 %ifarch x86_64 ppc64
@@ -249,6 +252,8 @@ touch ./none/tests/amd64/bmi.stderr.exp
 %ifarch s390x
 %patch28 -p1
 %endif
+
+%patch29 -p1
 
 # To suppress eventual automake warnings/errors
 rm -f gdbserver_tests/filter_gdb.orig
@@ -398,6 +403,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Tue Oct 16 2012 Mark Wielaard <mjw@redhat.com> 3.8.1-4
+- Add valgrind-3.8.1-xaddb.patch (#866793, KDE#307106)
+
 * Mon Oct 15 2012 Mark Wielaard <mjw@redhat.com> 3.8.1-3
 - Add valgrind-3.8.1-x86_amd64_features-avx.patch (KDE#307285)
 - Add valgrind-3.8.1-gdbserver_tests-syscall-template-source.patch (KDE#307155)
