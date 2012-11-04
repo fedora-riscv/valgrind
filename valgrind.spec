@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.8.1
-Release: 4%{?dist}
+Release: 5%{?dist}
 Epoch: 1
 License: GPLv2
 URL: http://www.valgrind.org/
@@ -417,7 +417,7 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
-* Sun Nov  4 2012 Mark Wielaard <mjw@redhat.com>
+* Sun Nov  4 2012 Mark Wielaard <mjw@redhat.com> 3.8.1-5
 - Add valgrind-3.8.1-stpncpy.patch (KDE#309427)
 - Add valgrind-3.8.1-ppc-32-mode-64-bit-instr.patch (#810992, KDE#308573)
 - Add valgrind-3.8.1-sigill_diag.patch (#810992, KDE#309425)
