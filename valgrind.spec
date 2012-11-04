@@ -124,6 +124,9 @@ Patch28: valgrind-3.8.1-s390_tsearch_supp.patch
 # KDE#307106 - unhandled instruction bytes: f0 0f c0 02 (lock xadd)
 Patch29: valgrind-3.8.1-xaddb.patch
 
+# KDE#309427 - SSE optimized stpncpy trigger uninitialised value
+Patch30: valgrind-3.8.1-stpncpy.patch
+
 Obsoletes: valgrind-callgrind
 %ifarch x86_64 ppc64
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -254,6 +257,7 @@ touch ./none/tests/amd64/bmi.stderr.exp
 %endif
 
 %patch29 -p1
+%patch30 -p1
 
 # To suppress eventual automake warnings/errors
 rm -f gdbserver_tests/filter_gdb.orig
@@ -403,6 +407,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Sun Nov  4 2012 Mark Wielaard <mjw@redhat.com>
+- Add valgrind-3.8.1-stpncpy.patch (KDE#309427)
+
 * Tue Oct 16 2012 Mark Wielaard <mjw@redhat.com> 3.8.1-4
 - Add valgrind-3.8.1-xaddb.patch (#866793, KDE#307106)
 
