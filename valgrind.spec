@@ -127,6 +127,10 @@ Patch29: valgrind-3.8.1-xaddb.patch
 # KDE#309427 - SSE optimized stpncpy trigger uninitialised value
 Patch30: valgrind-3.8.1-stpncpy.patch
 
+# KDE#308573 - Internal Valgrind error on 64-bit instruction executed
+#              in 32-bit mode
+Patch31: valgrind-3.8.1-ppc-32-mode-64-bit-instr.patch
+
 Obsoletes: valgrind-callgrind
 %ifarch x86_64 ppc64
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -258,6 +262,7 @@ touch ./none/tests/amd64/bmi.stderr.exp
 
 %patch29 -p1
 %patch30 -p1
+%patch31 -p1
 
 # To suppress eventual automake warnings/errors
 rm -f gdbserver_tests/filter_gdb.orig
@@ -409,6 +414,7 @@ echo ===============END TESTING===============
 %changelog
 * Sun Nov  4 2012 Mark Wielaard <mjw@redhat.com>
 - Add valgrind-3.8.1-stpncpy.patch (KDE#309427)
+- Add valgrind-3.8.1-ppc-32-mode-64-bit-instr.patch (#810992, KDE#308573)
 
 * Tue Oct 16 2012 Mark Wielaard <mjw@redhat.com> 3.8.1-4
 - Add valgrind-3.8.1-xaddb.patch (#866793, KDE#307106)
