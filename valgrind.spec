@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.8.1
-Release: 5%{?dist}
+Release: 6%{?dist}
 Epoch: 1
 License: GPLv2
 URL: http://www.valgrind.org/
@@ -134,6 +134,9 @@ Patch31: valgrind-3.8.1-ppc-32-mode-64-bit-instr.patch
 # KDE#309425 - Provide a --sigill-diagnostics flag to suppress
 #              illegal instruction reporting
 Patch32: valgrind-3.8.1-sigill_diag.patch
+
+# Allow building against glibc-2.17. Upstream commit svn 13228.
+Patch33: valgrind-3.8.1-glibc-2.17.patch
 
 Obsoletes: valgrind-callgrind
 %ifarch x86_64 ppc64
@@ -268,6 +271,7 @@ touch ./none/tests/amd64/bmi.stderr.exp
 %patch30 -p1
 %patch31 -p1
 %patch32 -p1
+%patch33 -p1
 
 # To suppress eventual automake warnings/errors
 rm -f gdbserver_tests/filter_gdb.orig
@@ -417,6 +421,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Wed Jan 16 2013 Mark Wielaard <mjw@redhat.com> 3.8.1-6
+- Allow building against glibc-2.17.
+
 * Sun Nov  4 2012 Mark Wielaard <mjw@redhat.com> 3.8.1-5
 - Add valgrind-3.8.1-stpncpy.patch (KDE#309427)
 - Add valgrind-3.8.1-ppc-32-mode-64-bit-instr.patch (#810992, KDE#308573)
