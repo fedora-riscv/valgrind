@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.8.1
-Release: 6%{?dist}
+Release: 7%{?dist}
 Epoch: 1
 License: GPLv2
 URL: http://www.valgrind.org/
@@ -138,7 +138,6 @@ Patch32: valgrind-3.8.1-sigill_diag.patch
 # Allow building against glibc-2.17. Upstream commit svn 13228.
 Patch33: valgrind-3.8.1-glibc-2.17.patch
 
-Obsoletes: valgrind-callgrind
 %ifarch x86_64 ppc64
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -197,7 +196,7 @@ ExclusiveArch: %{ix86} x86_64 ppc ppc64 s390x %{arm}
 %define __spec_install_post /usr/lib/rpm/brp-compress || :
 
 # Disable -debuginfo package generation
-%define debug_package	%{nil}
+%define debug_package  %{nil}
 
 %description
 Valgrind is a tool to help you find memory-management problems in your
@@ -421,6 +420,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Thu Feb 07 2013 Jon Ciesla <limburgher@gmail.com> 1:3.8.1-7
+- Merge review fixes, BZ 226522.
+
 * Wed Jan 16 2013 Mark Wielaard <mjw@redhat.com> 3.8.1-6
 - Allow building against glibc-2.17.
 
@@ -490,7 +492,7 @@ echo ===============END TESTING===============
 - update to 3.8.0 release
 - from CFLAGS/CXXFLAGS filter just fortification flags, not arch
   specific flags
-- on i?86 prefer to use CFI over %ebp unwinding, as GCC 4.6+
+- on i?86 prefer to use CFI over %%ebp unwinding, as GCC 4.6+
   defaults to -fomit-frame-pointer
 
 * Tue Aug 07 2012 Mark Wielaard <mjw@redhat.com> 3.8.0-0.1.TEST1.svn12858
@@ -675,7 +677,7 @@ echo ===============END TESTING===============
 - power5+ and power6 support (#240762)
 
 * Thu Jun 28 2007 Jakub Jelinek <jakub@redhat.com> 3.2.3-4
-- pass GDB=%{_prefix}/gdb to configure to fix default
+- pass GDB=%%{_prefix}/gdb to configure to fix default
   --db-command (#220840)
 
 * Wed Jun 27 2007 Jakub Jelinek <jakub@redhat.com> 3.2.3-3
@@ -768,7 +770,7 @@ echo ===============END TESTING===============
 
 * Fri Aug 12 2005 Jakub Jelinek <jakub@redhat.com> 3.0.0-3
 - fix amd64 handling of cwtd instruction
-- fix amd64 handling of e.g. sarb $0x4,val(%rip)
+- fix amd64 handling of e.g. sarb $0x4,val(%%rip)
 - speedup amd64 insn decoding
 
 * Fri Aug 12 2005 Jakub Jelinek <jakub@redhat.com> 3.0.0-2
