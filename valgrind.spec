@@ -141,6 +141,12 @@ Patch33: valgrind-3.8.1-glibc-2.17.patch
 # KDE#315441 - sendmsg syscall should ignore unset msghdr msg_flags
 Patch34: valgrind-3.8.1-sendmsg-flags.patch
 
+# KDE#308886 - Missing support for PTRACE_SET/GETREGSET
+Patch35: valgrind-3.8.1-ptrace-setgetregset.patch
+
+# KDE#310424 - --read-var-info does not properly describe static variables
+Patch36: valgrind-3.8.1-static-variables.patch
+
 %ifarch x86_64 ppc64
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -275,6 +281,9 @@ touch ./none/tests/amd64/bmi.stderr.exp
 %patch32 -p1
 %patch33 -p1
 %patch34 -p1
+%patch35 -p1
+touch ./memcheck/tests/linux/getregset.stderr.exp
+%patch36 -p1
 
 # To suppress eventual automake warnings/errors
 rm -f gdbserver_tests/filter_gdb.orig
@@ -426,6 +435,8 @@ echo ===============END TESTING===============
 %changelog
 * Tue Feb 19 2013 Mark Wielaard <mjw@redhat.com> 3.8.1-8
 - Add valgrind-3.8.1-sendmsg-flags.patch
+- Add valgrind-3.8.1-ptrace-setgetregset.patch
+- Add valgrind-3.8.1-static-variables.patch
 
 * Thu Feb 07 2013 Jon Ciesla <limburgher@gmail.com> 1:3.8.1-7
 - Merge review fixes, BZ 226522.
