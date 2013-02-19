@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.8.1
-Release: 7%{?dist}
+Release: 8%{?dist}
 Epoch: 1
 License: GPLv2
 URL: http://www.valgrind.org/
@@ -138,6 +138,9 @@ Patch32: valgrind-3.8.1-sigill_diag.patch
 # Allow building against glibc-2.17. Upstream commit svn 13228.
 Patch33: valgrind-3.8.1-glibc-2.17.patch
 
+# KDE#315441 - sendmsg syscall should ignore unset msghdr msg_flags
+Patch34: valgrind-3.8.1-sendmsg-flags.patch
+
 %ifarch x86_64 ppc64
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -271,6 +274,7 @@ touch ./none/tests/amd64/bmi.stderr.exp
 %patch31 -p1
 %patch32 -p1
 %patch33 -p1
+%patch34 -p1
 
 # To suppress eventual automake warnings/errors
 rm -f gdbserver_tests/filter_gdb.orig
@@ -420,6 +424,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Tue Feb 19 2013 Mark Wielaard <mjw@redhat.com> 3.8.1-8
+- Add valgrind-3.8.1-sendmsg-flags.patch
+
 * Thu Feb 07 2013 Jon Ciesla <limburgher@gmail.com> 1:3.8.1-7
 - Merge review fixes, BZ 226522.
 
