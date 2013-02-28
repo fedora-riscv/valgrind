@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.8.1
-Release: 8%{?dist}
+Release: 9%{?dist}
 Epoch: 1
 License: GPLv2
 URL: http://www.valgrind.org/
@@ -433,6 +433,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Thu Feb 28 2013 Mark Wielaard <mjw@redhat.com> 3.8.1-9
+- Replace valgrind-3.8.1-sendmsg-flags.patch with upstream version.
+
 * Tue Feb 19 2013 Mark Wielaard <mjw@redhat.com> 3.8.1-8
 - Add valgrind-3.8.1-sendmsg-flags.patch
 - Add valgrind-3.8.1-ptrace-setgetregset.patch
