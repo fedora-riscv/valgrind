@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.8.1
-Release: 9%{?dist}
+Release: 10%{?dist}
 Epoch: 1
 License: GPLv2
 URL: http://www.valgrind.org/
@@ -201,11 +201,10 @@ ExclusiveArch: %{ix86} x86_64 ppc ppc64 s390x %{arm}
 %define valsecarch %{nil}
 %endif
 
-# Disable build root strip policy
-%define __spec_install_post /usr/lib/rpm/brp-compress || :
-
-# Disable -debuginfo package generation
-%define debug_package  %{nil}
+# Don't barf on mising build-ids when creating the -debuginfo package.
+# See coregrind/link_tool_exe_linux.in, which links the tool executables
+# statically and at an alternative load address.
+%undefine _missing_build_ids_terminate_build
 
 %description
 Valgrind is a tool to help you find memory-management problems in your
@@ -433,6 +432,10 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Fri Mar 01 2013 Mark Wielaard <mjw@redhat.com> 3.8.1-10
+- Don't disable -debuginfo package generation, but do undefine
+  _missing_build_ids_terminate_build.
+
 * Thu Feb 28 2013 Mark Wielaard <mjw@redhat.com> 3.8.1-9
 - Replace valgrind-3.8.1-sendmsg-flags.patch with upstream version.
 
