@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.8.1
-Release: 10%{?dist}
+Release: 11%{?dist}
 Epoch: 1
 License: GPLv2
 URL: http://www.valgrind.org/
@@ -147,6 +147,9 @@ Patch35: valgrind-3.8.1-ptrace-setgetregset.patch
 # KDE#310424 - --read-var-info does not properly describe static variables
 Patch36: valgrind-3.8.1-static-variables.patch
 
+# KDE#316144, KDE#315959, KDE#316145 - various manpage fixes
+Patch37: valgrind-3.8.1-manpages.patch
+
 %ifarch x86_64 ppc64
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -283,6 +286,7 @@ touch ./none/tests/amd64/bmi.stderr.exp
 %patch35 -p1
 touch ./memcheck/tests/linux/getregset.stderr.exp
 %patch36 -p1
+%patch37 -p1
 
 # To suppress eventual automake warnings/errors
 rm -f gdbserver_tests/filter_gdb.orig
@@ -432,6 +436,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Tue Mar 12 2013 Mark Wielaard <mjw@redhat.com> 3.8.1-11
+- Add valgrind-3.8.1-manpages.patch
+
 * Fri Mar 01 2013 Mark Wielaard <mjw@redhat.com> 3.8.1-10
 - Don't disable -debuginfo package generation, but do undefine
   _missing_build_ids_terminate_build.
