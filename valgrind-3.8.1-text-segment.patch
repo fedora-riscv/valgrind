@@ -228,15 +228,6 @@ diff -ur valgrind-3.8.1.orig/configure valgrind-3.8.1/configure
  DWARF4_FALSE
  DWARF4_TRUE
  FLAG_UNLIMITED_INLINE_UNIT_GROWTH
-@@ -5328,7 +5328,7 @@
-         ARCH_MAX="s390x"
-         ;;
- 
--     armv[57]*)
-+     armv57*)
- 	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: ok (${host_cpu})" >&5
- $as_echo "ok (${host_cpu})" >&6; }
- 	ARCH_MAX="arm"
 @@ -7913,16 +7913,25 @@
  CFLAGS=$safe_CFLAGS
  

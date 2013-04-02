@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.8.1
-Release: 12%{?dist}
+Release: 13%{?dist}
 Epoch: 1
 License: GPLv2
 URL: http://www.valgrind.org/
@@ -435,6 +435,10 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Tue Apr 02 2013 Mark Wielaard <mjw@redhat.com> 3.8.1-13
+- Fix quoting in valgrind valgrind-3.8.1-enable-armv5.patch and
+  remove arm configure hunk from valgrind-3.8.1-text-segment.patch #947440
+
 * Wed Mar 20 2013 Mark Wielaard <mjw@redhat.com> 3.8.1-12
 - Add valgrind-3.8.1-text-segment.patch
 - Don't undefine _missing_build_ids_terminate_build.
