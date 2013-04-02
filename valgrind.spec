@@ -153,6 +153,9 @@ Patch37: valgrind-3.8.1-manpages.patch
 # KDE#317091 Use -Wl,-Ttext-segment when static linking to keep build-ids
 Patch38: valgrind-3.8.1-text-segment.patch
 
+# svn revisions 13348 and 13349
+Patch39: valgrind-3.8.1-regtest-fixlets.patch
+
 %ifarch x86_64 ppc64
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -286,6 +289,7 @@ touch ./memcheck/tests/linux/getregset.stderr.exp
 %patch36 -p1
 %patch37 -p1
 %patch38 -p1
+%patch39 -p1
 
 # To suppress eventual automake warnings/errors
 rm -f gdbserver_tests/filter_gdb.orig
@@ -439,6 +443,7 @@ echo ===============END TESTING===============
 - Fix quoting in valgrind valgrind-3.8.1-enable-armv5.patch and
   remove arm configure hunk from valgrind-3.8.1-text-segment.patch #947440
 - Replace valgrind-3.8.1-text-segment.patch with upstream variant.
+- Add valgrind-3.8.1-regtest-fixlets.patch.
 
 * Wed Mar 20 2013 Mark Wielaard <mjw@redhat.com> 3.8.1-12
 - Add valgrind-3.8.1-text-segment.patch
