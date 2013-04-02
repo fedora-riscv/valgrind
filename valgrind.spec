@@ -438,6 +438,7 @@ echo ===============END TESTING===============
 * Tue Apr 02 2013 Mark Wielaard <mjw@redhat.com> 3.8.1-13
 - Fix quoting in valgrind valgrind-3.8.1-enable-armv5.patch and
   remove arm configure hunk from valgrind-3.8.1-text-segment.patch #947440
+- Replace valgrind-3.8.1-text-segment.patch with upstream variant.
 
 * Wed Mar 20 2013 Mark Wielaard <mjw@redhat.com> 3.8.1-12
 - Add valgrind-3.8.1-text-segment.patch
