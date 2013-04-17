@@ -876,3 +876,54 @@ diff -ur valgrind-3.8.1.orig/tests/Makefile.in valgrind-3.8.1/tests/Makefile.in
  FLAG_UNLIMITED_INLINE_UNIT_GROWTH = @FLAG_UNLIMITED_INLINE_UNIT_GROWTH@
  FLAG_W_EXTRA = @FLAG_W_EXTRA@
  FLAG_W_NO_EMPTY_BODY = @FLAG_W_NO_EMPTY_BODY@
+
+commit 0e6f91f20c180a37e32a7688b93c94f73aede0b6
+Author: Mark Wielaard <mjw@redhat.com>
+Date:   Wed Apr 17 20:30:10 2013 +0200
+
+    Fix -Ttext-segment configure check.
+    
+    Explicitly test together with -static -nodefaultlibs -nostartfiles to mimic
+    what the tools linking script does. At least on s390 the test might fail for
+    a non-static AC_LINK, while it does work when using those other flags too.
+
+diff --git a/configure.in b/configure.in
+index 424f8e6..9a1db0c 100644
+--- a/configure.in
++++ b/configure.in
+@@ -1718,10 +1718,10 @@ CFLAGS=$safe_CFLAGS
+ AC_MSG_CHECKING([if the linker accepts -Wl,-Ttext-segment])
+ 
+ safe_CFLAGS=$CFLAGS
+-CFLAGS="-Wl,-Ttext-segment=$valt_load_address_pri_norml"
++CFLAGS="-static -nodefaultlibs -nostartfiles -Wl,-Ttext-segment=$valt_load_address_pri_norml"
+ 
+ AC_LINK_IFELSE(
+-[AC_LANG_PROGRAM([ ], [return 0;])],
++[AC_LANG_SOURCE([int _start () { return 0; }])],
+ [
+   linker_using_t_text="no"
+   AC_SUBST([FLAG_T_TEXT], ["-Ttext-segment"])
+--- valgrind-3.8.1/configure.orig2	2013-04-17 20:37:38.431443701 +0200
++++ valgrind-3.8.1/configure	2013-04-17 20:38:19.103686995 +0200
+@@ -7932,18 +7932,11 @@
+ $as_echo_n "checking if the linker accepts -Wl,-Ttext-segment... " >&6; }
+ 
+ safe_CFLAGS=$CFLAGS
+-CFLAGS="-Wl,-Ttext-segment=$valt_load_address_pri_norml"
++CFLAGS="-static -nodefaultlibs -nostartfiles -Wl,-Ttext-segment=$valt_load_address_pri_norml"
+ 
+ cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+ /* end confdefs.h.  */
+-
+-int
+-main ()
+-{
+-return 0;
+-  ;
+-  return 0;
+-}
++int _start () { return 0; }
+ _ACEOF
+ if ac_fn_c_try_link "$LINENO"; then :
+ 
