@@ -178,6 +178,9 @@ BuildRequires: openmpi-devel >= 1.3.3
 BuildRequires: %{?scl_prefix}gdb
 BuildRequires: %{?scl_prefix}binutils
 
+# gdbserver_tests/filter_make_empty uses ps in test
+BuildRequires: /bin/ps
+
 %{?scl:Requires:%scl_runtime}
 
 ExclusiveArch: %{ix86} x86_64 ppc ppc64 s390x %{arm}
