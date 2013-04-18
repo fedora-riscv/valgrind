@@ -294,6 +294,16 @@ touch ./memcheck/tests/linux/getregset.stderr.exp
 %patch38 -p1
 %patch39 -p1
 
+# These tests go into an endless loop on ARM
+# There is a __sync_add_and_fetch in the testcase.
+# DRD is doing this trace printing inside the loop
+# which causes the reservation (LDREX) to fail so
+# it can never make progress.
+%ifarch %{arm}
+rm -f drd/tests/annotate_trace_memory_xml.vgtest
+rm -f drd/tests/annotate_trace_memory.vgtest
+%endif
+
 # To suppress eventual automake warnings/errors
 rm -f gdbserver_tests/filter_gdb.orig
 
@@ -392,7 +402,9 @@ done
 %check
 # Build the test files with the software collection compiler if available.
 %{?scl:PATH=%{_bindir}${PATH:+:${PATH}}}
-make %{?_smp_mflags} check || :
+# Make sure no extra CFLAGS leak through, the testsuite sets all flags
+# necessary. See also configure above.
+make %{?_smp_mflags} CFLAGS="" check || :
 echo ===============TESTING===================
 ./close_fds make regtest || :
 # Make sure test failures show up in build.log
