@@ -183,6 +183,9 @@ BuildRequires: /bin/ps
 
 %{?scl:Requires:%scl_runtime}
 
+# We need to fixup selinux file context when doing a scl build.
+%{?scl:Requires(post): /usr/sbin/semanage, /sbin/restorecon}
+
 ExclusiveArch: %{ix86} x86_64 ppc ppc64 s390x %{arm}
 %ifarch %{ix86}
 %define valarch x86
@@ -452,6 +455,15 @@ echo ===============END TESTING===============
 %dir %{_libdir}/valgrind
 %{_libdir}/valgrind/libmpiwrap*.so
 %endif
+
+%post
+# Fixup selinux file context inside software collection
+%if 0%{?rhel} == 5
+%{?scl:/usr/sbin/semanage fcontext -a -t unconfined_execmem_exec_t %{_bindir}/valgrind}
+%else
+%{?scl:/usr/sbin/semanage fcontext -a -t execmem_exec_t %{_bindir}/valgrind}
+%endif
+%{?scl:/sbin/restorecon %{_bindir}/valgrind}
 
 %changelog
 * Tue Apr 02 2013 Mark Wielaard <mjw@redhat.com> 3.8.1-13
