@@ -46,7 +46,7 @@ Patch10: valgrind-3.8.1-x86-backtrace.patch
 # KDE#305431 - Use find_buildid shdr fallback for separate .debug files
 Patch11: valgrind-3.8.1-find-buildid.patch
 
-# KDE#305513 - Robustify abbrev reading (part already upstream).
+# KDE#305513 - Fix readdwarf.c read_unitinfo_dwarf2 abbrev reading
 Patch12: valgrind-3.8.1-abbrev-parsing.patch
 
 # KDE#307038 - DWARF2 CFI reader: unhandled DW_OP_ opcode 0x8 (DW_OP_const1u) 
