@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.8.1
-Release: 13%{?dist}
+Release: 14%{?dist}
 Epoch: 1
 License: GPLv2
 URL: http://www.valgrind.org/
@@ -466,6 +466,13 @@ echo ===============END TESTING===============
 %{?scl:/sbin/restorecon %{_bindir}/valgrind}
 
 %changelog
+* Thu Apr 18 2013 Mark Wielaard <mjw@redhat.com> 3.8.1-14
+- fixup selinux file context when doing a scl build.
+- Enable regtest suite on ARM.
+- valgrind-3.8.1-abbrev-parsing.patch, drop workaround, enable real fix.
+- Fix -Ttext-segment configure check. Enables s390x again.
+- BuildRequire ps for testsuite.
+
 * Tue Apr 02 2013 Mark Wielaard <mjw@redhat.com> 3.8.1-13
 - Fix quoting in valgrind valgrind-3.8.1-enable-armv5.patch and
   remove arm configure hunk from valgrind-3.8.1-text-segment.patch #947440
@@ -517,7 +524,7 @@ echo ===============END TESTING===============
 - Add valgrind-3.8.1-aspacemgr_VG_N_SEGs.patch (#730303, KDE#164485)
 - Add valgrind-3.8.1-s390_tsearch_supp.patch (#816244, KDE#308427)
 
-* Fri Sep 20 2012 Mark Wielaard <mjw@redhat.com> 3.8.1-2
+* Fri Sep 21 2012 Mark Wielaard <mjw@redhat.com> 3.8.1-2
 - Add valgrind-3.8.1-gdbserver_tests-mcinvoke-ppc64.patch
 - Replace valgrind-3.8.1-cfi_dw_ops.patch with version as committed upstream.
 - Remove erroneous printf change from valgrind-3.8.1-abbrev-parsing.patch.
@@ -575,7 +582,7 @@ echo ===============END TESTING===============
 - Fixup shadowing warnings valgrind-3.7.0-dwz.patch
 - Add valgrind-3.7.0-ref_addr.patch (#842659, KDE#298864)
 
-* Mon Jul 25 2012 Mark Wielaard <mjw@redhat.com> 3.7.0-6
+* Wed Jul 25 2012 Mark Wielaard <mjw@redhat.com> 3.7.0-6
 - handle dwz DWARF compressor output (#842659, KDE#302901)
 - allow glibc 2.16.
 
@@ -718,7 +725,7 @@ echo ===============END TESTING===============
 * Mon Mar  9 2009 Jakub Jelinek <jakub@redhat.com> 3.4.1-1
 - update to 3.4.1
 
-* Tue Feb  9 2009 Jakub Jelinek <jakub@redhat.com> 3.4.0-3
+* Mon Feb  9 2009 Jakub Jelinek <jakub@redhat.com> 3.4.0-3
 - update to 3.4.0
 
 * Wed Apr 16 2008 Jakub Jelinek <jakub@redhat.com> 3.3.0-3
