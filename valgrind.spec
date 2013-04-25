@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.8.1
-Release: 14%{?dist}
+Release: 15%{?dist}
 Epoch: 1
 License: GPLv2
 URL: http://www.valgrind.org/
@@ -156,6 +156,9 @@ Patch38: valgrind-3.8.1-text-segment.patch
 # svn revisions 13348 and 13349
 Patch39: valgrind-3.8.1-regtest-fixlets.patch
 
+# KDE#309600 - valgrind is a bit confused about 0-sized sections
+Patch40: valgrind-3.8.1-zero-size-sections.patch
+
 %ifarch x86_64 ppc64
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -296,6 +299,7 @@ touch ./memcheck/tests/linux/getregset.stderr.exp
 %patch37 -p1
 %patch38 -p1
 %patch39 -p1
+%patch40 -p1
 
 # These tests go into an endless loop on ARM
 # There is a __sync_add_and_fetch in the testcase.
@@ -466,6 +470,10 @@ echo ===============END TESTING===============
 %{?scl:/sbin/restorecon %{_bindir}/valgrind}
 
 %changelog
+* Thu Apr 25 2013 Mark Wielaard <mjw@redhat.com> 3.8.1-15
+- Add valgrind-3.8.1-zero-size-sections.patch. Resolves issues with zero
+  sized .eh_frame sections on ppc64.
+
 * Thu Apr 18 2013 Mark Wielaard <mjw@redhat.com> 3.8.1-14
 - fixup selinux file context when doing a scl build.
 - Enable regtest suite on ARM.
