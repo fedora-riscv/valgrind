@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.8.1
-Release: 15%{?dist}
+Release: 16%{?dist}
 Epoch: 1
 License: GPLv2
 URL: http://www.valgrind.org/
@@ -231,6 +231,7 @@ find/diagnose.
 Summary: Development files for valgrind
 Group: Development/Debuggers
 Requires: %{?scl_prefix}valgrind = %{epoch}:%{version}-%{release}
+Provides: %{name}-static = %{epoch}:%{version}-%{release}
 
 %description devel
 Header files and libraries for development of valgrind aware programs
@@ -470,6 +471,9 @@ echo ===============END TESTING===============
 %{?scl:/sbin/restorecon %{_bindir}/valgrind}
 
 %changelog
+* Tue May 28 2013 Michael Schwendt <mschwendt@fedoraproject.org> - 1:3.8.1-16
+- Provide virtual -static package in -devel subpackage (#609624).
+
 * Thu Apr 25 2013 Mark Wielaard <mjw@redhat.com> 3.8.1-15
 - Add valgrind-3.8.1-zero-size-sections.patch. Resolves issues with zero
   sized .eh_frame sections on ppc64.
