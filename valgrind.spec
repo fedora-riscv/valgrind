@@ -165,6 +165,10 @@ Patch41: valgrind-3.8.1-dwarf-anon-enum.patch
 # KDE#321969 - Support [lf]setxattr on ppc32 and ppc64 linux kernel
 Patch42: valgrind-3.8.1-ppc-setxattr.patch
 
+# KDE#321730 Add cg_merge and cg_diff man pages
+# KDE#321738 Add manpages for vgdb and valgrind-listener
+Patch43: valgrind-3.8.1-new-manpages.patch
+
 %ifarch x86_64 ppc64
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -306,6 +310,7 @@ touch ./memcheck/tests/linux/getregset.stderr.exp
 %patch40 -p1
 %patch41 -p1
 %patch42 -p1
+%patch43 -p1
 
 # These tests go into an endless loop on ARM
 # There is a __sync_add_and_fetch in the testcase.
@@ -471,6 +476,7 @@ echo ===============END TESTING===============
 - Add valgrind-3.8.1-dwarf-anon-enum.patch
 - Cleanup valgrind-3.8.1-sigill_diag.patch .orig file changes (#949687).
 - Add valgrind-3.8.1-ppc-setxattr.patch
+- Add valgrind-3.8.1-new-manpages.patch
 
 * Tue May 28 2013 Michael Schwendt <mschwendt@fedoraproject.org> - 1:3.8.1-16
 - Provide virtual -static package in -devel subpackage (#609624).
