@@ -162,6 +162,9 @@ Patch40: valgrind-3.8.1-zero-size-sections.patch
 # KDE#289360 - parse_type_DIE confused by DW_TAG_enumeration_type
 Patch41: valgrind-3.8.1-dwarf-anon-enum.patch
 
+# KDE#321969 - Support [lf]setxattr on ppc32 and ppc64 linux kernel
+Patch42: valgrind-3.8.1-ppc-setxattr.patch
+
 %ifarch x86_64 ppc64
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -302,6 +305,7 @@ touch ./memcheck/tests/linux/getregset.stderr.exp
 %patch39 -p1
 %patch40 -p1
 %patch41 -p1
+%patch42 -p1
 
 # These tests go into an endless loop on ARM
 # There is a __sync_add_and_fetch in the testcase.
@@ -466,6 +470,7 @@ echo ===============END TESTING===============
 * Mon Jul 08 2013 Mark Wielaard <mjw@redhat.com>
 - Add valgrind-3.8.1-dwarf-anon-enum.patch
 - Cleanup valgrind-3.8.1-sigill_diag.patch .orig file changes (#949687).
+- Add valgrind-3.8.1-ppc-setxattr.patch
 
 * Tue May 28 2013 Michael Schwendt <mschwendt@fedoraproject.org> - 1:3.8.1-16
 - Provide virtual -static package in -devel subpackage (#609624).
