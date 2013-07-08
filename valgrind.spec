@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.8.1
-Release: 16%{?dist}
+Release: 17%{?dist}
 Epoch: 1
 License: GPLv2
 URL: http://www.valgrind.org/
@@ -480,7 +480,7 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
-* Mon Jul 08 2013 Mark Wielaard <mjw@redhat.com>
+* Mon Jul 08 2013 Mark Wielaard <mjw@redhat.com> - 3.8.1-17
 - Add valgrind-3.8.1-dwarf-anon-enum.patch
 - Cleanup valgrind-3.8.1-sigill_diag.patch .orig file changes (#949687).
 - Add valgrind-3.8.1-ppc-setxattr.patch
