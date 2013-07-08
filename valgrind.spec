@@ -172,6 +172,9 @@ Patch43: valgrind-3.8.1-new-manpages.patch
 # KDE#320063 Support PTRACE_GET/SET_THREAD_AREA on x86.
 Patch44: valgrind-3.8.1-ptrace-thread-area.patch
 
+# KDE#320116 Support Linux kernel AF_BLUETOOTH for bind()
+Patch45: valgrind-3.8.1-af-bluetooth.patch
+
 %ifarch x86_64 ppc64
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -315,6 +318,7 @@ touch ./memcheck/tests/linux/getregset.stderr.exp
 %patch42 -p1
 %patch43 -p1
 %patch44 -p1
+%patch45 -p1
 
 # These tests go into an endless loop on ARM
 # There is a __sync_add_and_fetch in the testcase.
@@ -482,6 +486,7 @@ echo ===============END TESTING===============
 - Add valgrind-3.8.1-ppc-setxattr.patch
 - Add valgrind-3.8.1-new-manpages.patch
 - Add valgrind-3.8.1-ptrace-thread-area.patch
+- Add valgrind-3.8.1-af-bluetooth.patch
 
 * Tue May 28 2013 Michael Schwendt <mschwendt@fedoraproject.org> - 1:3.8.1-16
 - Provide virtual -static package in -devel subpackage (#609624).
