@@ -465,6 +465,7 @@ echo ===============END TESTING===============
 %changelog
 * Mon Jul 08 2013 Mark Wielaard <mjw@redhat.com>
 - Add valgrind-3.8.1-dwarf-anon-enum.patch
+- Cleanup valgrind-3.8.1-sigill_diag.patch .orig file changes (#949687).
 
 * Tue May 28 2013 Michael Schwendt <mschwendt@fedoraproject.org> - 1:3.8.1-16
 - Provide virtual -static package in -devel subpackage (#609624).
