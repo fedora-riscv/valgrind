@@ -169,6 +169,9 @@ Patch42: valgrind-3.8.1-ppc-setxattr.patch
 # KDE#321738 Add manpages for vgdb and valgrind-listener
 Patch43: valgrind-3.8.1-new-manpages.patch
 
+# KDE#320063 Support PTRACE_GET/SET_THREAD_AREA on x86.
+Patch44: valgrind-3.8.1-ptrace-thread-area.patch
+
 %ifarch x86_64 ppc64
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -311,6 +314,7 @@ touch ./memcheck/tests/linux/getregset.stderr.exp
 %patch41 -p1
 %patch42 -p1
 %patch43 -p1
+%patch44 -p1
 
 # These tests go into an endless loop on ARM
 # There is a __sync_add_and_fetch in the testcase.
@@ -477,6 +481,7 @@ echo ===============END TESTING===============
 - Cleanup valgrind-3.8.1-sigill_diag.patch .orig file changes (#949687).
 - Add valgrind-3.8.1-ppc-setxattr.patch
 - Add valgrind-3.8.1-new-manpages.patch
+- Add valgrind-3.8.1-ptrace-thread-area.patch
 
 * Tue May 28 2013 Michael Schwendt <mschwendt@fedoraproject.org> - 1:3.8.1-16
 - Provide virtual -static package in -devel subpackage (#609624).
