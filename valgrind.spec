@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.8.1
-Release: 20%{?dist}
+Release: 21%{?dist}
 Epoch: 1
 License: GPLv2
 URL: http://www.valgrind.org/
@@ -191,7 +191,7 @@ BuildRequires: glibc-devel >= 2.12
 BuildRequires: glibc-devel >= 2.5
 %endif
 %endif
-%ifarch %{ix86} x86_64 ppc ppc64
+%ifarch %{ix86} x86_64 ppc ppc64 %{arm}
 BuildRequires: openmpi-devel >= 1.3.3
 %endif
 
@@ -365,7 +365,7 @@ CC="gcc -B `pwd`/libgcc/"
 # compiled with -O2 unless explicitely requested.
 OPTFLAGS="`echo " %{optflags} " | sed 's/ -m\(64\|3[21]\) / /g;s/ -fexceptions / /g;s/ -fstack-protector / / g;s/ -Wp,-D_FORTIFY_SOURCE=2 / /g;s/ -O2 / /g;s/^ //;s/ $//'`"
 %configure CC="$CC" CFLAGS="$OPTFLAGS" CXXFLAGS="$OPTFLAGS" \
-%ifarch %{ix86} x86_64 ppc ppc64
+%ifarch %{ix86} x86_64 ppc ppc64 %{arm}
   --with-mpicc=%{mpiccpath} \
 %endif
   GDB=%{_bindir}/gdb
@@ -476,7 +476,7 @@ echo ===============END TESTING===============
 %{_libdir}/valgrind/*.a
 %{_libdir}/pkgconfig/*
 
-%ifarch %{ix86} x86_64 ppc ppc64
+%ifarch %{ix86} x86_64 ppc ppc64 %{arm}
 %files openmpi
 %defattr(-,root,root)
 %dir %{_libdir}/valgrind
@@ -484,9 +484,10 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
-* Thu Aug 08 2013 Mark Wielaard <mjw@redhat.com>
+* Thu Aug 08 2013 Mark Wielaard <mjw@redhat.com> - 3.8.1-21
 - Don't depend on docdir location and version in openmpi subpackage
   description (#993938).
+- Enable openmpi subpackage also on arm.
 
 * Thu Aug 08 2013 Mark Wielaard <mjw@redhat.com> - 3.8.1-20
 - Add valgrind-3.8.1-ptrace-include-configure.patch (#992847)
