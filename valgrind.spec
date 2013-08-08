@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.8.1
-Release: 19%{?dist}
+Release: 20%{?dist}
 Epoch: 1
 License: GPLv2
 URL: http://www.valgrind.org/
@@ -175,6 +175,9 @@ Patch44: valgrind-3.8.1-ptrace-thread-area.patch
 # KDE#320116 Support Linux kernel AF_BLUETOOTH for bind()
 Patch45: valgrind-3.8.1-af-bluetooth.patch
 
+# Don't include linux/ptrace.h. Upstream commits r13471 and r13482.
+Patch46: valgrind-3.8.1-ptrace-include-configure.patch
+
 %ifarch x86_64 ppc64
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -319,6 +322,7 @@ touch ./memcheck/tests/linux/getregset.stderr.exp
 %patch43 -p1
 %patch44 -p1
 %patch45 -p1
+%patch46 -p1
 
 # These tests go into an endless loop on ARM
 # There is a __sync_add_and_fetch in the testcase.
@@ -480,6 +484,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Thu Aug 08 2013 Mark Wielaard <mjw@redhat.com> - 3.8.1-20
+- Add valgrind-3.8.1-ptrace-include-configure.patch (#992847)
+
 * Sun Aug 04 2013 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1:3.8.1-19
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_20_Mass_Rebuild
 
