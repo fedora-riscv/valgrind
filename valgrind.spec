@@ -260,8 +260,8 @@ Requires: %{?scl_prefix}valgrind = %{epoch}:%{version}-%{release}
 
 %description openmpi
 A wrapper library for debugging OpenMPI parallel programs with valgrind.
-See file:///usr/share/doc/%{?scl_prefix}valgrind-%{version}/html/mc-manual.html#mc-manual.mpiwrap
-for details.
+See the section on Debugging MPI Parallel Programs with Valgrind in the
+Valgrind User Manual for details.
 
 %prep
 %setup -q %{?scl:-n %{pkg_name}-%{version}}
@@ -484,6 +484,10 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Thu Aug 08 2013 Mark Wielaard <mjw@redhat.com>
+- Don't depend on docdir location and version in openmpi subpackage
+  description (#993938).
+
 * Thu Aug 08 2013 Mark Wielaard <mjw@redhat.com> - 3.8.1-20
 - Add valgrind-3.8.1-ptrace-include-configure.patch (#992847)
 
