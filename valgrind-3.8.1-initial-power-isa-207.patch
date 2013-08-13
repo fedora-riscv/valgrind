@@ -1357,7 +1357,7 @@ index 0000000..a4649be
 +prereq: ../../../tests/check_isa-2_07_cap
 +prog: test_isa_2_07_part2
 diff --git a/none/tests/ppc64/jm_vec_isa_2_07.stderr.exp b/none/tests/ppc64/jm_vec_isa_2_07.stderr.exp
-new file mode 100644
+new file mode 100755
 index 0000000..139597f
 --- /dev/null
 +++ b/none/tests/ppc64/jm_vec_isa_2_07.stderr.exp

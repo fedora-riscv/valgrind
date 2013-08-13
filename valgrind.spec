@@ -327,6 +327,7 @@ touch ./memcheck/tests/linux/getregset.stderr.exp
 %patch45 -p1
 %patch46 -p1
 %patch47 -p1
+chmod 755 tests/check_isa-2_07_cap
 
 # These tests go into an endless loop on ARM
 # There is a __sync_add_and_fetch in the testcase.
@@ -488,6 +489,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Tue Aug 13 2013 Mark Wielaard <mjw@redhat.com>
+- tests/check_isa-2_07_cap should be executable.
+
 * Tue Aug 13 2013 Mark Wielaard <mjw@redhat.com> - 3.8.1-22
 - Add valgrind-3.8.1-initial-power-isa-207.patch
   Initial ISA 2.07 support for POWER8-tuned libc.
