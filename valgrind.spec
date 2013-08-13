@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.8.1
-Release: 21%{?dist}
+Release: 22%{?dist}
 Epoch: 1
 License: GPLv2
 URL: http://www.valgrind.org/
@@ -178,6 +178,9 @@ Patch45: valgrind-3.8.1-af-bluetooth.patch
 # Don't include linux/ptrace.h. Upstream commits r13471 and r13482.
 Patch46: valgrind-3.8.1-ptrace-include-configure.patch
 
+# KDE#322294 Initial ISA 2.07 support for POWER8-tuned libc.
+Patch47: valgrind-3.8.1-initial-power-isa-207.patch
+
 %ifarch x86_64 ppc64
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -323,6 +326,7 @@ touch ./memcheck/tests/linux/getregset.stderr.exp
 %patch44 -p1
 %patch45 -p1
 %patch46 -p1
+%patch47 -p1
 
 # These tests go into an endless loop on ARM
 # There is a __sync_add_and_fetch in the testcase.
@@ -484,6 +488,10 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Tue Aug 13 2013 Mark Wielaard <mjw@redhat.com> - 3.8.1-22
+- Add valgrind-3.8.1-initial-power-isa-207.patch
+  Initial ISA 2.07 support for POWER8-tuned libc.
+
 * Thu Aug 08 2013 Mark Wielaard <mjw@redhat.com> - 3.8.1-21
 - Don't depend on docdir location and version in openmpi subpackage
   description (#993938).
