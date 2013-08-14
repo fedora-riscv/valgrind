@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.8.1
-Release: 23%{?dist}
+Release: 24%{?dist}
 Epoch: 1
 License: GPLv2
 URL: http://www.valgrind.org/
@@ -493,9 +493,10 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
-* Wed Aug 14 2013 Mark Wielaard <mjw@redhat.com>
+* Wed Aug 14 2013 Mark Wielaard <mjw@redhat.com> - 3.8.1-24
 - Add valgrind-3.8.1-power-isa-205-deprecation.patch
   Deprecation of some ISA 2.05 POWER6 instructions.
+- Fixup auto-foo generation of new manpage doc patch.
 
 * Wed Aug 14 2013 Mark Wielaard <mjw@redhat.com> - 3.8.1-23
 - tests/check_isa-2_07_cap should be executable.

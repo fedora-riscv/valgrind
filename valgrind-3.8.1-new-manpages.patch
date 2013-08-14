@@ -1356,3 +1356,42 @@ diff -urN valgrind-3.8.1.orig/docs/xml/vg-entities.xml docs/xml/vg-entities.xml
  <!ENTITY rel-date    "10 August 2012">
  
  <!-- where the docs are installed -->
+diff -ur valgrind-3.8.1.orig/auxprogs/Makefile.in valgrind-3.8.1/auxprogs/Makefile.in
+--- valgrind-3.8.1.orig/auxprogs/Makefile.in	2013-08-14 18:06:17.416639326 +0200
++++ valgrind-3.8.1/auxprogs/Makefile.in	2013-08-14 18:06:23.286621135 +0200
+@@ -356,6 +356,7 @@
+ 	posixtestsuite-1.5.1-diff-results
+ 
+ EXTRA_DIST = \
++	docs/valgrind-listener-manpage.xml \
+ 	DotToScc.hs \
+ 	Merge3Way.hs \
+ 	gsl16-badfree.patch \
+diff -ur valgrind-3.8.1.orig/cachegrind/Makefile.in valgrind-3.8.1/cachegrind/Makefile.in
+--- valgrind-3.8.1.orig/cachegrind/Makefile.in	2013-08-14 18:06:17.458639197 +0200
++++ valgrind-3.8.1/cachegrind/Makefile.in	2013-08-14 18:06:23.389620812 +0200
+@@ -589,7 +589,9 @@
+ 
+ EXTRA_DIST = \
+ 	docs/cg-manual.xml \
+-	docs/cg_annotate-manpage.xml
++	docs/cg_annotate-manpage.xml \
++	docs/cg_diff-manpage.xml \
++	docs/cg_merge-manpage.xml
+ 
+ 
+ #----------------------------------------------------------------------------
+diff -ur valgrind-3.8.1.orig/coregrind/Makefile.in valgrind-3.8.1/coregrind/Makefile.in
+--- valgrind-3.8.1.orig/coregrind/Makefile.in	2013-08-14 18:06:17.470639160 +0200
++++ valgrind-3.8.1/coregrind/Makefile.in	2013-08-14 18:06:24.403617627 +0200
+@@ -935,8 +935,8 @@
+ 
+ # so as to make sure these get copied into the tarball
+ EXTRA_DIST = m_debuginfo/UNUSED_STABS.txt m_debuginfo/README.txt \
+-	m_gdbserver/README_DEVELOPERS $(GDBSERVER_XML_FILES) \
+-	fixup_macho_loadcmds.c
++	m_gdbserver/README_DEVELOPERS docs/vgdb-manpage.xml \
++	$(GDBSERVER_XML_FILES) fixup_macho_loadcmds.c
+ @VGCONF_OS_IS_DARWIN_TRUE@valgrind_SOURCES = \
+ @VGCONF_OS_IS_DARWIN_TRUE@	launcher-darwin.c \
+ @VGCONF_OS_IS_DARWIN_TRUE@	m_debuglog.c
