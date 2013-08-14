@@ -181,6 +181,9 @@ Patch46: valgrind-3.8.1-ptrace-include-configure.patch
 # KDE#322294 Initial ISA 2.07 support for POWER8-tuned libc.
 Patch47: valgrind-3.8.1-initial-power-isa-207.patch
 
+# KDE#323116 Deprecation of some ISA 2.05 POWER6 instructions.
+Patch48: valgrind-3.8.1-power-isa-205-deprecation.patch
+
 %ifarch x86_64 ppc64
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -328,6 +331,7 @@ touch ./memcheck/tests/linux/getregset.stderr.exp
 %patch46 -p1
 %patch47 -p1
 chmod 755 tests/check_isa-2_07_cap
+%patch48 -p1
 
 # These tests go into an endless loop on ARM
 # There is a __sync_add_and_fetch in the testcase.
@@ -489,6 +493,10 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Wed Aug 14 2013 Mark Wielaard <mjw@redhat.com>
+- Add valgrind-3.8.1-power-isa-205-deprecation.patch
+  Deprecation of some ISA 2.05 POWER6 instructions.
+
 * Wed Aug 14 2013 Mark Wielaard <mjw@redhat.com> - 3.8.1-23
 - tests/check_isa-2_07_cap should be executable.
 

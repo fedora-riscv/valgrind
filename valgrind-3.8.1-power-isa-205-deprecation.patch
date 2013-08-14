@@ -1,0 +1,492 @@
+commit 13b3c5c25500879aad0a682c6cced934def56e53
+Author: carll <carll@a5019735-40e9-0310-863c-91ae7b9d1cf9>
+Date:   Fri Aug 9 21:55:45 2013 +0000
+
+    The following instructions were introduced in the Power ISA 2.05
+    (i.e., POWER6) - lfdp - stfdp - lfdpx - stfdpx These instructions were promptly
+    deprecated (phased out) in ISA 2.06 (i.e., POWER7). Recent updates in binutils
+    no longer supports these instructions unless the assembler is invoked with
+    '-mpower6'. When 'make check' is run on valgrind when using such a newer
+    binutils and running on a ppc64 system newer than POWER6, you get the
+    following build error:
+    y
+    pc64_linux=1 -DVGPV_ppc64_linux_vanilla=1 -DVGA_SEC_ppc32=1 -DVGP_SEC_ppc64_linux=1 -Winline -Wall -Wshadow -g -Winline -Wall -Wshadow -g -I../../../include -m64 -Wno-long-long -Wwrite-strings -fno-stack-protector -Wno-write-strings -MT power_ISA2_05-power_ISA2_05.o -MD -MP -MF .deps/power_ISA2_05-power_ISA2_05.Tpo -c -o power_ISA2_05-power_ISA2_05.o `test -f 'power_ISA2_05.c' || echo './'`power_ISA2_05.c
+    /tmp/cciGIkGG.s:Assembler messages:
+    /tmp/cciGIkGG.s:387: Error: operand out of domain (31 is not a multiple of 4)
+    /tmp/cciGIkGG.s:387: Error: syntax error; found `,', expected `('
+    /tmp/cciGIkGG.s:387: Error: junk at end of line: `,9'
+    /tmp/cciGIkGG.s:478: Error: operand out of domain (31 is not a multiple of 4)
+    /tmp/cciGIkGG.s:478: Error: syntax error; found `,', expected `('
+    /tmp/cciGIkGG.s:478: Error: junk at end of line: `,9'
+    make[2]: *** [power_ISA2_05-power_ISA2_05.o] Error 1
+    make[2]: Leaving directory `/tmp/Valgrind_review/valgrind_ISA2_05/memcheck/tests/ppc64'
+    make[1]: *** [check-am] Error 2
+    make[1]: Leaving directory `/tmp/Valgrind_review/valgrind_ISA2_05/memcheck/tests/ppc64' make: *** [check-recursive] Error 1
+    
+    This patch fixes the problem by adding a configure check to determine if these
+    phased out instructions are supported by the binutils, and the result of that
+    configure check is used to decide whether or not to compile in the source for
+    testing these instructions.
+    
+    Bugzilla 323116
+    
+    committed by Carl Love, carll@us.ibm.com
+    
+    git-svn-id: svn://svn.valgrind.org/valgrind/trunk@13490 a5019735-40e9-0310-863c-91ae7b9d1cf9
+
+diff --git a/configure.in b/configure.in
+index 6ac32b0..5cf28a1 100644
+--- a/configure.in
++++ b/configure.in
+@@ -1771,6 +1771,28 @@ if test x$ac_have_as_ppc_mftocrf = xyes ; then
+ fi
+ 
+ 
++# does the ppc assembler support "lfdp" and other phased out floating point insns?
++AC_MSG_CHECKING([if ppc32/64 asm supports phased out floating point instructions])
++
++AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[]], [[
++  do { typedef struct {
++      double hi;
++      double lo;
++     } dbl_pair_t;
++     dbl_pair_t dbl_pair[3];
++     __asm__ volatile ("lfdp 10, %0"::"m" (dbl_pair[0]));
++   } while (0)
++]])], [
++ac_have_as_ppc_fpPO=yes
++AC_MSG_RESULT([yes])
++], [
++ac_have_as_ppc_fpPO=no
++AC_MSG_RESULT([no])
++])
++if test x$ac_have_as_ppc_fpPO = xyes ; then
++  AC_DEFINE(HAVE_AS_PPC_FPPO, 1, [Define to 1 if as supports floating point phased out category.])
++fi
++
+ CFLAGS=$safe_CFLAGS
+ 
+ # does the x86/amd64 assembler understand SSE3 instructions?
+diff --git a/memcheck/tests/ppc32/Makefile.am b/memcheck/tests/ppc32/Makefile.am
+index 40033fc..bd70eea 100644
+--- a/memcheck/tests/ppc32/Makefile.am
++++ b/memcheck/tests/ppc32/Makefile.am
+@@ -4,7 +4,8 @@ include $(top_srcdir)/Makefile.tool-tests.am
+ dist_noinst_SCRIPTS = filter_stderr
+ 
+ EXTRA_DIST = $(noinst_SCRIPTS) \
+-	power_ISA2_05.stderr.exp power_ISA2_05.stdout.exp power_ISA2_05.vgtest
++	power_ISA2_05.stderr.exp power_ISA2_05.stdout.exp power_ISA2_05.vgtest \
++	power_ISA2_05.stdout.exp_Without_FPPO
+ 
+ check_PROGRAMS = \
+ 	power_ISA2_05
+diff --git a/memcheck/tests/ppc32/power_ISA2_05.c b/memcheck/tests/ppc32/power_ISA2_05.c
+index 0178452..3736c27 100644
+--- a/memcheck/tests/ppc32/power_ISA2_05.c
++++ b/memcheck/tests/ppc32/power_ISA2_05.c
+@@ -1,4 +1,5 @@
+ #include <stdio.h>
++#include <config.h>
+ 
+ double foo = -1.0;
+ double FRT1;
+@@ -65,9 +66,15 @@ void test_lfiwax()
+ ** FPp	= leftmost 64 bits stored at DS(RA)
+ ** FPp+1= rightmost 64 bits stored at DS(RA)
+ ** FPp must be an even float register
++**
++** The [st|l]fdp[x] instructions were put into the "Floating-Point.Phased-Out"
++** category in ISA 2.06 (i.e., POWER7 timeframe).  If valgrind and its
++** testsuite are built with -mcpu=power7 (or later), then the assembler will
++** not recognize those phased out instructions.
+ */
+ void test_double_pair_instrs()
+ {
++#ifdef HAVE_AS_PPC_FPPO
+    typedef struct {
+       double hi;
+       double lo;
+@@ -122,6 +129,7 @@ void test_double_pair_instrs()
+    __asm__ volatile ("stfdpx 10, 20, 21");
+    printf("stfdpx (%f, %f) => F_hi=%f, F_lo=%f\n",
+           FRT1, FRT2, dbl_pair[2].hi, dbl_pair[2].lo);
++#endif
+ }
+ 
+ 
+diff --git a/memcheck/tests/ppc32/power_ISA2_05.stdout.exp_Without_FPPO b/memcheck/tests/ppc32/power_ISA2_05.stdout.exp_Without_FPPO
+new file mode 120000
+index 0000000..da5c109
+--- /dev/null
++++ b/memcheck/tests/ppc32/power_ISA2_05.stdout.exp_Without_FPPO
+@@ -0,0 +1 @@
++../ppc64/power_ISA2_05.stdout.exp_Without_FPPO
+\ No newline at end of file
+diff --git a/memcheck/tests/ppc64/Makefile.am b/memcheck/tests/ppc64/Makefile.am
+index a18afd7..96eb576 100644
+--- a/memcheck/tests/ppc64/Makefile.am
++++ b/memcheck/tests/ppc64/Makefile.am
+@@ -4,7 +4,8 @@ include $(top_srcdir)/Makefile.tool-tests.am
+ dist_noinst_SCRIPTS = filter_stderr
+ 
+ EXTRA_DIST = $(noinst_SCRIPTS) \
+-	power_ISA2_05.stderr.exp power_ISA2_05.stdout.exp power_ISA2_05.vgtest
++	power_ISA2_05.stderr.exp power_ISA2_05.stdout.exp power_ISA2_05.vgtest \
++	power_ISA2_05.stdout.exp_Without_FPPO
+ 
+ check_PROGRAMS = \
+ 	power_ISA2_05
+diff --git a/memcheck/tests/ppc64/power_ISA2_05.c b/memcheck/tests/ppc64/power_ISA2_05.c
+index 8c0eab9..f552dc4 100644
+--- a/memcheck/tests/ppc64/power_ISA2_05.c
++++ b/memcheck/tests/ppc64/power_ISA2_05.c
+@@ -1,4 +1,5 @@
+ #include <stdio.h>
++#include <config.h>
+ 
+ double foo = -1.0;
+ double FRT1;
+@@ -63,9 +64,16 @@ void test_lfiwax()
+ ** FPp	= leftmost 64 bits stored at DS(RA)
+ ** FPp+1= rightmost 64 bits stored at DS(RA)
+ ** FPp must be an even float register
++**
++** The [st|l]fdp[x] instructions were put into the "Floating-Point.Phased-Out"
++** category in ISA 2.06 (i.e., POWER7 timeframe).  If valgrind and its
++** testsuite are built with -mcpu=power7 (or later), then the assembler will
++** not recognize those phased out instructions.
++**
+ */
+ void test_double_pair_instrs()
+ {
++#ifdef HAVE_AS_PPC_FPPO
+    typedef struct {
+       double hi;
+       double lo;
+@@ -120,6 +128,7 @@ void test_double_pair_instrs()
+    __asm__ volatile ("stfdpx 10, 20, 21");
+    printf("stfdpx (%f, %f) => F_hi=%f, F_lo=%f\n",
+           FRT1, FRT2, dbl_pair[2].hi, dbl_pair[2].lo);
++#endif
+ }
+ 
+ 
+diff --git a/memcheck/tests/ppc64/power_ISA2_05.stdout.exp_Without_FPPO b/memcheck/tests/ppc64/power_ISA2_05.stdout.exp_Without_FPPO
+new file mode 100644
+index 0000000..1945526
+--- /dev/null
++++ b/memcheck/tests/ppc64/power_ISA2_05.stdout.exp_Without_FPPO
+@@ -0,0 +1,119 @@
++lwarx => 0
++ldarx => bad0beef
++fcpsgn sign=10.101010, base=11.111111 => 11.111111
++fcpsgn sign=10.101010, base=-0.000000 => 0.000000
++fcpsgn sign=10.101010, base=0.000000 => 0.000000
++fcpsgn sign=10.101010, base=-11.111111 => 11.111111
++fcpsgn sign=-0.000000, base=11.111111 => -11.111111
++fcpsgn sign=-0.000000, base=-0.000000 => -0.000000
++fcpsgn sign=-0.000000, base=0.000000 => -0.000000
++fcpsgn sign=-0.000000, base=-11.111111 => -11.111111
++fcpsgn sign=0.000000, base=11.111111 => 11.111111
++fcpsgn sign=0.000000, base=-0.000000 => 0.000000
++fcpsgn sign=0.000000, base=0.000000 => 0.000000
++fcpsgn sign=0.000000, base=-11.111111 => 11.111111
++fcpsgn sign=-10.101010, base=11.111111 => -11.111111
++fcpsgn sign=-10.101010, base=-0.000000 => -0.000000
++fcpsgn sign=-10.101010, base=0.000000 => -0.000000
++fcpsgn sign=-10.101010, base=-11.111111 => -11.111111
++lfiwax (-1024.000000) => FRT=(ffffffff, c0900000)
++prtyd (0) => parity=0
++prtyw (0) => parity=0
++prtyd (1) => parity=1
++prtyw (1) => parity=1
++prtyd (2) => parity=0
++prtyw (2) => parity=0
++prtyd (3) => parity=1
++prtyw (3) => parity=1
++prtyd (4) => parity=0
++prtyw (4) => parity=0
++prtyd (5) => parity=1
++prtyw (5) => parity=1
++prtyd (6) => parity=0
++prtyw (6) => parity=0
++prtyd (7) => parity=1
++prtyw (7) => parity=1
++prtyd (8) => parity=0
++prtyw (8) => parity=0
++prtyd (9) => parity=1
++prtyw (9) => parity=1
++prtyd (a) => parity=0
++prtyw (a) => parity=0
++prtyd (b) => parity=1
++prtyw (b) => parity=1
++prtyd (c) => parity=0
++prtyw (c) => parity=0
++prtyd (d) => parity=1
++prtyw (d) => parity=1
++prtyd (e) => parity=0
++prtyw (e) => parity=0
++prtyd (f) => parity=1
++prtyw (f) => parity=1
++prtyd (10) => parity=0
++prtyw (10) => parity=0
++prtyd (11) => parity=1
++prtyw (11) => parity=1
++prtyd (12) => parity=0
++prtyw (12) => parity=0
++prtyd (13) => parity=1
++prtyw (13) => parity=1
++prtyd (14) => parity=0
++prtyw (14) => parity=0
++prtyd (15) => parity=1
++prtyw (15) => parity=1
++prtyd (16) => parity=0
++prtyw (16) => parity=0
++prtyd (17) => parity=1
++prtyw (17) => parity=1
++prtyd (18) => parity=0
++prtyw (18) => parity=0
++prtyd (19) => parity=1
++prtyw (19) => parity=1
++prtyd (1a) => parity=0
++prtyw (1a) => parity=0
++prtyd (1b) => parity=1
++prtyw (1b) => parity=1
++prtyd (1c) => parity=0
++prtyw (1c) => parity=0
++prtyd (1d) => parity=1
++prtyw (1d) => parity=1
++prtyd (1e) => parity=0
++prtyw (1e) => parity=0
++prtyd (1f) => parity=1
++prtyw (1f) => parity=1
++prtyd (20) => parity=0
++prtyw (20) => parity=0
++prtyd (21) => parity=1
++prtyw (21) => parity=1
++prtyd (22) => parity=0
++prtyw (22) => parity=0
++prtyd (23) => parity=1
++prtyw (23) => parity=1
++prtyd (24) => parity=0
++prtyw (24) => parity=0
++prtyd (25) => parity=1
++prtyw (25) => parity=1
++prtyd (26) => parity=0
++prtyw (26) => parity=0
++prtyd (27) => parity=1
++prtyw (27) => parity=1
++prtyd (28) => parity=0
++prtyw (28) => parity=0
++prtyd (29) => parity=1
++prtyw (29) => parity=1
++prtyd (2a) => parity=0
++prtyw (2a) => parity=0
++prtyd (2b) => parity=1
++prtyw (2b) => parity=1
++prtyd (2c) => parity=0
++prtyw (2c) => parity=0
++prtyd (2d) => parity=1
++prtyw (2d) => parity=1
++prtyd (2e) => parity=0
++prtyw (2e) => parity=0
++prtyd (2f) => parity=1
++prtyw (2f) => parity=1
++prtyd (30) => parity=0
++prtyw (30) => parity=0
++prtyd (31) => parity=1
++prtyw (31) => parity=1
+diff -ur valgrind-3.8.1.orig/config.h.in valgrind-3.8.1/config.h.in
+--- valgrind-3.8.1.orig/config.h.in	2013-08-14 17:58:25.970210332 +0200
++++ valgrind-3.8.1/config.h.in	2013-08-14 17:59:26.000000000 +0200
+@@ -81,6 +81,9 @@
+ /* Define to 1 if you have the <asm/unistd.h> header file. */
+ #undef HAVE_ASM_UNISTD_H
+ 
++/* Define to 1 if as supports floating point phased out category. */
++#undef HAVE_AS_PPC_FPPO
++
+ /* Define to 1 if as supports mtocrf/mfocrf. */
+ #undef HAVE_AS_PPC_MFTOCRF
+ 
+Only in valgrind-3.8.1: config.h.in~
+diff -ur valgrind-3.8.1.orig/configure valgrind-3.8.1/configure
+--- valgrind-3.8.1.orig/configure	2013-08-14 17:58:25.970210332 +0200
++++ valgrind-3.8.1/configure	2013-08-14 17:59:32.537941678 +0200
+@@ -8134,6 +8134,49 @@
+ fi
+ 
+ 
++# does the ppc assembler support "lfdp" and other phased out floating point insns?
++{ $as_echo "$as_me:${as_lineno-$LINENO}: checking if ppc32/64 asm supports phased out floating point instructions" >&5
++$as_echo_n "checking if ppc32/64 asm supports phased out floating point instructions... " >&6; }
++
++cat confdefs.h - <<_ACEOF >conftest.$ac_ext
++/* end confdefs.h.  */
++
++int
++main ()
++{
++
++  do { typedef struct {
++      double hi;
++      double lo;
++     } dbl_pair_t;
++     dbl_pair_t dbl_pair[3];
++     __asm__ volatile ("lfdp 10, %0"::"m" (dbl_pair[0]));
++   } while (0)
++
++  ;
++  return 0;
++}
++_ACEOF
++if ac_fn_c_try_compile "$LINENO"; then :
++
++ac_have_as_ppc_fpPO=yes
++{ $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
++$as_echo "yes" >&6; }
++
++else
++
++ac_have_as_ppc_fpPO=no
++{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
++$as_echo "no" >&6; }
++
++fi
++rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
++if test x$ac_have_as_ppc_fpPO = xyes ; then
++
++$as_echo "#define HAVE_AS_PPC_FPPO 1" >>confdefs.h
++
++fi
++
+ CFLAGS=$safe_CFLAGS
+ 
+ # does the x86/amd64 assembler understand SSE3 instructions?
+diff -ur valgrind-3.8.1.orig/memcheck/tests/ppc32/Makefile.in valgrind-3.8.1/memcheck/tests/ppc32/Makefile.in
+--- valgrind-3.8.1.orig/memcheck/tests/ppc32/Makefile.in	2013-08-14 17:58:25.794211043 +0200
++++ valgrind-3.8.1/memcheck/tests/ppc32/Makefile.in	2013-08-14 17:59:30.729948971 +0200
+@@ -362,7 +362,8 @@
+ @VGCONF_OS_IS_DARWIN_TRUE@noinst_DSYMS = $(check_PROGRAMS)
+ dist_noinst_SCRIPTS = filter_stderr
+ EXTRA_DIST = $(noinst_SCRIPTS) \
+-	power_ISA2_05.stderr.exp power_ISA2_05.stdout.exp power_ISA2_05.vgtest
++	power_ISA2_05.stderr.exp power_ISA2_05.stdout.exp power_ISA2_05.vgtest \
++	power_ISA2_05.stdout.exp_Without_FPPO
+ 
+ power_ISA2_05_CFLAGS = $(AM_CFLAGS) $(WERROR) -Winline -Wall -Wshadow -g \
+ 		-I$(top_srcdir)/include @FLAG_M32@
+diff -ur valgrind-3.8.1.orig/memcheck/tests/ppc64/Makefile.in valgrind-3.8.1/memcheck/tests/ppc64/Makefile.in
+--- valgrind-3.8.1.orig/memcheck/tests/ppc64/Makefile.in	2013-08-14 17:58:25.789211063 +0200
++++ valgrind-3.8.1/memcheck/tests/ppc64/Makefile.in	2013-08-14 17:59:30.785948745 +0200
+@@ -362,7 +362,8 @@
+ @VGCONF_OS_IS_DARWIN_TRUE@noinst_DSYMS = $(check_PROGRAMS)
+ dist_noinst_SCRIPTS = filter_stderr
+ EXTRA_DIST = $(noinst_SCRIPTS) \
+-	power_ISA2_05.stderr.exp power_ISA2_05.stdout.exp power_ISA2_05.vgtest
++	power_ISA2_05.stderr.exp power_ISA2_05.stdout.exp power_ISA2_05.vgtest \
++	power_ISA2_05.stdout.exp_Without_FPPO
+ 
+ power_ISA2_05_CFLAGS = $(AM_CFLAGS) $(WERROR) -Winline -Wall -Wshadow -g \
+ 		-I$(top_srcdir)/include @FLAG_M64@
+commit 5d0d52118210671d3eeff94fd3f5cc3807bd2a44
+Author: sewardj <sewardj@a5019735-40e9-0310-863c-91ae7b9d1cf9>
+Date:   Tue Jan 29 22:14:01 2013 +0000
+
+    test_reservation(), test_double_pair_instrs(): Fix broken inline assembly
+    causing segfaults with gcc-4.7.  The inline assembly still isn't right,
+    but it's better than it was before.
+    
+    
+    
+    git-svn-id: svn://svn.valgrind.org/valgrind/trunk@13279 a5019735-40e9-0310-863c-91ae7b9d1cf9
+
+diff --git a/memcheck/tests/ppc32/power_ISA2_05.c b/memcheck/tests/ppc32/power_ISA2_05.c
+index a95f427..0178452 100644
+--- a/memcheck/tests/ppc32/power_ISA2_05.c
++++ b/memcheck/tests/ppc32/power_ISA2_05.c
+@@ -103,8 +103,8 @@ void test_double_pair_instrs()
+    FRT2 = -1.0;
+    base = (unsigned long) &dbl_pair;
+    offset = (unsigned long) &dbl_pair[1] - base;
+-   __asm__ volatile ("or 20, 0, %0"::"r" (base));
+-   __asm__ volatile ("or 21, 0, %0"::"r" (offset));
++   __asm__ volatile ("ori 20, %0, 0"::"r" (base));
++   __asm__ volatile ("ori 21, %0, 0"::"r" (offset));
+    __asm__ volatile ("lfdpx 10, 20, 21");
+    __asm__ volatile ("fmr %0, 10":"=f" (FRT1));
+    __asm__ volatile ("fmr %0, 11":"=f" (FRT2));
+@@ -115,8 +115,8 @@ void test_double_pair_instrs()
+    FRT2 = -16.1024;
+    base = (unsigned long) &dbl_pair;
+    offset = (unsigned long) &dbl_pair[2] - base;
+-   __asm__ volatile ("or 20, 0, %0"::"r" (base));
+-   __asm__ volatile ("or 21, 0, %0"::"r" (offset));
++   __asm__ volatile ("ori 20, %0, 0"::"r" (base));
++   __asm__ volatile ("ori 21, %0, 0"::"r" (offset));
+    __asm__ volatile ("fmr %0, 10":"=f" (FRT1));
+    __asm__ volatile ("fmr %0, 11":"=f" (FRT2));
+    __asm__ volatile ("stfdpx 10, 20, 21");
+@@ -168,14 +168,14 @@ void test_reservation()
+ 
+    base = (unsigned long) &arr;
+    offset = (unsigned long) &arr[1] - base;
+-   __asm__ volatile ("or 20, 0, %0"::"r" (base));
+-   __asm__ volatile ("or 21, 0, %0"::"r" (offset));
++   __asm__ volatile ("ori 20, %0, 0"::"r" (base));
++   __asm__ volatile ("ori 21, %0, 0"::"r" (offset));
+    __asm__ volatile ("lwarx %0, 20, 21, 1":"=r" (RT));
+    printf("lwarx => %x\n", RT);
+ 
+ #ifdef __powerpc64__
+    offset = (unsigned long) &arr[1] - base;
+-   __asm__ volatile ("or 21, 0, %0"::"r" (offset));
++   __asm__ volatile ("ori 21, %0, 0"::"r" (offset));
+    __asm__ volatile ("ldarx %0, 20, 21, 1":"=r" (RT));
+    printf("ldarx => %x\n", RT);
+ #endif
+diff --git a/memcheck/tests/ppc64/power_ISA2_05.c b/memcheck/tests/ppc64/power_ISA2_05.c
+index dcf0e7a..8c0eab9 100644
+--- a/memcheck/tests/ppc64/power_ISA2_05.c
++++ b/memcheck/tests/ppc64/power_ISA2_05.c
+@@ -101,8 +101,8 @@ void test_double_pair_instrs()
+    FRT2 = -1.0;
+    base = (unsigned long) &dbl_pair;
+    offset = (unsigned long) &dbl_pair[1] - base;
+-   __asm__ volatile ("or 20, 0, %0"::"r" (base));
+-   __asm__ volatile ("or 21, 0, %0"::"r" (offset));
++   __asm__ volatile ("ori 20, %0, 0"::"r" (base));
++   __asm__ volatile ("ori 21, %0, 0"::"r" (offset));
+    __asm__ volatile ("lfdpx 10, 20, 21");
+    __asm__ volatile ("fmr %0, 10":"=f" (FRT1));
+    __asm__ volatile ("fmr %0, 11":"=f" (FRT2));
+@@ -113,8 +113,8 @@ void test_double_pair_instrs()
+    FRT2 = -16.1024;
+    base = (unsigned long) &dbl_pair;
+    offset = (unsigned long) &dbl_pair[2] - base;
+-   __asm__ volatile ("or 20, 0, %0"::"r" (base));
+-   __asm__ volatile ("or 21, 0, %0"::"r" (offset));
++   __asm__ volatile ("ori 20, %0, 0"::"r" (base));
++   __asm__ volatile ("ori 21, %0, 0"::"r" (offset));
+    __asm__ volatile ("fmr %0, 10":"=f" (FRT1));
+    __asm__ volatile ("fmr %0, 11":"=f" (FRT2));
+    __asm__ volatile ("stfdpx 10, 20, 21");
+@@ -166,14 +166,14 @@ void test_reservation()
+ 
+    base = (unsigned long) &arr;
+    offset = (unsigned long) &arr[1] - base;
+-   __asm__ volatile ("or 20, 0, %0"::"r" (base));
+-   __asm__ volatile ("or 21, 0, %0"::"r" (offset));
++   __asm__ volatile ("ori 20, %0, 0"::"r" (base));
++   __asm__ volatile ("ori 21, %0, 0"::"r" (offset));
+    __asm__ volatile ("lwarx %0, 20, 21, 1":"=r" (RT));
+    printf("lwarx => %x\n", RT);
+ 
+ #ifdef __powerpc64__
+    offset = (unsigned long) &arr[1] - base;
+-   __asm__ volatile ("or 21, 0, %0"::"r" (offset));
++   __asm__ volatile ("ori 21, %0, 0"::"r" (offset));
+    __asm__ volatile ("ldarx %0, 20, 21, 1":"=r" (RT));
+    printf("ldarx => %x\n", RT);
+ #endif
