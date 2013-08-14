@@ -489,7 +489,7 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
-* Tue Aug 13 2013 Mark Wielaard <mjw@redhat.com>
+* Tue Aug 14 2013 Mark Wielaard <mjw@redhat.com> - 3.8.1-23
 - tests/check_isa-2_07_cap should be executable.
 
 * Tue Aug 13 2013 Mark Wielaard <mjw@redhat.com> - 3.8.1-22
