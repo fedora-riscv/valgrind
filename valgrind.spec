@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.8.1
-Release: 24%{?dist}
+Release: 25%{?dist}
 Epoch: 1
 License: GPLv2
 URL: http://www.valgrind.org/
@@ -184,6 +184,9 @@ Patch47: valgrind-3.8.1-initial-power-isa-207.patch
 # KDE#323116 Deprecation of some ISA 2.05 POWER6 instructions.
 Patch48: valgrind-3.8.1-power-isa-205-deprecation.patch
 
+# KDE#310931 message-security assist instruction extension not implemented 
+Patch49: valgrind-3.8.1-s390-STFLE.patch
+
 %ifarch x86_64 ppc64
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -332,6 +335,7 @@ touch ./memcheck/tests/linux/getregset.stderr.exp
 %patch47 -p1
 chmod 755 tests/check_isa-2_07_cap
 %patch48 -p1
+%patch49 -p1
 
 # These tests go into an endless loop on ARM
 # There is a __sync_add_and_fetch in the testcase.
@@ -493,6 +497,10 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Thu Aug 15 2013 Mark Wielaard <mjw@redhat.com> - 3.8.1-25
+- Add valgrind-3.8.1-s390-STFLE.patch
+  s390 message-security assist (MSA) instruction extension not implemented.
+
 * Wed Aug 14 2013 Mark Wielaard <mjw@redhat.com> - 3.8.1-24
 - Add valgrind-3.8.1-power-isa-205-deprecation.patch
   Deprecation of some ISA 2.05 POWER6 instructions.

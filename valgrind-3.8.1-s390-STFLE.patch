@@ -1,0 +1,141 @@
+commit d2c954603a211e11c35db7d8b3fdd60675483738
+Author: florian <florian@8f6e269a-dfd6-0310-a8e1-e2731360e62c>
+Date:   Tue Dec 4 04:45:32 2012 +0000
+
+    In the past, the implementation of STFLE returned the facilities of the host
+    machine. This was not consistent in the following sense: Suppose the host
+    has a facility F installed and this facility implies the availability of an
+    insn X. Suppose further, that insn X is not supported in valgrind.
+    An application progrm that tests the availability of insn X by checking
+    for its associated facility F will fail under valgrind when using X because
+    valgrind will SIGILL. Not so good.
+    
+    This patch changes the STFLE behaviour to adjust the facilities of the
+    virtual machine according to what the set of insns that is actually
+    supported. It's an approximation, because for some facilities we only
+    support a subset of the insns enabled by that facility.
+    
+    Fixes BZ 310931.
+    
+    
+    git-svn-id: svn://svn.valgrind.org/vex/trunk@2579 8f6e269a-dfd6-0310-a8e1-e2731360e62c
+
+diff --git a/VEX/priv/guest_s390_helpers.c b/priv/guest_s390_helpers.c
+index 8169916..b0c0225 100644
+--- a/VEX/priv/guest_s390_helpers.c
++++ b/VEX/priv/guest_s390_helpers.c
+@@ -292,6 +292,22 @@ ULong s390x_dirtyhelper_STCKE(ULong *addr) {return 3;}
+ /*--- Dirty helper for Store Facility instruction          ---*/
+ /*------------------------------------------------------------*/
+ #if defined(VGA_s390x)
++static void
++s390_set_facility_bit(ULong *addr, UInt bitno, UInt value)
++{
++   addr  += bitno / 64;
++   bitno  = bitno % 64;
++
++   ULong mask = 1;
++   mask <<= (63 - bitno);
++
++   if (value == 1) {
++      *addr |= mask;   // set
++   } else {
++      *addr &= ~mask;  // clear
++   }
++}
++
+ ULong
+ s390x_dirtyhelper_STFLE(VexGuestS390XState *guest_state, ULong *addr)
+ {
+@@ -313,9 +329,56 @@ s390x_dirtyhelper_STFLE(VexGuestS390XState *guest_state, ULong *addr)
+    /* Update guest register 0  with what STFLE set r0 to */
+    guest_state->guest_r0 = reg0;
+ 
++   /* Set default: VM facilities = host facilities */
+    for (i = 0; i < num_dw; ++i)
+       addr[i] = hoststfle[i];
+ 
++   /* Enumerators for interesting facilities. The value of the enumerator
++      is the number of the facility bit as per POP. */
++   enum {
++      S390_FAC_MSA    = 17,  // message-security-assist
++      S390_FAC_LDISP  = 18,  // long displacement
++      S390_FAC_HFPMAS = 20,  // HFP multiply-and-add-subtract
++      S390_FAC_EIMM   = 21,  // extended immediate
++      S390_FAC_HFPUNX = 23,  // HFP unnormalized extension
++      S390_FAC_ETF2   = 24,  // ETF2-enhancement
++      S390_FAC_PENH   = 26,  // parsing-enhancement
++      S390_FAC_ETF3   = 30,  // ETF3-enhancement
++      S390_FAC_XCPUT  = 31,  // extract-CPU-time
++      S390_FAC_GIE    = 34,  // general insn extension
++      S390_FAC_EXEXT  = 35,  // execute extension
++      S390_FAC_DFP    = 42,  // decimal floating point
++      S390_FAC_PFPO   = 44,  // perform floating point operation insn
++      S390_FAC_HIGHW  = 45,  // high-word extension
++      S390_FAC_DFPZC  = 48,  // DFP zoned-conversion
++      S390_FAC_MISC   = 49,  // miscellaneous insn
++      S390_FAC_CTREXE = 50,  // constrained transactional execution
++      S390_FAC_TREXE  = 73,  // transactional execution
++      S390_FAC_MSA4   = 77   // message-security-assist 4
++   };
++
++   /* Now adjust the VM facilities according to what the VM supports */
++   s390_set_facility_bit(addr, S390_FAC_LDISP,  1);
++   s390_set_facility_bit(addr, S390_FAC_EIMM,   1);
++   s390_set_facility_bit(addr, S390_FAC_ETF2,   1);
++   s390_set_facility_bit(addr, S390_FAC_ETF3,   1);
++   s390_set_facility_bit(addr, S390_FAC_GIE,    1);
++   s390_set_facility_bit(addr, S390_FAC_EXEXT,  1);
++   s390_set_facility_bit(addr, S390_FAC_HIGHW,  1);
++
++   s390_set_facility_bit(addr, S390_FAC_HFPMAS, 0);
++   s390_set_facility_bit(addr, S390_FAC_HFPUNX, 0);
++   s390_set_facility_bit(addr, S390_FAC_XCPUT,  0);
++   s390_set_facility_bit(addr, S390_FAC_MSA,    0);
++   s390_set_facility_bit(addr, S390_FAC_PENH,   0);
++   s390_set_facility_bit(addr, S390_FAC_DFP,    0);
++   s390_set_facility_bit(addr, S390_FAC_PFPO,   0);
++   s390_set_facility_bit(addr, S390_FAC_DFPZC,  0);
++   s390_set_facility_bit(addr, S390_FAC_MISC,   0);
++   s390_set_facility_bit(addr, S390_FAC_CTREXE, 0);
++   s390_set_facility_bit(addr, S390_FAC_TREXE,  0);
++   s390_set_facility_bit(addr, S390_FAC_MSA4,   0);
++
+    return cc;
+ }
+ 
+commit a53843d425a9cc64159bd46833e93febb0a8d797
+Author: florian <florian@a5019735-40e9-0310-863c-91ae7b9d1cf9>
+Date:   Tue Dec 4 04:46:52 2012 +0000
+
+    Beef up testcase. Announce fix.
+    Part of fixing BZ 310931.
+    
+    
+    git-svn-id: svn://svn.valgrind.org/valgrind/trunk@13150 a5019735-40e9-0310-863c-91ae7b9d1cf9
+
+diff --git a/none/tests/s390x/stfle.c b/none/tests/s390x/stfle.c
+index 7bfe2d6..6c8007b 100644
+--- a/none/tests/s390x/stfle.c
++++ b/none/tests/s390x/stfle.c
+@@ -52,5 +52,11 @@ int main()
+   else
+     printf("The z/Architecture architectural mode is not installed\n");
+ 
++  /* Test #4: Message security assist */
++  if (stfle(dw, 17)) {
++     printf("MSA facility is present\n");
++  } else {
++     printf("No MSA facility available\n");
++  }
+   return 0;
+ }
+diff --git a/none/tests/s390x/stfle.stdout.exp b/none/tests/s390x/stfle.stdout.exp
+index c4653a9..00c2c75 100644
+--- a/none/tests/s390x/stfle.stdout.exp
++++ b/none/tests/s390x/stfle.stdout.exp
+@@ -6,3 +6,4 @@ STFLE facility is installed
+ the value of cc is 3 and #double words is 2
+ the value of cc is 3 and #double words is 2
+ The z/Architecture architectural mode is installed and active
++No MSA facility available
