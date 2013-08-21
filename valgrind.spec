@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.8.1
-Release: 25%{?dist}
+Release: 26%{?dist}
 Epoch: 1
 License: GPLv2
 URL: http://www.valgrind.org/
@@ -136,7 +136,8 @@ Patch31: valgrind-3.8.1-ppc-32-mode-64-bit-instr.patch
 Patch32: valgrind-3.8.1-sigill_diag.patch
 
 # Allow building against glibc-2.17. Upstream commit svn 13228.
-Patch33: valgrind-3.8.1-glibc-2.17.patch
+# Allow building against glibc-2.18. Upstream commit svn 13504.
+Patch33: valgrind-3.8.1-glibc-2.17-18.patch
 
 # KDE#315441 - sendmsg syscall should ignore unset msghdr msg_flags
 Patch34: valgrind-3.8.1-sendmsg-flags.patch
@@ -497,6 +498,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Thu Aug 21 2013 Mark Wielaard <mjw@redhat.com> - 3.8.1-26
+- Allow building against glibc 2.18.
+
 * Thu Aug 15 2013 Mark Wielaard <mjw@redhat.com> - 3.8.1-25
 - Add valgrind-3.8.1-s390-STFLE.patch
   s390 message-security assist (MSA) instruction extension not implemented.
