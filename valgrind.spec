@@ -499,7 +499,7 @@ echo ===============END TESTING===============
 
 %changelog
 * Thu Aug 21 2013 Mark Wielaard <mjw@redhat.com> - 3.8.1-26
-- Allow building against glibc 2.18.
+- Allow building against glibc 2.18. (#999169)
 
 * Thu Aug 15 2013 Mark Wielaard <mjw@redhat.com> - 3.8.1-25
 - Add valgrind-3.8.1-s390-STFLE.patch
