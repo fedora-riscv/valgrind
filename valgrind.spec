@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.8.1
-Release: 26%{?dist}
+Release: 27%{?dist}
 Epoch: 1
 License: GPLv2
 URL: http://www.valgrind.org/
@@ -502,7 +502,7 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
-* Thu Sep 05 2013 Mark Wielaard <mjw@redhat.com>
+* Thu Sep 05 2013 Mark Wielaard <mjw@redhat.com> - 3.8.1-27
 - Fix power_ISA2_05 testcase (valgrind-3.8.1-power-isa-205-deprecation.patch)
 - Fix ppc32 make check build (valgrind-3.8.1-initial-power-isa-207.patch)
 - Add valgrind-3.8.1-mmxext.patch
