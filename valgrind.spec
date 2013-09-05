@@ -500,8 +500,9 @@ echo ===============END TESTING===============
 %changelog
 * Thu Sep 05 2013 Mark Wielaard <mjw@redhat.com>
 - Fix power_ISA2_05 testcase (valgrind-3.8.1-power-isa-205-deprecation.patch)
+- Fix ppc32 make check build (valgrind-3.8.1-initial-power-isa-207.patch)
 
-* Thu Aug 21 2013 Mark Wielaard <mjw@redhat.com> - 3.8.1-26
+* Wed Aug 21 2013 Mark Wielaard <mjw@redhat.com> - 3.8.1-26
 - Allow building against glibc 2.18. (#999169)
 
 * Thu Aug 15 2013 Mark Wielaard <mjw@redhat.com> - 3.8.1-25

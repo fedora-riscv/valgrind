@@ -267,7 +267,7 @@ diff -ur valgrind-3.8.1.orig/none/tests/ppc32/Makefile.am valgrind-3.8.1/none/te
 +                        @FLAG_M32@ $(BUILD_FLAGS_ISA_2_07)
 +
 +test_isa_2_07_part2_CFLAGS = $(AM_CFLAGS) -Winline -Wall -O -lm -g -mregnames $(ISA_2_07_FLAG) \
-+			@FLAG_M64@ $(BUILD_FLAGS_ISA_2_07)
++			@FLAG_M32@ $(BUILD_FLAGS_ISA_2_07)
 diff -ur valgrind-3.8.1.orig/none/tests/ppc32/Makefile.in valgrind-3.8.1/none/tests/ppc32/Makefile.in
 --- valgrind-3.8.1.orig/none/tests/ppc32/Makefile.in	2013-08-13 13:07:12.632886501 +0200
 +++ valgrind-3.8.1/none/tests/ppc32/Makefile.in	2013-08-13 13:28:32.372024756 +0200
@@ -348,7 +348,7 @@ diff -ur valgrind-3.8.1.orig/none/tests/ppc32/Makefile.in valgrind-3.8.1/none/te
 +                        @FLAG_M32@ $(BUILD_FLAGS_ISA_2_07)
 +
 +test_isa_2_07_part2_CFLAGS = $(AM_CFLAGS) -Winline -Wall -O -lm -g -mregnames $(ISA_2_07_FLAG) \
-+			@FLAG_M64@ $(BUILD_FLAGS_ISA_2_07)
++			@FLAG_M32@ $(BUILD_FLAGS_ISA_2_07)
 +
  all: all-am
  
