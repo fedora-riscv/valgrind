@@ -498,6 +498,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Thu Sep 05 2013 Mark Wielaard <mjw@redhat.com>
+- Fix power_ISA2_05 testcase (valgrind-3.8.1-power-isa-205-deprecation.patch)
+
 * Thu Aug 21 2013 Mark Wielaard <mjw@redhat.com> - 3.8.1-26
 - Allow building against glibc 2.18. (#999169)
 

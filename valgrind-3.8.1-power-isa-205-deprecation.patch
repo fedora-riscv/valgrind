@@ -490,3 +490,113 @@ index dcf0e7a..8c0eab9 100644
     __asm__ volatile ("ldarx %0, 20, 21, 1":"=r" (RT));
     printf("ldarx => %x\n", RT);
  #endif
+commit 28b37cc93e8b7a851f005a217752073bb8ac7dca
+Author: carll <carll@a5019735-40e9-0310-863c-91ae7b9d1cf9>
+Date:   Wed Aug 21 19:46:50 2013 +0000
+
+    The file tests/ppc32/power_ISA2_05.stdout.exp_Without_FPPO was a link
+    to file tests/ppc64/power_ISA2_05.stdout.exp_Without_FPPO.  That was a
+    commit error as the output for ppc32 and ppc64 are different.  Remove
+    the file and commit to remove the link.
+    
+    See bugzilla 81535.
+    
+    
+    git-svn-id: svn://svn.valgrind.org/valgrind/trunk@13505 a5019735-40e9-0310-863c-91ae7b9d1cf9
+
+diff --git a/memcheck/tests/ppc32/power_ISA2_05.stdout.exp_Without_FPPO b/memcheck/tests/ppc32/power_ISA2_05.stdout.exp_Without_FPPO
+deleted file mode 120000
+index da5c109..0000000
+--- a/memcheck/tests/ppc32/power_ISA2_05.stdout.exp_Without_FPPO
++++ /dev/null
+@@ -1 +0,0 @@
+-../ppc64/power_ISA2_05.stdout.exp_Without_FPPO
+\ No newline at end of file
+
+commit bfde541a949ff59db394b0ce26f370215e94e30a
+Author: carll <carll@a5019735-40e9-0310-863c-91ae7b9d1cf9>
+Date:   Wed Aug 21 19:47:19 2013 +0000
+
+    The file tests/ppc32/power_ISA2_05.stdout.exp_Without_FPPO was a link
+    to file tests/ppc64/power_ISA2_05.stdout.exp_Without_FPPO.  That was a
+    commit error as the output for ppc32 and ppc64 are different.  Replaced
+    the link with the correct real file of expected results.  See bugzilla
+    81535.
+    
+    
+    git-svn-id: svn://svn.valgrind.org/valgrind/trunk@13506 a5019735-40e9-0310-863c-91ae7b9d1cf9
+
+diff --git a/memcheck/tests/ppc32/power_ISA2_05.stdout.exp_Without_FPPO b/memcheck/tests/ppc32/power_ISA2_05.stdout.exp_Without_FPPO
+new file mode 100644
+index 0000000..f9e934e
+--- /dev/null
++++ b/memcheck/tests/ppc32/power_ISA2_05.stdout.exp_Without_FPPO
+@@ -0,0 +1,68 @@
++lwarx => bad0beef
++fcpsgn sign=10.101010, base=11.111111 => 11.111111
++fcpsgn sign=10.101010, base=-0.000000 => 0.000000
++fcpsgn sign=10.101010, base=0.000000 => 0.000000
++fcpsgn sign=10.101010, base=-11.111111 => 11.111111
++fcpsgn sign=-0.000000, base=11.111111 => -11.111111
++fcpsgn sign=-0.000000, base=-0.000000 => -0.000000
++fcpsgn sign=-0.000000, base=0.000000 => -0.000000
++fcpsgn sign=-0.000000, base=-11.111111 => -11.111111
++fcpsgn sign=0.000000, base=11.111111 => 11.111111
++fcpsgn sign=0.000000, base=-0.000000 => 0.000000
++fcpsgn sign=0.000000, base=0.000000 => 0.000000
++fcpsgn sign=0.000000, base=-11.111111 => 11.111111
++fcpsgn sign=-10.101010, base=11.111111 => -11.111111
++fcpsgn sign=-10.101010, base=-0.000000 => -0.000000
++fcpsgn sign=-10.101010, base=0.000000 => -0.000000
++fcpsgn sign=-10.101010, base=-11.111111 => -11.111111
++lfiwax (-1024.000000) => FRT=(ffffffff, c0900000)
++prtyw (0) => parity=0
++prtyw (1) => parity=1
++prtyw (2) => parity=0
++prtyw (3) => parity=1
++prtyw (4) => parity=0
++prtyw (5) => parity=1
++prtyw (6) => parity=0
++prtyw (7) => parity=1
++prtyw (8) => parity=0
++prtyw (9) => parity=1
++prtyw (a) => parity=0
++prtyw (b) => parity=1
++prtyw (c) => parity=0
++prtyw (d) => parity=1
++prtyw (e) => parity=0
++prtyw (f) => parity=1
++prtyw (10) => parity=0
++prtyw (11) => parity=1
++prtyw (12) => parity=0
++prtyw (13) => parity=1
++prtyw (14) => parity=0
++prtyw (15) => parity=1
++prtyw (16) => parity=0
++prtyw (17) => parity=1
++prtyw (18) => parity=0
++prtyw (19) => parity=1
++prtyw (1a) => parity=0
++prtyw (1b) => parity=1
++prtyw (1c) => parity=0
++prtyw (1d) => parity=1
++prtyw (1e) => parity=0
++prtyw (1f) => parity=1
++prtyw (20) => parity=0
++prtyw (21) => parity=1
++prtyw (22) => parity=0
++prtyw (23) => parity=1
++prtyw (24) => parity=0
++prtyw (25) => parity=1
++prtyw (26) => parity=0
++prtyw (27) => parity=1
++prtyw (28) => parity=0
++prtyw (29) => parity=1
++prtyw (2a) => parity=0
++prtyw (2b) => parity=1
++prtyw (2c) => parity=0
++prtyw (2d) => parity=1
++prtyw (2e) => parity=0
++prtyw (2f) => parity=1
++prtyw (30) => parity=0
++prtyw (31) => parity=1
