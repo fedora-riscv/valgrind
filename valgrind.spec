@@ -188,6 +188,9 @@ Patch48: valgrind-3.8.1-power-isa-205-deprecation.patch
 # KDE#310931 message-security assist instruction extension not implemented 
 Patch49: valgrind-3.8.1-s390-STFLE.patch
 
+# KDE#323713 Support mmxext (integer sse) subset on i386 (athlon)
+Patch50: valgrind-3.8.1-mmxext.patch
+
 %ifarch x86_64 ppc64
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -337,6 +340,7 @@ touch ./memcheck/tests/linux/getregset.stderr.exp
 chmod 755 tests/check_isa-2_07_cap
 %patch48 -p1
 %patch49 -p1
+%patch50 -p1
 
 # These tests go into an endless loop on ARM
 # There is a __sync_add_and_fetch in the testcase.
@@ -501,6 +505,7 @@ echo ===============END TESTING===============
 * Thu Sep 05 2013 Mark Wielaard <mjw@redhat.com>
 - Fix power_ISA2_05 testcase (valgrind-3.8.1-power-isa-205-deprecation.patch)
 - Fix ppc32 make check build (valgrind-3.8.1-initial-power-isa-207.patch)
+- Add valgrind-3.8.1-mmxext.patch
 
 * Wed Aug 21 2013 Mark Wielaard <mjw@redhat.com> - 3.8.1-26
 - Allow building against glibc 2.18. (#999169)

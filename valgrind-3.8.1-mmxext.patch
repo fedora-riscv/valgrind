@@ -1,0 +1,975 @@
+commit a4b7b67db47021c424c18a5729f250016d34df27
+Author: mjw <mjw@8f6e269a-dfd6-0310-a8e1-e2731360e62c>
+Date:   Tue Aug 27 10:19:03 2013 +0000
+
+    Support mmxext (integer sse) subset on i386 (athlon).
+    
+    Some processors like the AMD Athlon "Classic" support mmxext,
+    a sse1 subset. This subset is not properly detected by VEX.
+    The subset uses the same encoding as the sse1 instructions.
+    
+    The subset is described at:
+      http://support.amd.com/us/Embedded_TechDocs/22466.pdf
+      https://en.wikipedia.org/wiki/3DNow!#3DNow.21_extensions
+    
+    This introduces a new VEX_HWCAPS_X86_MMXEXT that sits between
+    the baseline (0) and VEX_HWCAPS_X86_SSE1. There is also a new
+    x86g_dirtyhelper_CPUID_mmxext to mimics a Athlon "Classic"
+    (Model 2, K75 "Pluto/Orion").
+    
+    Groups all mmxext instructions together in one block.
+    
+    git-svn-id: svn://svn.valgrind.org/vex/trunk@2745 8f6e269a-dfd6-0310-a8e1-e2731360e62c
+
+diff --git a/VEX/priv/guest_x86_defs.h b/VEX/priv/guest_x86_defs.h
+index 389e6bb..1a16a0b 100644
+--- a/VEX/priv/guest_x86_defs.h
++++ b/VEX/priv/guest_x86_defs.h
+@@ -144,6 +144,7 @@ extern ULong x86g_dirtyhelper_loadF80le  ( UInt );
+ extern void  x86g_dirtyhelper_storeF80le ( UInt, ULong );
+ 
+ extern void  x86g_dirtyhelper_CPUID_sse0 ( VexGuestX86State* );
++extern void  x86g_dirtyhelper_CPUID_mmxext ( VexGuestX86State* );
+ extern void  x86g_dirtyhelper_CPUID_sse1 ( VexGuestX86State* );
+ extern void  x86g_dirtyhelper_CPUID_sse2 ( VexGuestX86State* );
+ 
+diff --git a/VEX/priv/guest_x86_helpers.c b/VEX/priv/guest_x86_helpers.c
+index 9c26794..e87e89f 100644
+--- a/VEX/priv/guest_x86_helpers.c
++++ b/VEX/priv/guest_x86_helpers.c
+@@ -2207,6 +2207,63 @@ void x86g_dirtyhelper_CPUID_sse0 ( VexGuestX86State* st )
+ 
+ /* CALLED FROM GENERATED CODE */
+ /* DIRTY HELPER (modifies guest state) */
++/* Claim to be a Athlon "Classic" (Model 2, K75 "Pluto/Orion") */
++/* But without 3DNow support (weird, but we really don't support it). */
++void x86g_dirtyhelper_CPUID_mmxext ( VexGuestX86State* st )
++{
++   switch (st->guest_EAX) {
++      /* vendor ID */
++      case 0:
++         st->guest_EAX = 0x1;
++         st->guest_EBX = 0x68747541;
++         st->guest_ECX = 0x444d4163;
++         st->guest_EDX = 0x69746e65;
++         break;
++      /* feature bits */
++      case 1:
++         st->guest_EAX = 0x621;
++         st->guest_EBX = 0x0;
++         st->guest_ECX = 0x0;
++         st->guest_EDX = 0x183f9ff;
++         break;
++      /* Highest Extended Function Supported (0x80000004 brand string) */
++      case 0x80000000:
++         st->guest_EAX = 0x80000004;
++         st->guest_EBX = 0x68747541;
++         st->guest_ECX = 0x444d4163;
++         st->guest_EDX = 0x69746e65;
++         break;
++      /* Extended Processor Info and Feature Bits */
++      case 0x80000001:
++         st->guest_EAX = 0x721;
++         st->guest_EBX = 0x0;
++         st->guest_ECX = 0x0;
++         st->guest_EDX = 0x1c3f9ff; /* Note no 3DNow. */
++         break;
++      /* Processor Brand String "AMD Athlon(tm) Processor" */
++      case 0x80000002:
++         st->guest_EAX = 0x20444d41;
++         st->guest_EBX = 0x6c687441;
++         st->guest_ECX = 0x74286e6f;
++         st->guest_EDX = 0x5020296d;
++         break;
++      case 0x80000003:
++         st->guest_EAX = 0x65636f72;
++         st->guest_EBX = 0x726f7373;
++         st->guest_ECX = 0x0;
++         st->guest_EDX = 0x0;
++         break;
++      default:
++         st->guest_EAX = 0x0;
++         st->guest_EBX = 0x0;
++         st->guest_ECX = 0x0;
++         st->guest_EDX = 0x0;
++         break;
++   }
++}
++
++/* CALLED FROM GENERATED CODE */
++/* DIRTY HELPER (modifies guest state) */
+ /* Claim to be the following SSE1-capable CPU:
+    vendor_id       : GenuineIntel
+    cpu family      : 6
+diff --git a/VEX/priv/guest_x86_toIR.c b/VEX/priv/guest_x86_toIR.c
+index 90499b0..e98f19c 100644
+--- a/VEX/priv/guest_x86_toIR.c
++++ b/VEX/priv/guest_x86_toIR.c
+@@ -8318,7 +8318,18 @@ DisResult disInstr_X86_WRK (
+       guest subarchitecture. */
+    if (archinfo->hwcaps == 0/*baseline, no sse at all*/)
+       goto after_sse_decoders;
+-   
++
++   /* With mmxext only some extended MMX instructions are recognized.
++      The mmxext instructions are MASKMOVQ MOVNTQ PAVGB PAVGW PMAXSW
++      PMAXUB PMINSW PMINUB PMULHUW PSADBW PSHUFW PEXTRW PINSRW PMOVMSKB
++      PREFETCHNTA PREFETCHT0 PREFETCHT1 PREFETCHT2 SFENCE
++
++      http://support.amd.com/us/Embedded_TechDocs/22466.pdf
++      https://en.wikipedia.org/wiki/3DNow!#3DNow.21_extensions */
++
++   if (archinfo->hwcaps == VEX_HWCAPS_X86_MMXEXT/*integer only sse1 subset*/)
++      goto mmxext;
++
+    /* Otherwise we must be doing sse1 or sse2, so we can at least try
+       for SSE1 here. */
+ 
+@@ -8627,6 +8638,11 @@ DisResult disInstr_X86_WRK (
+       goto decode_success;
+    }
+ 
++
++   /* mmxext sse1 subset starts here. mmxext only arches will parse
++      only this subset of the sse1 instructions. */
++  mmxext:
++
+    /* ***--- this is an MMX class insn introduced in SSE1 ---*** */
+    /* 0F F7 = MASKMOVQ -- 8x8 masked store */
+    if (sz == 4 && insn[0] == 0x0F && insn[1] == 0xF7) {
+@@ -8637,203 +8653,6 @@ DisResult disInstr_X86_WRK (
+       goto decode_success;
+    }
+ 
+-   /* 0F 5F = MAXPS -- max 32Fx4 from R/M to R */
+-   if (sz == 4 && insn[0] == 0x0F && insn[1] == 0x5F) {
+-      delta = dis_SSE_E_to_G_all( sorb, delta+2, "maxps", Iop_Max32Fx4 );
+-      goto decode_success;
+-   }
+-
+-   /* F3 0F 5F = MAXSS -- max 32F0x4 from R/M to R */
+-   if (insn[0] == 0xF3 && insn[1] == 0x0F && insn[2] == 0x5F) {
+-      vassert(sz == 4);
+-      delta = dis_SSE_E_to_G_lo32( sorb, delta+3, "maxss", Iop_Max32F0x4 );
+-      goto decode_success;
+-   }
+-
+-   /* 0F 5D = MINPS -- min 32Fx4 from R/M to R */
+-   if (sz == 4 && insn[0] == 0x0F && insn[1] == 0x5D) {
+-      delta = dis_SSE_E_to_G_all( sorb, delta+2, "minps", Iop_Min32Fx4 );
+-      goto decode_success;
+-   }
+-
+-   /* F3 0F 5D = MINSS -- min 32F0x4 from R/M to R */
+-   if (insn[0] == 0xF3 && insn[1] == 0x0F && insn[2] == 0x5D) {
+-      vassert(sz == 4);
+-      delta = dis_SSE_E_to_G_lo32( sorb, delta+3, "minss", Iop_Min32F0x4 );
+-      goto decode_success;
+-   }
+-
+-   /* 0F 28 = MOVAPS -- move from E (mem or xmm) to G (xmm). */
+-   /* 0F 10 = MOVUPS -- move from E (mem or xmm) to G (xmm). */
+-   if (sz == 4 && insn[0] == 0x0F && (insn[1] == 0x28 || insn[1] == 0x10)) {
+-      modrm = getIByte(delta+2);
+-      if (epartIsReg(modrm)) {
+-         putXMMReg( gregOfRM(modrm), 
+-                    getXMMReg( eregOfRM(modrm) ));
+-         DIP("mov[ua]ps %s,%s\n", nameXMMReg(eregOfRM(modrm)),
+-                                  nameXMMReg(gregOfRM(modrm)));
+-         delta += 2+1;
+-      } else {
+-         addr = disAMode ( &alen, sorb, delta+2, dis_buf );
+-         if (insn[1] == 0x28/*movaps*/)
+-            gen_SEGV_if_not_16_aligned( addr );
+-         putXMMReg( gregOfRM(modrm), 
+-                    loadLE(Ity_V128, mkexpr(addr)) );
+-         DIP("mov[ua]ps %s,%s\n", dis_buf,
+-                                  nameXMMReg(gregOfRM(modrm)));
+-         delta += 2+alen;
+-      }
+-      goto decode_success;
+-   }
+-
+-   /* 0F 29 = MOVAPS -- move from G (xmm) to E (mem or xmm). */
+-   /* 0F 11 = MOVUPS -- move from G (xmm) to E (mem or xmm). */
+-   if (sz == 4 && insn[0] == 0x0F 
+-       && (insn[1] == 0x29 || insn[1] == 0x11)) {
+-      modrm = getIByte(delta+2);
+-      if (epartIsReg(modrm)) {
+-         /* fall through; awaiting test case */
+-      } else {
+-         addr = disAMode ( &alen, sorb, delta+2, dis_buf );
+-         if (insn[1] == 0x29/*movaps*/)
+-            gen_SEGV_if_not_16_aligned( addr );
+-         storeLE( mkexpr(addr), getXMMReg(gregOfRM(modrm)) );
+-         DIP("mov[ua]ps %s,%s\n", nameXMMReg(gregOfRM(modrm)),
+-                                  dis_buf );
+-         delta += 2+alen;
+-         goto decode_success;
+-      }
+-   }
+-
+-   /* 0F 16 = MOVHPS -- move from mem to high half of XMM. */
+-   /* 0F 16 = MOVLHPS -- move from lo half to hi half of XMM. */
+-   if (sz == 4 && insn[0] == 0x0F && insn[1] == 0x16) {
+-      modrm = getIByte(delta+2);
+-      if (epartIsReg(modrm)) {
+-         delta += 2+1;
+-         putXMMRegLane64( gregOfRM(modrm), 1/*upper lane*/,
+-                          getXMMRegLane64( eregOfRM(modrm), 0 ) );
+-         DIP("movhps %s,%s\n", nameXMMReg(eregOfRM(modrm)), 
+-                               nameXMMReg(gregOfRM(modrm)));
+-      } else {
+-         addr = disAMode ( &alen, sorb, delta+2, dis_buf );
+-         delta += 2+alen;
+-         putXMMRegLane64( gregOfRM(modrm), 1/*upper lane*/,
+-                          loadLE(Ity_I64, mkexpr(addr)) );
+-         DIP("movhps %s,%s\n", dis_buf, 
+-                               nameXMMReg( gregOfRM(modrm) ));
+-      }
+-      goto decode_success;
+-   }
+-
+-   /* 0F 17 = MOVHPS -- move from high half of XMM to mem. */
+-   if (sz == 4 && insn[0] == 0x0F && insn[1] == 0x17) {
+-      if (!epartIsReg(insn[2])) {
+-         delta += 2;
+-         addr = disAMode ( &alen, sorb, delta, dis_buf );
+-         delta += alen;
+-         storeLE( mkexpr(addr), 
+-                  getXMMRegLane64( gregOfRM(insn[2]),
+-                                   1/*upper lane*/ ) );
+-         DIP("movhps %s,%s\n", nameXMMReg( gregOfRM(insn[2]) ),
+-                               dis_buf);
+-         goto decode_success;
+-      }
+-      /* else fall through */
+-   }
+-
+-   /* 0F 12 = MOVLPS -- move from mem to low half of XMM. */
+-   /* OF 12 = MOVHLPS -- from from hi half to lo half of XMM. */
+-   if (sz == 4 && insn[0] == 0x0F && insn[1] == 0x12) {
+-      modrm = getIByte(delta+2);
+-      if (epartIsReg(modrm)) {
+-         delta += 2+1;
+-         putXMMRegLane64( gregOfRM(modrm),  
+-                          0/*lower lane*/,
+-                          getXMMRegLane64( eregOfRM(modrm), 1 ));
+-         DIP("movhlps %s, %s\n", nameXMMReg(eregOfRM(modrm)), 
+-                                 nameXMMReg(gregOfRM(modrm)));
+-      } else {
+-         addr = disAMode ( &alen, sorb, delta+2, dis_buf );
+-         delta += 2+alen;
+-         putXMMRegLane64( gregOfRM(modrm),  0/*lower lane*/,
+-                          loadLE(Ity_I64, mkexpr(addr)) );
+-         DIP("movlps %s, %s\n", 
+-             dis_buf, nameXMMReg( gregOfRM(modrm) ));
+-      }
+-      goto decode_success;
+-   }
+-
+-   /* 0F 13 = MOVLPS -- move from low half of XMM to mem. */
+-   if (sz == 4 && insn[0] == 0x0F && insn[1] == 0x13) {
+-      if (!epartIsReg(insn[2])) {
+-         delta += 2;
+-         addr = disAMode ( &alen, sorb, delta, dis_buf );
+-         delta += alen;
+-         storeLE( mkexpr(addr), 
+-                  getXMMRegLane64( gregOfRM(insn[2]), 
+-                                   0/*lower lane*/ ) );
+-         DIP("movlps %s, %s\n", nameXMMReg( gregOfRM(insn[2]) ),
+-                                dis_buf);
+-         goto decode_success;
+-      }
+-      /* else fall through */
+-   }
+-
+-   /* 0F 50 = MOVMSKPS - move 4 sign bits from 4 x F32 in xmm(E)
+-      to 4 lowest bits of ireg(G) */
+-   if (insn[0] == 0x0F && insn[1] == 0x50) {
+-      modrm = getIByte(delta+2);
+-      if (sz == 4 && epartIsReg(modrm)) {
+-         Int src;
+-         t0 = newTemp(Ity_I32);
+-         t1 = newTemp(Ity_I32);
+-         t2 = newTemp(Ity_I32);
+-         t3 = newTemp(Ity_I32);
+-         delta += 2+1;
+-         src = eregOfRM(modrm);
+-         assign( t0, binop( Iop_And32,
+-                            binop(Iop_Shr32, getXMMRegLane32(src,0), mkU8(31)),
+-                            mkU32(1) ));
+-         assign( t1, binop( Iop_And32,
+-                            binop(Iop_Shr32, getXMMRegLane32(src,1), mkU8(30)),
+-                            mkU32(2) ));
+-         assign( t2, binop( Iop_And32,
+-                            binop(Iop_Shr32, getXMMRegLane32(src,2), mkU8(29)),
+-                            mkU32(4) ));
+-         assign( t3, binop( Iop_And32,
+-                            binop(Iop_Shr32, getXMMRegLane32(src,3), mkU8(28)),
+-                            mkU32(8) ));
+-         putIReg(4, gregOfRM(modrm),
+-                    binop(Iop_Or32,
+-                          binop(Iop_Or32, mkexpr(t0), mkexpr(t1)),
+-                          binop(Iop_Or32, mkexpr(t2), mkexpr(t3))
+-                         )
+-                 );
+-         DIP("movmskps %s,%s\n", nameXMMReg(src), 
+-                                 nameIReg(4, gregOfRM(modrm)));
+-         goto decode_success;
+-      }
+-      /* else fall through */
+-   }
+-
+-   /* 0F 2B = MOVNTPS -- for us, just a plain SSE store. */
+-   /* 66 0F 2B = MOVNTPD -- for us, just a plain SSE store. */
+-   if (insn[0] == 0x0F && insn[1] == 0x2B) {
+-      modrm = getIByte(delta+2);
+-      if (!epartIsReg(modrm)) {
+-         addr = disAMode ( &alen, sorb, delta+2, dis_buf );
+-         gen_SEGV_if_not_16_aligned( addr );
+-         storeLE( mkexpr(addr), getXMMReg(gregOfRM(modrm)) );
+-         DIP("movntp%s %s,%s\n", sz==2 ? "d" : "s",
+-                                 dis_buf,
+-                                 nameXMMReg(gregOfRM(modrm)));
+-         delta += 2+alen;
+-         goto decode_success;
+-      }
+-      /* else fall through */
+-   }
+-
+    /* ***--- this is an MMX class insn introduced in SSE1 ---*** */
+    /* 0F E7 = MOVNTQ -- for us, just a plain MMX store.  Note, the
+       Intel manual does not say anything about the usual business of
+@@ -8854,70 +8673,6 @@ DisResult disInstr_X86_WRK (
+       /* else fall through */
+    }
+ 
+-   /* F3 0F 10 = MOVSS -- move 32 bits from E (mem or lo 1/4 xmm) to G
+-      (lo 1/4 xmm).  If E is mem, upper 3/4 of G is zeroed out. */
+-   if (insn[0] == 0xF3 && insn[1] == 0x0F && insn[2] == 0x10) {
+-      vassert(sz == 4);
+-      modrm = getIByte(delta+3);
+-      if (epartIsReg(modrm)) {
+-         putXMMRegLane32( gregOfRM(modrm), 0,
+-                          getXMMRegLane32( eregOfRM(modrm), 0 ));
+-         DIP("movss %s,%s\n", nameXMMReg(eregOfRM(modrm)),
+-                              nameXMMReg(gregOfRM(modrm)));
+-         delta += 3+1;
+-      } else {
+-         addr = disAMode ( &alen, sorb, delta+3, dis_buf );
+-         /* zero bits 127:64 */
+-         putXMMRegLane64( gregOfRM(modrm), 1, mkU64(0) ); 
+-         /* zero bits 63:32 */
+-         putXMMRegLane32( gregOfRM(modrm), 1, mkU32(0) ); 
+-         /* write bits 31:0 */
+-         putXMMRegLane32( gregOfRM(modrm), 0,
+-                          loadLE(Ity_I32, mkexpr(addr)) );
+-         DIP("movss %s,%s\n", dis_buf,
+-                              nameXMMReg(gregOfRM(modrm)));
+-         delta += 3+alen;
+-      }
+-      goto decode_success;
+-   }
+-
+-   /* F3 0F 11 = MOVSS -- move 32 bits from G (lo 1/4 xmm) to E (mem
+-      or lo 1/4 xmm). */
+-   if (insn[0] == 0xF3 && insn[1] == 0x0F && insn[2] == 0x11) {
+-      vassert(sz == 4);
+-      modrm = getIByte(delta+3);
+-      if (epartIsReg(modrm)) {
+-         /* fall through, we don't yet have a test case */
+-      } else {
+-         addr = disAMode ( &alen, sorb, delta+3, dis_buf );
+-         storeLE( mkexpr(addr),
+-                  getXMMRegLane32(gregOfRM(modrm), 0) );
+-         DIP("movss %s,%s\n", nameXMMReg(gregOfRM(modrm)),
+-                              dis_buf);
+-         delta += 3+alen;
+-         goto decode_success;
+-      }
+-   }
+-
+-   /* 0F 59 = MULPS -- mul 32Fx4 from R/M to R */
+-   if (sz == 4 && insn[0] == 0x0F && insn[1] == 0x59) {
+-      delta = dis_SSE_E_to_G_all( sorb, delta+2, "mulps", Iop_Mul32Fx4 );
+-      goto decode_success;
+-   }
+-
+-   /* F3 0F 59 = MULSS -- mul 32F0x4 from R/M to R */
+-   if (insn[0] == 0xF3 && insn[1] == 0x0F && insn[2] == 0x59) {
+-      vassert(sz == 4);
+-      delta = dis_SSE_E_to_G_lo32( sorb, delta+3, "mulss", Iop_Mul32F0x4 );
+-      goto decode_success;
+-   }
+-
+-   /* 0F 56 = ORPS -- G = G and E */
+-   if (sz == 4 && insn[0] == 0x0F && insn[1] == 0x56) {
+-      delta = dis_SSE_E_to_G_all( sorb, delta+2, "orps", Iop_OrV128 );
+-      goto decode_success;
+-   }
+-
+    /* ***--- this is an MMX class insn introduced in SSE1 ---*** */
+    /* 0F E0 = PAVGB -- 8x8 unsigned Packed Average, with rounding */
+    if (sz == 4 && insn[0] == 0x0F && insn[1] == 0xE0) {
+@@ -9173,6 +8928,284 @@ DisResult disInstr_X86_WRK (
+       goto decode_success;
+    }
+ 
++   /* 0F AE /7 = SFENCE -- flush pending operations to memory */
++   if (insn[0] == 0x0F && insn[1] == 0xAE
++       && epartIsReg(insn[2]) && gregOfRM(insn[2]) == 7) {
++      vassert(sz == 4);
++      delta += 3;
++      /* Insert a memory fence.  It's sometimes important that these
++         are carried through to the generated code. */
++      stmt( IRStmt_MBE(Imbe_Fence) );
++      DIP("sfence\n");
++      goto decode_success;
++   }
++
++   /* End of mmxext sse1 subset. No more sse parsing for mmxext only arches. */
++   if (archinfo->hwcaps == VEX_HWCAPS_X86_MMXEXT/*integer only sse1 subset*/)
++      goto after_sse_decoders;
++
++
++   /* 0F 5F = MAXPS -- max 32Fx4 from R/M to R */
++   if (sz == 4 && insn[0] == 0x0F && insn[1] == 0x5F) {
++      delta = dis_SSE_E_to_G_all( sorb, delta+2, "maxps", Iop_Max32Fx4 );
++      goto decode_success;
++   }
++
++   /* F3 0F 5F = MAXSS -- max 32F0x4 from R/M to R */
++   if (insn[0] == 0xF3 && insn[1] == 0x0F && insn[2] == 0x5F) {
++      vassert(sz == 4);
++      delta = dis_SSE_E_to_G_lo32( sorb, delta+3, "maxss", Iop_Max32F0x4 );
++      goto decode_success;
++   }
++
++   /* 0F 5D = MINPS -- min 32Fx4 from R/M to R */
++   if (sz == 4 && insn[0] == 0x0F && insn[1] == 0x5D) {
++      delta = dis_SSE_E_to_G_all( sorb, delta+2, "minps", Iop_Min32Fx4 );
++      goto decode_success;
++   }
++
++   /* F3 0F 5D = MINSS -- min 32F0x4 from R/M to R */
++   if (insn[0] == 0xF3 && insn[1] == 0x0F && insn[2] == 0x5D) {
++      vassert(sz == 4);
++      delta = dis_SSE_E_to_G_lo32( sorb, delta+3, "minss", Iop_Min32F0x4 );
++      goto decode_success;
++   }
++
++   /* 0F 28 = MOVAPS -- move from E (mem or xmm) to G (xmm). */
++   /* 0F 10 = MOVUPS -- move from E (mem or xmm) to G (xmm). */
++   if (sz == 4 && insn[0] == 0x0F && (insn[1] == 0x28 || insn[1] == 0x10)) {
++      modrm = getIByte(delta+2);
++      if (epartIsReg(modrm)) {
++         putXMMReg( gregOfRM(modrm), 
++                    getXMMReg( eregOfRM(modrm) ));
++         DIP("mov[ua]ps %s,%s\n", nameXMMReg(eregOfRM(modrm)),
++                                  nameXMMReg(gregOfRM(modrm)));
++         delta += 2+1;
++      } else {
++         addr = disAMode ( &alen, sorb, delta+2, dis_buf );
++         if (insn[1] == 0x28/*movaps*/)
++            gen_SEGV_if_not_16_aligned( addr );
++         putXMMReg( gregOfRM(modrm), 
++                    loadLE(Ity_V128, mkexpr(addr)) );
++         DIP("mov[ua]ps %s,%s\n", dis_buf,
++                                  nameXMMReg(gregOfRM(modrm)));
++         delta += 2+alen;
++      }
++      goto decode_success;
++   }
++
++   /* 0F 29 = MOVAPS -- move from G (xmm) to E (mem or xmm). */
++   /* 0F 11 = MOVUPS -- move from G (xmm) to E (mem or xmm). */
++   if (sz == 4 && insn[0] == 0x0F 
++       && (insn[1] == 0x29 || insn[1] == 0x11)) {
++      modrm = getIByte(delta+2);
++      if (epartIsReg(modrm)) {
++         /* fall through; awaiting test case */
++      } else {
++         addr = disAMode ( &alen, sorb, delta+2, dis_buf );
++         if (insn[1] == 0x29/*movaps*/)
++            gen_SEGV_if_not_16_aligned( addr );
++         storeLE( mkexpr(addr), getXMMReg(gregOfRM(modrm)) );
++         DIP("mov[ua]ps %s,%s\n", nameXMMReg(gregOfRM(modrm)),
++                                  dis_buf );
++         delta += 2+alen;
++         goto decode_success;
++      }
++   }
++
++   /* 0F 16 = MOVHPS -- move from mem to high half of XMM. */
++   /* 0F 16 = MOVLHPS -- move from lo half to hi half of XMM. */
++   if (sz == 4 && insn[0] == 0x0F && insn[1] == 0x16) {
++      modrm = getIByte(delta+2);
++      if (epartIsReg(modrm)) {
++         delta += 2+1;
++         putXMMRegLane64( gregOfRM(modrm), 1/*upper lane*/,
++                          getXMMRegLane64( eregOfRM(modrm), 0 ) );
++         DIP("movhps %s,%s\n", nameXMMReg(eregOfRM(modrm)), 
++                               nameXMMReg(gregOfRM(modrm)));
++      } else {
++         addr = disAMode ( &alen, sorb, delta+2, dis_buf );
++         delta += 2+alen;
++         putXMMRegLane64( gregOfRM(modrm), 1/*upper lane*/,
++                          loadLE(Ity_I64, mkexpr(addr)) );
++         DIP("movhps %s,%s\n", dis_buf, 
++                               nameXMMReg( gregOfRM(modrm) ));
++      }
++      goto decode_success;
++   }
++
++   /* 0F 17 = MOVHPS -- move from high half of XMM to mem. */
++   if (sz == 4 && insn[0] == 0x0F && insn[1] == 0x17) {
++      if (!epartIsReg(insn[2])) {
++         delta += 2;
++         addr = disAMode ( &alen, sorb, delta, dis_buf );
++         delta += alen;
++         storeLE( mkexpr(addr), 
++                  getXMMRegLane64( gregOfRM(insn[2]),
++                                   1/*upper lane*/ ) );
++         DIP("movhps %s,%s\n", nameXMMReg( gregOfRM(insn[2]) ),
++                               dis_buf);
++         goto decode_success;
++      }
++      /* else fall through */
++   }
++
++   /* 0F 12 = MOVLPS -- move from mem to low half of XMM. */
++   /* OF 12 = MOVHLPS -- from from hi half to lo half of XMM. */
++   if (sz == 4 && insn[0] == 0x0F && insn[1] == 0x12) {
++      modrm = getIByte(delta+2);
++      if (epartIsReg(modrm)) {
++         delta += 2+1;
++         putXMMRegLane64( gregOfRM(modrm),  
++                          0/*lower lane*/,
++                          getXMMRegLane64( eregOfRM(modrm), 1 ));
++         DIP("movhlps %s, %s\n", nameXMMReg(eregOfRM(modrm)), 
++                                 nameXMMReg(gregOfRM(modrm)));
++      } else {
++         addr = disAMode ( &alen, sorb, delta+2, dis_buf );
++         delta += 2+alen;
++         putXMMRegLane64( gregOfRM(modrm),  0/*lower lane*/,
++                          loadLE(Ity_I64, mkexpr(addr)) );
++         DIP("movlps %s, %s\n", 
++             dis_buf, nameXMMReg( gregOfRM(modrm) ));
++      }
++      goto decode_success;
++   }
++
++   /* 0F 13 = MOVLPS -- move from low half of XMM to mem. */
++   if (sz == 4 && insn[0] == 0x0F && insn[1] == 0x13) {
++      if (!epartIsReg(insn[2])) {
++         delta += 2;
++         addr = disAMode ( &alen, sorb, delta, dis_buf );
++         delta += alen;
++         storeLE( mkexpr(addr), 
++                  getXMMRegLane64( gregOfRM(insn[2]), 
++                                   0/*lower lane*/ ) );
++         DIP("movlps %s, %s\n", nameXMMReg( gregOfRM(insn[2]) ),
++                                dis_buf);
++         goto decode_success;
++      }
++      /* else fall through */
++   }
++
++   /* 0F 50 = MOVMSKPS - move 4 sign bits from 4 x F32 in xmm(E)
++      to 4 lowest bits of ireg(G) */
++   if (insn[0] == 0x0F && insn[1] == 0x50) {
++      modrm = getIByte(delta+2);
++      if (sz == 4 && epartIsReg(modrm)) {
++         Int src;
++         t0 = newTemp(Ity_I32);
++         t1 = newTemp(Ity_I32);
++         t2 = newTemp(Ity_I32);
++         t3 = newTemp(Ity_I32);
++         delta += 2+1;
++         src = eregOfRM(modrm);
++         assign( t0, binop( Iop_And32,
++                            binop(Iop_Shr32, getXMMRegLane32(src,0), mkU8(31)),
++                            mkU32(1) ));
++         assign( t1, binop( Iop_And32,
++                            binop(Iop_Shr32, getXMMRegLane32(src,1), mkU8(30)),
++                            mkU32(2) ));
++         assign( t2, binop( Iop_And32,
++                            binop(Iop_Shr32, getXMMRegLane32(src,2), mkU8(29)),
++                            mkU32(4) ));
++         assign( t3, binop( Iop_And32,
++                            binop(Iop_Shr32, getXMMRegLane32(src,3), mkU8(28)),
++                            mkU32(8) ));
++         putIReg(4, gregOfRM(modrm),
++                    binop(Iop_Or32,
++                          binop(Iop_Or32, mkexpr(t0), mkexpr(t1)),
++                          binop(Iop_Or32, mkexpr(t2), mkexpr(t3))
++                         )
++                 );
++         DIP("movmskps %s,%s\n", nameXMMReg(src), 
++                                 nameIReg(4, gregOfRM(modrm)));
++         goto decode_success;
++      }
++      /* else fall through */
++   }
++
++   /* 0F 2B = MOVNTPS -- for us, just a plain SSE store. */
++   /* 66 0F 2B = MOVNTPD -- for us, just a plain SSE store. */
++   if (insn[0] == 0x0F && insn[1] == 0x2B) {
++      modrm = getIByte(delta+2);
++      if (!epartIsReg(modrm)) {
++         addr = disAMode ( &alen, sorb, delta+2, dis_buf );
++         gen_SEGV_if_not_16_aligned( addr );
++         storeLE( mkexpr(addr), getXMMReg(gregOfRM(modrm)) );
++         DIP("movntp%s %s,%s\n", sz==2 ? "d" : "s",
++                                 dis_buf,
++                                 nameXMMReg(gregOfRM(modrm)));
++         delta += 2+alen;
++         goto decode_success;
++      }
++      /* else fall through */
++   }
++
++   /* F3 0F 10 = MOVSS -- move 32 bits from E (mem or lo 1/4 xmm) to G
++      (lo 1/4 xmm).  If E is mem, upper 3/4 of G is zeroed out. */
++   if (insn[0] == 0xF3 && insn[1] == 0x0F && insn[2] == 0x10) {
++      vassert(sz == 4);
++      modrm = getIByte(delta+3);
++      if (epartIsReg(modrm)) {
++         putXMMRegLane32( gregOfRM(modrm), 0,
++                          getXMMRegLane32( eregOfRM(modrm), 0 ));
++         DIP("movss %s,%s\n", nameXMMReg(eregOfRM(modrm)),
++                              nameXMMReg(gregOfRM(modrm)));
++         delta += 3+1;
++      } else {
++         addr = disAMode ( &alen, sorb, delta+3, dis_buf );
++         /* zero bits 127:64 */
++         putXMMRegLane64( gregOfRM(modrm), 1, mkU64(0) ); 
++         /* zero bits 63:32 */
++         putXMMRegLane32( gregOfRM(modrm), 1, mkU32(0) ); 
++         /* write bits 31:0 */
++         putXMMRegLane32( gregOfRM(modrm), 0,
++                          loadLE(Ity_I32, mkexpr(addr)) );
++         DIP("movss %s,%s\n", dis_buf,
++                              nameXMMReg(gregOfRM(modrm)));
++         delta += 3+alen;
++      }
++      goto decode_success;
++   }
++
++   /* F3 0F 11 = MOVSS -- move 32 bits from G (lo 1/4 xmm) to E (mem
++      or lo 1/4 xmm). */
++   if (insn[0] == 0xF3 && insn[1] == 0x0F && insn[2] == 0x11) {
++      vassert(sz == 4);
++      modrm = getIByte(delta+3);
++      if (epartIsReg(modrm)) {
++         /* fall through, we don't yet have a test case */
++      } else {
++         addr = disAMode ( &alen, sorb, delta+3, dis_buf );
++         storeLE( mkexpr(addr),
++                  getXMMRegLane32(gregOfRM(modrm), 0) );
++         DIP("movss %s,%s\n", nameXMMReg(gregOfRM(modrm)),
++                              dis_buf);
++         delta += 3+alen;
++         goto decode_success;
++      }
++   }
++
++   /* 0F 59 = MULPS -- mul 32Fx4 from R/M to R */
++   if (sz == 4 && insn[0] == 0x0F && insn[1] == 0x59) {
++      delta = dis_SSE_E_to_G_all( sorb, delta+2, "mulps", Iop_Mul32Fx4 );
++      goto decode_success;
++   }
++
++   /* F3 0F 59 = MULSS -- mul 32F0x4 from R/M to R */
++   if (insn[0] == 0xF3 && insn[1] == 0x0F && insn[2] == 0x59) {
++      vassert(sz == 4);
++      delta = dis_SSE_E_to_G_lo32( sorb, delta+3, "mulss", Iop_Mul32F0x4 );
++      goto decode_success;
++   }
++
++   /* 0F 56 = ORPS -- G = G and E */
++   if (sz == 4 && insn[0] == 0x0F && insn[1] == 0x56) {
++      delta = dis_SSE_E_to_G_all( sorb, delta+2, "orps", Iop_OrV128 );
++      goto decode_success;
++   }
++
+    /* 0F 53 = RCPPS -- approx reciprocal 32Fx4 from R/M to R */
+    if (insn[0] == 0x0F && insn[1] == 0x53) {
+       vassert(sz == 4);
+@@ -9205,18 +9238,6 @@ DisResult disInstr_X86_WRK (
+       goto decode_success;
+    }
+ 
+-   /* 0F AE /7 = SFENCE -- flush pending operations to memory */
+-   if (insn[0] == 0x0F && insn[1] == 0xAE
+-       && epartIsReg(insn[2]) && gregOfRM(insn[2]) == 7) {
+-      vassert(sz == 4);
+-      delta += 3;
+-      /* Insert a memory fence.  It's sometimes important that these
+-         are carried through to the generated code. */
+-      stmt( IRStmt_MBE(Imbe_Fence) );
+-      DIP("sfence\n");
+-      goto decode_success;
+-   }
+-
+    /* 0F C6 /r ib = SHUFPS -- shuffle packed F32s */
+    if (sz == 4 && insn[0] == 0x0F && insn[1] == 0xC6) {
+       Int    select;
+@@ -14674,6 +14695,11 @@ DisResult disInstr_X86_WRK (
+             fAddr = &x86g_dirtyhelper_CPUID_sse1; 
+          } 
+          else
++         if (archinfo->hwcaps & VEX_HWCAPS_X86_MMXEXT) {
++            fName = "x86g_dirtyhelper_CPUID_mmxext";
++            fAddr = &x86g_dirtyhelper_CPUID_mmxext;
++         }
++         else
+          if (archinfo->hwcaps == 0/*no SSE*/) {
+             fName = "x86g_dirtyhelper_CPUID_sse0";
+             fAddr = &x86g_dirtyhelper_CPUID_sse0; 
+diff --git a/VEX/priv/host_x86_defs.c b/VEX/priv/host_x86_defs.c
+index 21a05a9..693eaa2 100644
+--- a/VEX/priv/host_x86_defs.c
++++ b/VEX/priv/host_x86_defs.c
+@@ -727,7 +727,8 @@ X86Instr* X86Instr_MFence ( UInt hwcaps ) {
+    X86Instr* i          = LibVEX_Alloc(sizeof(X86Instr));
+    i->tag               = Xin_MFence;
+    i->Xin.MFence.hwcaps = hwcaps;
+-   vassert(0 == (hwcaps & ~(VEX_HWCAPS_X86_SSE1
++   vassert(0 == (hwcaps & ~(VEX_HWCAPS_X86_MMXEXT
++                            |VEX_HWCAPS_X86_SSE1
+                             |VEX_HWCAPS_X86_SSE2
+                             |VEX_HWCAPS_X86_SSE3
+                             |VEX_HWCAPS_X86_LZCNT)));
+@@ -2695,7 +2696,7 @@ Int emit_X86Instr ( /*MB_MOD*/Bool* is_profInc,
+          *p++ = 0x0F; *p++ = 0xAE; *p++ = 0xF0;
+          goto done;
+       }
+-      if (i->Xin.MFence.hwcaps & VEX_HWCAPS_X86_SSE1) {
++      if (i->Xin.MFence.hwcaps & VEX_HWCAPS_X86_MMXEXT) {
+          /* sfence */
+          *p++ = 0x0F; *p++ = 0xAE; *p++ = 0xF8;
+          /* lock addl $0,0(%esp) */
+diff --git a/VEX/priv/host_x86_defs.h b/VEX/priv/host_x86_defs.h
+index f810ab4..e03becf 100644
+--- a/VEX/priv/host_x86_defs.h
++++ b/VEX/priv/host_x86_defs.h
+@@ -360,7 +360,7 @@ typedef
+       Xin_Store,     /* store 16/8 bit value in memory */
+       Xin_Set32,     /* convert condition code to 32-bit value */
+       Xin_Bsfr32,    /* 32-bit bsf/bsr */
+-      Xin_MFence,    /* mem fence (not just sse2, but sse0 and 1 too) */
++      Xin_MFence,    /* mem fence (not just sse2, but sse0 and 1/mmxext too) */
+       Xin_ACAS,      /* 8/16/32-bit lock;cmpxchg */
+       Xin_DACAS,     /* lock;cmpxchg8b (doubleword ACAS, 2 x 32-bit only) */
+ 
+@@ -508,13 +508,13 @@ typedef
+             HReg src;
+             HReg dst;
+          } Bsfr32;
+-         /* Mem fence (not just sse2, but sse0 and 1 too).  In short,
+-            an insn which flushes all preceding loads and stores as
+-            much as possible before continuing.  On SSE2 we emit a
+-            real "mfence", on SSE1 "sfence ; lock addl $0,0(%esp)" and
+-            on SSE0 "lock addl $0,0(%esp)".  This insn therefore
+-            carries the host's hwcaps so the assembler knows what to
+-            emit. */
++         /* Mem fence (not just sse2, but sse0 and sse1/mmxext too).
++            In short, an insn which flushes all preceding loads and
++            stores as much as possible before continuing.  On SSE2
++            we emit a real "mfence", on SSE1 or the MMXEXT subset
++            "sfence ; lock addl $0,0(%esp)" and on SSE0
++            "lock addl $0,0(%esp)".  This insn therefore carries the
++            host's hwcaps so the assembler knows what to emit. */
+          struct {
+             UInt hwcaps;
+          } MFence;
+diff --git a/VEX/priv/host_x86_isel.c b/VEX/priv/host_x86_isel.c
+index 086aefc..90bc563 100644
+--- a/VEX/priv/host_x86_isel.c
++++ b/VEX/priv/host_x86_isel.c
+@@ -3251,7 +3251,8 @@ static HReg iselVecExpr_wrk ( ISelEnv* env, IRExpr* e )
+ {
+ 
+ #  define REQUIRE_SSE1                                    \
+-      do { if (env->hwcaps == 0/*baseline, no sse*/)      \
++      do { if (env->hwcaps == 0/*baseline, no sse*/       \
++               ||  env->hwcaps == VEX_HWCAPS_X86_MMXEXT /*Integer SSE*/) \
+               goto vec_fail;                              \
+       } while (0)
+ 
+@@ -4388,7 +4389,8 @@ HInstrArray* iselSB_X86 ( IRSB* bb,
+    /* sanity ... */
+    vassert(arch_host == VexArchX86);
+    vassert(0 == (hwcaps_host
+-                 & ~(VEX_HWCAPS_X86_SSE1
++                 & ~(VEX_HWCAPS_X86_MMXEXT
++                     | VEX_HWCAPS_X86_SSE1
+                      | VEX_HWCAPS_X86_SSE2
+                      | VEX_HWCAPS_X86_SSE3
+                      | VEX_HWCAPS_X86_LZCNT)));
+diff --git a/VEX/priv/main_main.c b/VEX/priv/main_main.c
+index e425950..5bb762f 100644
+--- a/VEX/priv/main_main.c
++++ b/VEX/priv/main_main.c
+@@ -1086,23 +1086,25 @@
+ 
+ static HChar* show_hwcaps_x86 ( UInt hwcaps ) 
+ {
+-   /* Monotonic, SSE3 > SSE2 > SSE1 > baseline. */
++   /* Monotonic, LZCNT > SSE3 > SSE2 > SSE1 > MMXEXT > baseline. */
+    switch (hwcaps) {
+       case 0:
+          return "x86-sse0";
+-      case VEX_HWCAPS_X86_SSE1:
+-         return "x86-sse1";
+-      case VEX_HWCAPS_X86_SSE1 | VEX_HWCAPS_X86_SSE2:
+-         return "x86-sse1-sse2";
+-      case VEX_HWCAPS_X86_SSE1 | VEX_HWCAPS_X86_SSE2
++      case VEX_HWCAPS_X86_MMXEXT:
++         return "x86-mmxext";
++      case VEX_HWCAPS_X86_MMXEXT | VEX_HWCAPS_X86_SSE1:
++         return "x86-mmxext-sse1";
++      case VEX_HWCAPS_X86_MMXEXT | VEX_HWCAPS_X86_SSE1 | VEX_HWCAPS_X86_SSE2:
++         return "x86-mmxext-sse1-sse2";
++      case VEX_HWCAPS_X86_MMXEXT | VEX_HWCAPS_X86_SSE1 | VEX_HWCAPS_X86_SSE2
+            | VEX_HWCAPS_X86_LZCNT:
+-         return "x86-sse1-sse2-lzcnt";
+-      case VEX_HWCAPS_X86_SSE1 | VEX_HWCAPS_X86_SSE2
++         return "x86-mmxext-sse1-sse2-lzcnt";
++      case VEX_HWCAPS_X86_MMXEXT | VEX_HWCAPS_X86_SSE1 | VEX_HWCAPS_X86_SSE2
+            | VEX_HWCAPS_X86_SSE3:
+-         return "x86-sse1-sse2-sse3";
+-      case VEX_HWCAPS_X86_SSE1 | VEX_HWCAPS_X86_SSE2
++         return "x86-mmxext-sse1-sse2-sse3";
++      case VEX_HWCAPS_X86_MMXEXT | VEX_HWCAPS_X86_SSE1 | VEX_HWCAPS_X86_SSE2
+            | VEX_HWCAPS_X86_SSE3 | VEX_HWCAPS_X86_LZCNT:
+-         return "x86-sse1-sse2-sse3-lzcnt";
++         return "x86-mmxext-sse1-sse2-sse3-lzcnt";
+       default:
+          return NULL;
+    }
+diff --git a/VEX/pub/libvex.h b/VEX/pub/libvex.h
+index 4b36727..c8b5892 100644
+--- a/VEX/pub/libvex.h
++++ b/VEX/pub/libvex.h
+@@ -71,11 +71,12 @@ typedef
+    combinations. */
+ 
+ /* x86: baseline capability is Pentium-1 (FPU, MMX, but no SSE), with
+-   cmpxchg8b. */
+-#define VEX_HWCAPS_X86_SSE1    (1<<1)  /* SSE1 support (Pentium III) */
+-#define VEX_HWCAPS_X86_SSE2    (1<<2)  /* SSE2 support (Pentium 4) */
+-#define VEX_HWCAPS_X86_SSE3    (1<<3)  /* SSE3 support (>= Prescott) */
+-#define VEX_HWCAPS_X86_LZCNT   (1<<4)  /* SSE4a LZCNT insn */
++   cmpxchg8b. MMXEXT is a special AMD only subset of SSE1 (Integer SSE). */
++#define VEX_HWCAPS_X86_MMXEXT  (1<<1)  /* A subset of SSE1 on early AMD */
++#define VEX_HWCAPS_X86_SSE1    (1<<2)  /* SSE1 support (Pentium III) */
++#define VEX_HWCAPS_X86_SSE2    (1<<3)  /* SSE2 support (Pentium 4) */
++#define VEX_HWCAPS_X86_SSE3    (1<<4)  /* SSE3 support (>= Prescott) */
++#define VEX_HWCAPS_X86_LZCNT   (1<<5)  /* SSE4a LZCNT insn */
+ 
+ /* amd64: baseline capability is SSE2, with cmpxchg8b but not
+    cmpxchg16b. */
+commit 4c6f0638553e69b7f70c17a64a8f60114d6f6230
+Author: mjw <mjw@a5019735-40e9-0310-863c-91ae7b9d1cf9>
+Date:   Tue Aug 27 10:23:23 2013 +0000
+
+    Support mmxext (integer sse) subset on i386 (athlon). Bug #323713
+    
+    Some processors like the AMD Athlon "Classic" support mmxext,
+    a sse1 subset. This subset is not properly detected by VEX.
+    The subset uses the same encoding as the sse1 instructions.
+    
+    The subset is described at:
+      http://support.amd.com/us/Embedded_TechDocs/22466.pdf
+      https://en.wikipedia.org/wiki/3DNow!#3DNow.21_extensions
+    
+    Detects mmxext subset from cpuid information (and enables it
+    when full sse1 is found). Also fixes the prereq of
+    none/tests/x86/insn_mmxext.vgtest so that it also runs when
+    full sse1 (and not just the mmxext subset) is found.
+    It already passed on such configurations. With the VEX patch
+    (r2745) it also passes with just the mmxext subset.
+    
+    git-svn-id: svn://svn.valgrind.org/valgrind/trunk@13515 a5019735-40e9-0310-863c-91ae7b9d1cf9
+
+diff --git a/coregrind/m_machine.c b/coregrind/m_machine.c
+index 353c05b..2fd5f07 100644
+--- a/coregrind/m_machine.c
++++ b/coregrind/m_machine.c
+@@ -685,7 +685,7 @@
+    LibVEX_default_VexArchInfo(&vai);
+ 
+ #if defined(VGA_x86)
+-   { Bool have_sse1, have_sse2, have_cx8, have_lzcnt;
++   { Bool have_sse1, have_sse2, have_cx8, have_lzcnt, have_mmxext;
+      UInt eax, ebx, ecx, edx, max_extended;
+      UChar vstr[13];
+      vstr[0] = 0;
+@@ -722,17 +722,27 @@
+      if (!have_cx8)
+         return False;
+ 
+-     /* Figure out if this is an AMD that can do LZCNT. */
++     /* Figure out if this is an AMD that can do mmxext and/or LZCNT. */
++     have_mmxext = False;
+      have_lzcnt = False;
+      if (0 == VG_(strcmp)(vstr, "AuthenticAMD")
+          && max_extended >= 0x80000001) {
+         VG_(cpuid)(0x80000001, 0, &eax, &ebx, &ecx, &edx);
+         have_lzcnt = (ecx & (1<<5)) != 0; /* True => have LZCNT */
++
++        /* Some older AMD processors support a sse1 subset (Integer SSE). */
++        have_mmxext = !have_sse1 && ((edx & (1<<22)) != 0);
+      }
+ 
+-     if (have_sse2 && have_sse1) {
++     /* Intel processors don't define the mmxext extension, but since it
++        is just a sse1 subset always define it when we have sse1. */
++     if (have_sse1)
++        have_mmxext = True;
++
++     if (have_sse2 && have_sse1 && have_mmxext) {
+         va          = VexArchX86;
+-        vai.hwcaps  = VEX_HWCAPS_X86_SSE1;
++        vai.hwcaps  = VEX_HWCAPS_X86_MMXEXT;
++        vai.hwcaps |= VEX_HWCAPS_X86_SSE1;
+         vai.hwcaps |= VEX_HWCAPS_X86_SSE2;
+         if (have_lzcnt)
+            vai.hwcaps |= VEX_HWCAPS_X86_LZCNT;
+@@ -740,13 +750,21 @@
+         return True;
+      }
+ 
+-     if (have_sse1) {
++     if (have_sse1 && have_mmxext) {
+         va          = VexArchX86;
+-        vai.hwcaps  = VEX_HWCAPS_X86_SSE1;
++        vai.hwcaps  = VEX_HWCAPS_X86_MMXEXT;
++        vai.hwcaps |= VEX_HWCAPS_X86_SSE1;
+         VG_(machine_x86_have_mxcsr) = 1;
+         return True;
+      }
+ 
++     if (have_mmxext) {
++        va          = VexArchX86;
++        vai.hwcaps  = VEX_HWCAPS_X86_MMXEXT;
++        VG_(machine_x86_have_mxcsr) = 0;
++        return True;
++     }
++
+      va         = VexArchX86;
+      vai.hwcaps = 0; /*baseline - no sse at all*/
+      VG_(machine_x86_have_mxcsr) = 0;
+diff --git a/none/tests/x86/insn_mmxext.vgtest b/none/tests/x86/insn_mmxext.vgtest
+index ad48b6e..e3627d6 100644
+--- a/none/tests/x86/insn_mmxext.vgtest
++++ b/none/tests/x86/insn_mmxext.vgtest
+@@ -1,3 +1,4 @@
+ prog: ../../../none/tests/x86/insn_mmxext
+-prereq: ../../../tests/x86_amd64_features x86-mmxext
++# mmxext is an old AMD subset of sse1, so either will do.
++prereq: ../../../tests/x86_amd64_features x86-mmxext || ../../../tests/x86_amd64_features x86-sse
+ vgopts: -q
