@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.8.1
-Release: 27%{?dist}
+Release: 28%{?dist}
 Epoch: 1
 License: GPLv2
 URL: http://www.valgrind.org/
@@ -191,6 +191,9 @@ Patch49: valgrind-3.8.1-s390-STFLE.patch
 # KDE#323713 Support mmxext (integer sse) subset on i386 (athlon)
 Patch50: valgrind-3.8.1-mmxext.patch
 
+# KDE#316503 Implement SSE4 MOVNTDQA insn.
+Patch51: valgrind-3.8.1-movntdqa.patch
+
 %ifarch x86_64 ppc64
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -214,7 +217,7 @@ BuildRequires: %{?scl_prefix}gdb
 BuildRequires: %{?scl_prefix}binutils
 
 # gdbserver_tests/filter_make_empty uses ps in test
-BuildRequires: /bin/ps
+BuildRequires: procps
 
 %{?scl:Requires:%scl_runtime}
 
@@ -341,6 +344,7 @@ chmod 755 tests/check_isa-2_07_cap
 %patch48 -p1
 %patch49 -p1
 %patch50 -p1
+%patch51 -p1
 
 # These tests go into an endless loop on ARM
 # There is a __sync_add_and_fetch in the testcase.
@@ -502,6 +506,11 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Mon Sep 23 2013 Mark Wielaard <mjw@redhat.com> - 3.8.1-28
+- Implement SSE4 MOVNTDQA insn (valgrind-3.8.1-movntdqa.patch)
+- Don't BuildRequire /bin/ps, just BuildRequire procps
+  (procps-ng provides procps).
+
 * Thu Sep 05 2013 Mark Wielaard <mjw@redhat.com> - 3.8.1-27
 - Fix power_ISA2_05 testcase (valgrind-3.8.1-power-isa-205-deprecation.patch)
 - Fix ppc32 make check build (valgrind-3.8.1-initial-power-isa-207.patch)
