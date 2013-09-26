@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.8.1
-Release: 28%{?dist}
+Release: 29%{?dist}
 Epoch: 1
 License: GPLv2
 URL: http://www.valgrind.org/
@@ -384,8 +384,10 @@ CC="gcc -B `pwd`/libgcc/"
 # Filter out some flags that cause lots of valgrind test failures.
 # Also filter away -O2, valgrind adds it wherever suitable, but
 # not for tests which should be -O0, as they aren't meant to be
-# compiled with -O2 unless explicitely requested.
-OPTFLAGS="`echo " %{optflags} " | sed 's/ -m\(64\|3[21]\) / /g;s/ -fexceptions / /g;s/ -fstack-protector / / g;s/ -Wp,-D_FORTIFY_SOURCE=2 / /g;s/ -O2 / /g;s/^ //;s/ $//'`"
+# compiled with -O2 unless explicitely requested. Same for any -mcpu flag.
+# Ideally we will change this to only be done for the non-primary build
+# and the test suite.
+OPTFLAGS="`echo " %{optflags} " | sed 's/ -m\(64\|3[21]\) / /g;s/ -fexceptions / /g;s/ -fstack-protector / / g;s/ -Wp,-D_FORTIFY_SOURCE=2 / /g;s/ -O2 / /g;s/ -mcpu=\([a-z0-9]\+\) / /g;s/^ //;s/ $//'`"
 %configure CC="$CC" CFLAGS="$OPTFLAGS" CXXFLAGS="$OPTFLAGS" \
 %ifarch %{ix86} x86_64 ppc ppc64 %{arm}
   --with-mpicc=%{mpiccpath} \
@@ -506,6 +508,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Wed Sep 25 2013 Mark Wielaard <mjw@redhat.com> - 3.8.1-29
+- Filter out -mcpu= so tests are compiled with the right flags. (#996927).
+
 * Mon Sep 23 2013 Mark Wielaard <mjw@redhat.com> - 3.8.1-28
 - Implement SSE4 MOVNTDQA insn (valgrind-3.8.1-movntdqa.patch)
 - Don't BuildRequire /bin/ps, just BuildRequire procps
