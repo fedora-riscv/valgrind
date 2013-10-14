@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.8.1
-Release: 30%{?dist}
+Release: 31%{?dist}
 Epoch: 1
 License: GPLv2
 URL: http://www.valgrind.org/
@@ -448,7 +448,7 @@ rm -f $RPM_BUILD_ROOT%{_libdir}/valgrind/*.supp.in
 %ifarch %{ix86} x86_64
 # To avoid multilib clashes in between i?86 and x86_64,
 # tweak installed <valgrind/config.h> a little bit.
-for i in HAVE_PTHREAD_CREATE_GLIBC_2_0 \
+for i in HAVE_PTHREAD_CREATE_GLIBC_2_0 HAVE_PTRACE_GETREGS \
 %if 0%{?rhel} == 5
          HAVE_BUILTIN_ATOMIC HAVE_BUILTIN_ATOMIC_CXX \
 %endif
@@ -513,6 +513,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Mon Oct 14 2013 Mark Wielaard <mjw@redhat.com> - 3.8.1-31
+- Fix multilib issue with HAVE_PTRACE_GETREGS in config.h.
+
 * Thu Sep 26 2013 Mark Wielaard <mjw@redhat.com> - 3.8.1-30
 - Add valgrind-3.8.1-index-supp.patch (#1011713)
 
