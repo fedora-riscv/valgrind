@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.9.0
-Release: 0.1.TEST1%{?dist}
+Release: 1%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -12,9 +12,9 @@ Group: Development/Debuggers
 # Only necessary for RHEL, will be ignored on Fedora
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
-Source0: http://www.valgrind.org/downloads/valgrind-%{version}.TEST1.tar.bz2
+Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
 
-# Needs investigation and pushing upstrea
+# Needs investigation and pushing upstream
 Patch1: valgrind-3.9.0-cachegrind-improvements.patch
 
 # KDE#211352 - helgrind races in helgrind's own mythread_wrapper
@@ -23,15 +23,14 @@ Patch2: valgrind-3.9.0-helgrind-race-supp.patch
 # undef st_atime, st_mtime and st_ctime. Unknown why this is (still?) needed.
 Patch3: valgrind-3.9.0-stat_h.patch
 
-# Support really ancient gcc. Check __GNUC__ >= 3 for __builtin_expect.
-Patch4: valgrind-3.9.0-config_h.patch
-
 # Make ld.so supressions slightly less specific.
-Patch5: valgrind-3.8.1-ldso-supp.patch
+Patch4: valgrind-3.9.0-ldso-supp.patch
 
 # On some ppc64 installs these test just hangs
-Patch6: valgrind-3.8.1-gdbserver_tests-mcinvoke-ppc64.patch
+Patch5: valgrind-3.9.0-gdbserver_tests-mcinvoke-ppc64.patch
 
+# KDE#326983 - insn_basic test might crash because of setting DF flag 
+Patch6: valgrind-3.9.0-amd64_gen_insn_test.patch
 
 %ifarch x86_64 ppc64
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -119,7 +118,7 @@ See the section on Debugging MPI Parallel Programs with Valgrind in the
 Valgrind User Manual for details.
 
 %prep
-%setup -q -n %{?scl:%{pkg_name}}%{!?scl:%{name}}-%{version}.TEST1
+%setup -q -n %{?scl:%{pkg_name}}%{!?scl:%{name}}-%{version}
 
 %patch1 -p1
 %patch2 -p1
@@ -225,6 +224,12 @@ done
 # Make sure no extra CFLAGS leak through, the testsuite sets all flags
 # necessary. See also configure above.
 make %{?_smp_mflags} CFLAGS="" check || :
+
+# Remove and cleanup fake 32-bit libgcc package created in  %%build.
+%ifarch x86_64 ppc64
+rm -rf libgcc
+%endif
+
 echo ===============TESTING===================
 ./close_fds make regtest || :
 # Make sure test failures show up in build.log
@@ -274,6 +279,12 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Fri Nov  1 2013 Mark Wielaard <mjw@redhat.com> - 3.9.0-1
+- Upgrade to valgrind 3.9.0 final.
+- Remove support for really ancient GCCs (valgrind-3.9.0-config_h.patch).
+- Add valgrind-3.9.0-amd64_gen_insn_test.patch.
+- Remove and cleanup fake 32-bit libgcc package.
+
 * Mon Oct 28 2013 Mark Wielaard <mjw@redhat.com> - 3.9.0-0.1.TEST1
 - Upgrade to valgrind 3.9.0.TEST1
 - Remove patches that are now upstream:
