@@ -32,6 +32,9 @@ Patch5: valgrind-3.9.0-gdbserver_tests-mcinvoke-ppc64.patch
 # KDE#326983 - insn_basic test might crash because of setting DF flag 
 Patch6: valgrind-3.9.0-amd64_gen_insn_test.patch
 
+# KDE#327837 - dwz compressed alternate .debug_info/str not read correctly.
+Patch7: valgrind-3.9.0-dwz-alt-buildid.patch
+
 %ifarch x86_64 ppc64
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -126,6 +129,7 @@ Valgrind User Manual for details.
 %patch4 -p1
 %patch5 -p1
 %patch6 -p1
+%patch7 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -279,6 +283,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Wed Nov 20 2013 Mark Wielaard <mjw@redhat.com>
+- Add valgrind-3.9.0-dwz-alt-buildid.patch.
+
 * Fri Nov  1 2013 Mark Wielaard <mjw@redhat.com> - 3.9.0-1
 - Upgrade to valgrind 3.9.0 final.
 - Remove support for really ancient GCCs (valgrind-3.9.0-config_h.patch).
