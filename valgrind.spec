@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.9.0
-Release: 2%{?dist}
+Release: 3%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -298,7 +298,7 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
-* Fri Nov 22 2013 Mark Wielaard <mjw@redhat.com>
+* Fri Nov 22 2013 Mark Wielaard <mjw@redhat.com> - 3.9.0-3
 - Add valgrind-3.9.0-anon-typedef.patch.
 - Add valgrind-3.9.0-s390x-ld-supp.patch
 
