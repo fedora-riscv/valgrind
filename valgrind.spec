@@ -38,6 +38,9 @@ Patch7: valgrind-3.9.0-dwz-alt-buildid.patch
 # KDE#327284 - s390x VEX miscompilation of -march=z10 binary
 Patch8: valgrind-3.9.0-s390-risbg.patch
 
+# KDE#327916 - DW_TAG_typedef may have no name
+Patch9: valgrind-3.9.0-anon-typedef.patch
+
 %ifarch x86_64 ppc64
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -134,6 +137,7 @@ Valgrind User Manual for details.
 %patch6 -p1
 %patch7 -p1
 %patch8 -p1
+%patch9 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -287,6 +291,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Fri Nov 22 2013 Mark Wielaard <mjw@redhat.com>
+- Add valgrind-3.9.0-anon-typedef.patch.
+
 * Wed Nov 20 2013 Mark Wielaard <mjw@redhat.com> - 3.9.0-2
 - Add valgrind-3.9.0-dwz-alt-buildid.patch.
 - Add valgrind-3.9.0-s390-risbg.patch.
