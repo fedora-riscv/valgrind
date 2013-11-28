@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.9.0
-Release: 3%{?dist}
+Release: 4%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -43,6 +43,9 @@ Patch9: valgrind-3.9.0-anon-typedef.patch
 
 # KDE#327943 - s390x missing index/strchr suppression for ld.so bad backtrace?
 Patch10: valgrind-3.9.0-s390x-ld-supp.patch
+
+# KDE#328100 - XABORT not implemented
+Patch11: valgrind-3.9.0-xabort.patch
 
 %ifarch x86_64 ppc64
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -145,6 +148,8 @@ Valgrind User Manual for details.
 %ifarch s390x
 %patch10 -p1
 %endif
+
+%patch11 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -298,6 +303,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Thu Nov 28 2013 Mark Wielaard <mjw@redhat.com> - 3.9.0-4
+- Add valgrind-3.9.0-xabort.patch.
+
 * Fri Nov 22 2013 Mark Wielaard <mjw@redhat.com> - 3.9.0-3
 - Add valgrind-3.9.0-anon-typedef.patch.
 - Add valgrind-3.9.0-s390x-ld-supp.patch
