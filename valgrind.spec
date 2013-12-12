@@ -47,6 +47,9 @@ Patch10: valgrind-3.9.0-s390x-ld-supp.patch
 # KDE#328100 - XABORT not implemented
 Patch11: valgrind-3.9.0-xabort.patch
 
+# KDE#328711 - valgrind.1 manpage "memcheck options" section is bad
+Patch12: valgrind-3.9.0-manpage-memcheck-options.patch
+
 %ifarch x86_64 ppc64
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -150,6 +153,7 @@ Valgrind User Manual for details.
 %endif
 
 %patch11 -p1
+%patch12 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -303,6 +307,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Thu Dec 12 2013 Mark Wielaard <mjw@redhat.com>
+- Add valgrind-3.9.0-manpage-memcheck-options.patch.
+
 * Thu Nov 28 2013 Mark Wielaard <mjw@redhat.com> - 3.9.0-4
 - Add valgrind-3.9.0-xabort.patch.
 
