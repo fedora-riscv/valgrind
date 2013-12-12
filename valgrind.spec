@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.9.0
-Release: 4%{?dist}
+Release: 5%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -49,6 +49,9 @@ Patch11: valgrind-3.9.0-xabort.patch
 
 # KDE#328711 - valgrind.1 manpage "memcheck options" section is bad
 Patch12: valgrind-3.9.0-manpage-memcheck-options.patch
+
+# KDE#328455 - s390x SIGILL after emitting wrong register pair for ldxbr
+Patch13: valgrind-3.9.0-s390-fpr-pair.patch
 
 %ifarch x86_64 ppc64
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -154,6 +157,7 @@ Valgrind User Manual for details.
 
 %patch11 -p1
 %patch12 -p1
+%patch13 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -307,8 +311,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
-* Thu Dec 12 2013 Mark Wielaard <mjw@redhat.com>
+* Thu Dec 12 2013 Mark Wielaard <mjw@redhat.com> - 3.9.0-5
 - Add valgrind-3.9.0-manpage-memcheck-options.patch.
+- Add valgrind-3.9.0-s390-fpr-pair.patch.
 
 * Thu Nov 28 2013 Mark Wielaard <mjw@redhat.com> - 3.9.0-4
 - Add valgrind-3.9.0-xabort.patch.
