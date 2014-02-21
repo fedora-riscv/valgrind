@@ -53,6 +53,9 @@ Patch12: valgrind-3.9.0-manpage-memcheck-options.patch
 # KDE#328455 - s390x SIGILL after emitting wrong register pair for ldxbr
 Patch13: valgrind-3.9.0-s390-fpr-pair.patch
 
+# KDE#331337 - s390x WARNING: unhandled syscall: 326 (dup3)
+Patch14: valgrind-3.9.0-s390-dup3.patch
+
 %ifarch x86_64 ppc64
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -158,6 +161,7 @@ Valgrind User Manual for details.
 %patch11 -p1
 %patch12 -p1
 %patch13 -p1
+%patch14 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -311,6 +315,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Fri Feb 21 2014 Mark Wielaard <mjw@redhat.com>
+- Add valgrind-3.9.0-s390-dup3.patch
+
 * Thu Dec 12 2013 Mark Wielaard <mjw@redhat.com> - 3.9.0-5
 - Add valgrind-3.9.0-manpage-memcheck-options.patch.
 - Add valgrind-3.9.0-s390-fpr-pair.patch.
