@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.9.0
-Release: 5%{?dist}
+Release: 6%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -55,6 +55,9 @@ Patch13: valgrind-3.9.0-s390-fpr-pair.patch
 
 # KDE#331337 - s390x WARNING: unhandled syscall: 326 (dup3)
 Patch14: valgrind-3.9.0-s390-dup3.patch
+
+# KDE#331380 - Syscall param timer_create(evp) points to uninitialised byte(s)
+Patch15: valgrind-3.9.0-timer_create.patch
 
 %ifarch x86_64 ppc64
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -162,6 +165,7 @@ Valgrind User Manual for details.
 %patch12 -p1
 %patch13 -p1
 %patch14 -p1
+%patch15 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -315,8 +319,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
-* Fri Feb 21 2014 Mark Wielaard <mjw@redhat.com>
+* Fri Feb 21 2014 Mark Wielaard <mjw@redhat.com> - 3.9.0-6
 - Add valgrind-3.9.0-s390-dup3.patch
+- Add valgrind-3.9.0-timer_create.patch
 
 * Thu Dec 12 2013 Mark Wielaard <mjw@redhat.com> - 3.9.0-5
 - Add valgrind-3.9.0-manpage-memcheck-options.patch.
