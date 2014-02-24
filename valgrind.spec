@@ -323,6 +323,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Mon Feb 24 2014 Mark Wielaard <mjw@redhat.com>
+- Add upstream fixes to valgrind-3.9.0-timer_create.patch
+
 * Fri Feb 21 2014 Mark Wielaard <mjw@redhat.com> - 3.9.0-7
 - Add valgrind-3.9.0-glibc-2.19.patch
 
