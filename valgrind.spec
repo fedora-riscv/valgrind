@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.9.0
-Release: 7%{?dist}
+Release: 8%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -61,6 +61,9 @@ Patch15: valgrind-3.9.0-timer_create.patch
 
 # Accept glibc 2.19 as valid (upstream valgrind svn r13829)
 Patch16: valgrind-3.9.0-glibc-2.19.patch
+
+# KDE#331830 - ppc64: WARNING: unhandled syscall: 96/97
+Patch17: valgrind-3.9.0-ppc64-priority.patch
 
 %ifarch x86_64 ppc64
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -170,6 +173,7 @@ Valgrind User Manual for details.
 %patch14 -p1
 %patch15 -p1
 %patch16 -p1
+%patch17 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -323,6 +327,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Mon Mar 10 2014 Mark Wielaard <mjw@redhat.com> - 3.9.0-8
+- Add valgrind-3.9.0-ppc64-priority.patch
+
 * Mon Feb 24 2014 Mark Wielaard <mjw@redhat.com>
 - Add upstream fixes to valgrind-3.9.0-timer_create.patch
 
