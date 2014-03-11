@@ -1,9 +1,12 @@
 %{?scl:%scl_package valgrind}
 
+%define svn_date 20140311
+%define svn_rev 13869
+
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.9.0
-Release: 8%{?dist}
+Release: 9.svn%{?svn_date}r%{?svn_rev}%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -12,7 +15,17 @@ Group: Development/Debuggers
 # Only necessary for RHEL, will be ignored on Fedora
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
-Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
+#Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
+#
+# svn co svn://svn.valgrind.org/valgrind/trunk valgrind
+# cd valgrind
+# ./autogen.sh
+# ./configure
+# make dist
+# tar jxf valgrind-3.10.0.SVN.tar.bz2
+# mv valgrind-3.10.0.SVN valgrind-3.9.0-svn%{svn_date}r%{svn_rev}
+# tar jcf valgrind-3.9.0-svn%{svn_date}r%{svn_rev}.tar.bz2 valgrind-3.9.0-svn%{svn_date}r%{svn_rev}
+Source0: valgrind-%{version}-svn%{svn_date}r%{svn_rev}.tar.bz2
 
 # Needs investigation and pushing upstream
 Patch1: valgrind-3.9.0-cachegrind-improvements.patch
@@ -26,44 +39,8 @@ Patch3: valgrind-3.9.0-stat_h.patch
 # Make ld.so supressions slightly less specific.
 Patch4: valgrind-3.9.0-ldso-supp.patch
 
-# On some ppc64 installs these test just hangs
-Patch5: valgrind-3.9.0-gdbserver_tests-mcinvoke-ppc64.patch
-
-# KDE#326983 - insn_basic test might crash because of setting DF flag 
-Patch6: valgrind-3.9.0-amd64_gen_insn_test.patch
-
-# KDE#327837 - dwz compressed alternate .debug_info/str not read correctly.
-Patch7: valgrind-3.9.0-dwz-alt-buildid.patch
-
-# KDE#327284 - s390x VEX miscompilation of -march=z10 binary
-Patch8: valgrind-3.9.0-s390-risbg.patch
-
-# KDE#327916 - DW_TAG_typedef may have no name
-Patch9: valgrind-3.9.0-anon-typedef.patch
-
 # KDE#327943 - s390x missing index/strchr suppression for ld.so bad backtrace?
-Patch10: valgrind-3.9.0-s390x-ld-supp.patch
-
-# KDE#328100 - XABORT not implemented
-Patch11: valgrind-3.9.0-xabort.patch
-
-# KDE#328711 - valgrind.1 manpage "memcheck options" section is bad
-Patch12: valgrind-3.9.0-manpage-memcheck-options.patch
-
-# KDE#328455 - s390x SIGILL after emitting wrong register pair for ldxbr
-Patch13: valgrind-3.9.0-s390-fpr-pair.patch
-
-# KDE#331337 - s390x WARNING: unhandled syscall: 326 (dup3)
-Patch14: valgrind-3.9.0-s390-dup3.patch
-
-# KDE#331380 - Syscall param timer_create(evp) points to uninitialised byte(s)
-Patch15: valgrind-3.9.0-timer_create.patch
-
-# Accept glibc 2.19 as valid (upstream valgrind svn r13829)
-Patch16: valgrind-3.9.0-glibc-2.19.patch
-
-# KDE#331830 - ppc64: WARNING: unhandled syscall: 96/97
-Patch17: valgrind-3.9.0-ppc64-priority.patch
+Patch5: valgrind-3.9.0-s390x-ld-supp.patch
 
 %ifarch x86_64 ppc64
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -92,7 +69,7 @@ BuildRequires: procps
 
 %{?scl:Requires:%scl_runtime}
 
-ExclusiveArch: %{ix86} x86_64 ppc ppc64 s390x %{arm}
+ExclusiveArch: %{ix86} x86_64 ppc ppc64 s390x %{arm} aarch64
 %ifarch %{ix86}
 %define valarch x86
 %define valsecarch %{nil}
@@ -119,6 +96,10 @@ ExclusiveArch: %{ix86} x86_64 ppc ppc64 s390x %{arm}
 %endif
 %ifarch armv5tel
 %define valarch armv5tel
+%define valsecarch %{nil}
+%endif
+%ifarch aarch64
+%define valarch arm64
 %define valsecarch %{nil}
 %endif
 
@@ -151,29 +132,17 @@ See the section on Debugging MPI Parallel Programs with Valgrind in the
 Valgrind User Manual for details.
 
 %prep
-%setup -q -n %{?scl:%{pkg_name}}%{!?scl:%{name}}-%{version}
+#%setup -q -n %{?scl:%{pkg_name}}%{!?scl:%{name}}-%{version}
+%setup -q -n %{?scl:%{pkg_name}}%{!?scl:%{name}}-%{version}-svn%{svn_date}r%{svn_rev}
 
 %patch1 -p1
 %patch2 -p1
 %patch3 -p1
 %patch4 -p1
-%patch5 -p1
-%patch6 -p1
-%patch7 -p1
-%patch8 -p1
-%patch9 -p1
 
 %ifarch s390x
-%patch10 -p1
+%patch5 -p1
 %endif
-
-%patch11 -p1
-%patch12 -p1
-%patch13 -p1
-%patch14 -p1
-%patch15 -p1
-%patch16 -p1
-%patch17 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -207,6 +176,9 @@ OPTFLAGS="`echo " %{optflags} " | sed 's/ -m\(64\|3[21]\) / /g;s/ -fexceptions /
 %configure CC="$CC" CFLAGS="$OPTFLAGS" CXXFLAGS="$OPTFLAGS" \
 %ifarch %{ix86} x86_64 ppc ppc64 %{arm}
   --with-mpicc=%{mpiccpath} \
+%endif
+%ifarch aarch64
+  --enable-only64bit \
 %endif
   GDB=%{_bindir}/gdb
 
@@ -327,6 +299,10 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Tue Mar 11 2014 Mark Wielaard <mjw@redhat.com> - 3.9.0-9.svn20140311r13869
+- Enable aarch64 based on current upstream svn. Removed upstreamed patches.
+  Thanks to Marcin Juszkiewicz <mjuszkiewicz@redhat.com>
+
 * Mon Mar 10 2014 Mark Wielaard <mjw@redhat.com> - 3.9.0-8
 - Add valgrind-3.9.0-ppc64-priority.patch
 
