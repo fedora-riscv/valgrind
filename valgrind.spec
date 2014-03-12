@@ -239,6 +239,9 @@ done
 %endif
 
 %check
+# Make sure the basic binary runs.
+./vg-in-place /bin/true
+
 # Build the test files with the software collection compiler if available.
 %{?scl:PATH=%{_bindir}${PATH:+:${PATH}}}
 # Make sure no extra CFLAGS leak through, the testsuite sets all flags
@@ -299,6 +302,10 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Wed Mar 12 2014 Mark Wielaard <mjw@redhat.com>
+- Make sure basic binary (/bin/true) runs under valgrind.
+  And fail the whole build if not. The regtests are not zero-fail.
+
 * Tue Mar 11 2014 Mark Wielaard <mjw@redhat.com> - 3.9.0-9.svn20140311r13869
 - Enable aarch64 based on current upstream svn. Removed upstreamed patches.
   Thanks to Marcin Juszkiewicz <mjuszkiewicz@redhat.com>
