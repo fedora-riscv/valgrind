@@ -6,7 +6,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.9.0
-Release: 9.svn%{?svn_date}r%{?svn_rev}%{?dist}
+Release: 10.svn%{?svn_date}r%{?svn_rev}%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -14,6 +14,21 @@ Group: Development/Debuggers
 
 # Only necessary for RHEL, will be ignored on Fedora
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
+
+# Note that s390x and aarch64 are not multilib.
+# Only x86_64 and ppc64 support 32bit too.
+%ifarch x86_64 ppc64
+%global build_multilib 1
+%else
+%global build_multilib 0
+%endif
+
+# Note s390x and aarch64 don't have an openmpi port available.
+%ifarch %{ix86} x86_64 ppc ppc64 %{arm}
+%global build_openmpi 1
+%else
+%global build_openmpi 0
+%endif
 
 #Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
 #
@@ -42,10 +57,11 @@ Patch4: valgrind-3.9.0-ldso-supp.patch
 # KDE#327943 - s390x missing index/strchr suppression for ld.so bad backtrace?
 Patch5: valgrind-3.9.0-s390x-ld-supp.patch
 
-%ifarch x86_64 ppc64
+%if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
 %endif
+
 %if 0%{?fedora} >= 15
 BuildRequires: glibc-devel >= 2.14
 %else
@@ -55,7 +71,8 @@ BuildRequires: glibc-devel >= 2.12
 BuildRequires: glibc-devel >= 2.5
 %endif
 %endif
-%ifarch %{ix86} x86_64 ppc ppc64 %{arm}
+
+%if %{build_openmpi}
 BuildRequires: openmpi-devel >= 1.3.3
 %endif
 
@@ -151,7 +168,7 @@ Valgrind User Manual for details.
 %{?scl:PATH=%{_bindir}${PATH:+:${PATH}}}
 
 CC=gcc
-%ifarch x86_64 ppc64
+%if %{build_multilib}
 # Ugly hack - libgcc 32-bit package might not be installed
 mkdir -p libgcc/32
 ar r libgcc/32/libgcc_s.a
@@ -174,7 +191,7 @@ CC="gcc -B `pwd`/libgcc/"
 # and the test suite.
 OPTFLAGS="`echo " %{optflags} " | sed 's/ -m\(64\|3[21]\) / /g;s/ -fexceptions / /g;s/ -fstack-protector / / g;s/ -Wp,-D_FORTIFY_SOURCE=2 / /g;s/ -O2 / /g;s/ -mcpu=\([a-z0-9]\+\) / /g;s/^ //;s/ $//'`"
 %configure CC="$CC" CFLAGS="$OPTFLAGS" CXXFLAGS="$OPTFLAGS" \
-%ifarch %{ix86} x86_64 ppc ppc64 %{arm}
+%if %{build_openmpi}
   --with-mpicc=%{mpiccpath} \
 %endif
 %ifarch aarch64
@@ -249,7 +266,7 @@ done
 make %{?_smp_mflags} CFLAGS="" check || :
 
 # Remove and cleanup fake 32-bit libgcc package created in  %%build.
-%ifarch x86_64 ppc64
+%if %{build_multilib}
 rm -rf libgcc
 %endif
 
@@ -294,7 +311,7 @@ echo ===============END TESTING===============
 %{_libdir}/valgrind/*.a
 %{_libdir}/pkgconfig/*
 
-%ifarch %{ix86} x86_64 ppc ppc64 %{arm}
+%if %{build_openmpi}
 %files openmpi
 %defattr(-,root,root)
 %dir %{_libdir}/valgrind
@@ -302,10 +319,11 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
-* Tue Mar 18 2014 Mark Wielaard <mjw@redhat.com>
+* Tue Mar 18 2014 Mark Wielaard <mjw@redhat.com> - 3.9.0-10.svn20140318r13876
 - Make sure basic binary (/bin/true) runs under valgrind.
   And fail the whole build if not. The regtests are not zero-fail.
 - Update to upstream svn r13876.
+- Introduce build_openmpi and build_multilib in spec file.
 
 * Tue Mar 11 2014 Mark Wielaard <mjw@redhat.com> - 3.9.0-9.svn20140311r13869
 - Enable aarch64 based on current upstream svn. Removed upstreamed patches.
