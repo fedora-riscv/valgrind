@@ -1,7 +1,7 @@
 %{?scl:%scl_package valgrind}
 
-%define svn_date 20140311
-%define svn_rev 13869
+%define svn_date 20140318
+%define svn_rev 13876
 
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
@@ -302,9 +302,10 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
-* Wed Mar 12 2014 Mark Wielaard <mjw@redhat.com>
+* Tue Mar 18 2014 Mark Wielaard <mjw@redhat.com>
 - Make sure basic binary (/bin/true) runs under valgrind.
   And fail the whole build if not. The regtests are not zero-fail.
+- Update to upstream svn r13876.
 
 * Tue Mar 11 2014 Mark Wielaard <mjw@redhat.com> - 3.9.0-9.svn20140311r13869
 - Enable aarch64 based on current upstream svn. Removed upstreamed patches.
