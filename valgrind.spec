@@ -1,12 +1,12 @@
 %{?scl:%scl_package valgrind}
 
-%define svn_date 20140318
-%define svn_rev 13876
+%define svn_date 20140319
+%define svn_rev 13879
 
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.9.0
-Release: 10.svn%{?svn_date}r%{?svn_rev}%{?dist}
+Release: 11.svn%{?svn_date}r%{?svn_rev}%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -319,6 +319,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Tue Mar 19 2014 Mark Wielaard <mjw@redhat.com> - 3.9.0-11.svn20140319r13879
+- Update to upstream svn r13879. arm64 make check now builds.
+
 * Tue Mar 18 2014 Mark Wielaard <mjw@redhat.com> - 3.9.0-10.svn20140318r13876
 - Make sure basic binary (/bin/true) runs under valgrind.
   And fail the whole build if not. The regtests are not zero-fail.
