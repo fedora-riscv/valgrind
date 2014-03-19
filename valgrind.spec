@@ -319,7 +319,7 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
-* Tue Mar 19 2014 Mark Wielaard <mjw@redhat.com> - 3.9.0-11.svn20140319r13879
+* Wed Mar 19 2014 Mark Wielaard <mjw@redhat.com> - 3.9.0-11.svn20140319r13879
 - Update to upstream svn r13879. arm64 make check now builds.
 
 * Tue Mar 18 2014 Mark Wielaard <mjw@redhat.com> - 3.9.0-10.svn20140318r13876
