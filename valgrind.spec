@@ -6,7 +6,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.9.0
-Release: 11.svn%{?svn_date}r%{?svn_rev}%{?dist}
+Release: 12.svn%{?svn_date}r%{?svn_rev}%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -56,6 +56,9 @@ Patch4: valgrind-3.9.0-ldso-supp.patch
 
 # KDE#327943 - s390x missing index/strchr suppression for ld.so bad backtrace?
 Patch5: valgrind-3.9.0-s390x-ld-supp.patch
+
+# KDE#333666 - No MPX (bndmov) instruction support in VEX
+Patch6: valgrind-3.9.0-mpx.patch
 
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -160,6 +163,8 @@ Valgrind User Manual for details.
 %ifarch s390x
 %patch5 -p1
 %endif
+
+%patch6 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -319,6 +324,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Thu May 8 2014 Mark Wielaard <mjw@redhat.com> 3.9.0-12.svn20140319r13879
+- Add valgrind-3.9.0-mpx.patch (#1087933)
+
 * Wed Mar 19 2014 Mark Wielaard <mjw@redhat.com> - 3.9.0-11.svn20140319r13879
 - Update to upstream svn r13879. arm64 make check now builds.
 
