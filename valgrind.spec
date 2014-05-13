@@ -60,6 +60,9 @@ Patch5: valgrind-3.9.0-s390x-ld-supp.patch
 # KDE#334705 - sendmsg and recvmsg should guard against bogus msghdr fields
 Patch6: valgrind-3.9.0-msghdr.patch
 
+# KDE#334727 - Build fails with -Werror=format-security
+Patch7: valgrind-3.9.0-format-security.patch
+
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -165,6 +168,7 @@ Valgrind User Manual for details.
 %endif
 
 %patch6 -p1
+%patch7 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -328,6 +332,7 @@ echo ===============END TESTING===============
 - Update to upstream svn r13961.
 - Remove valgrind-3.9.0-mpx.patch integrated upstream now.
 - Add valgrind-3.9.0-msghdr.patch
+- Add valgrind-3.9.0-format-security.patch
 
 * Thu May 8 2014 Mark Wielaard <mjw@redhat.com> 3.9.0-12.svn20140319r13879
 - Add valgrind-3.9.0-mpx.patch (#1087933)
