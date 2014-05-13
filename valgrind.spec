@@ -1,12 +1,12 @@
 %{?scl:%scl_package valgrind}
 
-%define svn_date 20140319
-%define svn_rev 13879
+%define svn_date 20140513
+%define svn_rev 13961
 
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.9.0
-Release: 12.svn%{?svn_date}r%{?svn_rev}%{?dist}
+Release: 13.svn%{?svn_date}r%{?svn_rev}%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -57,8 +57,8 @@ Patch4: valgrind-3.9.0-ldso-supp.patch
 # KDE#327943 - s390x missing index/strchr suppression for ld.so bad backtrace?
 Patch5: valgrind-3.9.0-s390x-ld-supp.patch
 
-# KDE#333666 - No MPX (bndmov) instruction support in VEX
-Patch6: valgrind-3.9.0-mpx.patch
+# KDE#334705 - sendmsg and recvmsg should guard against bogus msghdr fields
+Patch6: valgrind-3.9.0-msghdr.patch
 
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -324,6 +324,11 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Tue May 13 2014 Mark Wielaard <mjw@redhat.com> 3.9.0-13.svn20140513r13961
+- Update to upstream svn r13961.
+- Remove valgrind-3.9.0-mpx.patch integrated upstream now.
+- Add valgrind-3.9.0-msghdr.patch
+
 * Thu May 8 2014 Mark Wielaard <mjw@redhat.com> 3.9.0-12.svn20140319r13879
 - Add valgrind-3.9.0-mpx.patch (#1087933)
 
