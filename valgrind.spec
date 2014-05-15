@@ -6,7 +6,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.9.0
-Release: 13.svn%{?svn_date}r%{?svn_rev}%{?dist}
+Release: 14.svn%{?svn_date}r%{?svn_rev}%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -62,6 +62,8 @@ Patch6: valgrind-3.9.0-msghdr.patch
 
 # KDE#334727 - Build fails with -Werror=format-security
 Patch7: valgrind-3.9.0-format-security.patch
+
+Patch8: valgrind-3.9.0-aarch64-glibc-2.19.90-gcc-4.9.patch
 
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -169,6 +171,7 @@ Valgrind User Manual for details.
 
 %patch6 -p1
 %patch7 -p1
+%patch8 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -328,6 +331,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Tue May 15 2014 Mark Wielaard <mjw@redhat.com> 3.9.0-14.svn20140513r13961
+- Add valgrind-3.9.0-aarch64-glibc-2.19.90-gcc-4.9.patch
+
 * Tue May 13 2014 Mark Wielaard <mjw@redhat.com> 3.9.0-13.svn20140513r13961
 - Update to upstream svn r13961.
 - Remove valgrind-3.9.0-mpx.patch integrated upstream now.
