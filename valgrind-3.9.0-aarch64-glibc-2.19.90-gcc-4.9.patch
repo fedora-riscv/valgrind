@@ -75,3 +75,69 @@ index 862eb20..85b2f2d 100644
     vex_printf("ARM64 front end: simd_and_fp\n");
     return False;
  #  undef INSN
+commit 5a75f1c5aad7e96a7f785fc05afecec96fab8166
+Author: sewardj <sewardj@8f6e269a-dfd6-0310-a8e1-e2731360e62c>
+Date:   Fri May 16 11:20:07 2014 +0000
+
+    Implement SHL_d_d_#imm.
+    
+    
+    git-svn-id: svn://svn.valgrind.org/vex/trunk@2863 8f6e269a-dfd6-0310-a8e1-e2731360e62c
+
+diff --git a/VEX/priv/guest_arm64_toIR.c b/VEX/priv/guest_arm64_toIR.c
+index 85b2f2d..25659b8 100644
+--- a/VEX/priv/guest_arm64_toIR.c
++++ b/VEX/priv/guest_arm64_toIR.c
+@@ -7106,7 +7106,7 @@ Bool dis_ARM64_simd_and_fp(/*MB_OUT*/DisResult* dres, UInt insn)
+ 
+    /* ---------------- CMEQ_d_d_#0 ---------------- */
+    /* 
+-      010 11110 11 10000 0100 110 n d
++      010 11110 11 10000 0100 110 n d   CMEQ Dd, Dn, #0
+    */
+    if ((INSN(31,0) & 0xFFFFFC00) == 0x5EE09800) {
+       UInt nn = INSN(9,5);
+@@ -7118,6 +7118,22 @@ Bool dis_ARM64_simd_and_fp(/*MB_OUT*/DisResult* dres, UInt insn)
+       return True;
+    }
+ 
++   /* ---------------- SHL_d_d_#imm ---------------- */
++   /* 31         22 21  18 15     9 4
++      010 111110 1  ih3 ib 010101 n d  SHL Dd, Dn, #(ih3:ib)
++   */
++   if (INSN(31,22) == BITS10(0,1,0,1,1,1,1,1,0,1)
++       && INSN(15,10) == BITS6(0,1,0,1,0,1)) {
++      UInt nn = INSN(9,5);
++      UInt dd = INSN(4,0);
++      UInt sh = INSN(21,16);
++      vassert(sh < 64);
++      putQReg128(dd, unop(Iop_ZeroHI64ofV128,
++                          binop(Iop_ShlN64x2, getQReg128(nn), mkU8(sh))));
++      DIP("shl d%u, d%u, #%u\n", dd, nn, sh);
++      return True;
++   }
++
+    vex_printf("ARM64 front end: simd_and_fp\n");
+    return False;
+ #  undef INSN
+diff --git a/VEX/priv/host_arm64_isel.c b/VEX/priv/host_arm64_isel.c
+index eb06cdf..470df6b 100644
+--- a/VEX/priv/host_arm64_isel.c
++++ b/VEX/priv/host_arm64_isel.c
+@@ -5543,10 +5543,14 @@ static HReg iselV128Expr_wrk ( ISelEnv* env, IRExpr* e )
+                   default:
+                      vassert(0);
+                }
+-               if (op != ARM64vecsh_INVALID && amt > 0 && amt <= limit) {
++               if (op != ARM64vecsh_INVALID && amt >= 0 && amt <= limit) {
+                   HReg src = iselV128Expr(env, argL);
+                   HReg dst = newVRegV(env);
+-                  addInstr(env, ARM64Instr_VShiftImmV(op, dst, src, amt));
++                  if (amt > 0) {
++                     addInstr(env, ARM64Instr_VShiftImmV(op, dst, src, amt));
++                  } else {
++                     dst = src;
++                  }
+                   return dst;
+                }
+             }

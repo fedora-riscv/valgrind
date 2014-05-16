@@ -6,7 +6,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.9.0
-Release: 14.svn%{?svn_date}r%{?svn_rev}%{?dist}
+Release: 15.svn%{?svn_date}r%{?svn_rev}%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -331,7 +331,10 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
-* Tue May 15 2014 Mark Wielaard <mjw@redhat.com> 3.9.0-14.svn20140513r13961
+* Fri May 16 2014 Mark Wielaard <mjw@redhat.com> 3.9.0-15.svn20140513r13961
+- Add SHL_d_d_#imm to valgrind-3.9.0-aarch64-glibc-2.19.90-gcc-4.9.patch
+
+* Thu May 15 2014 Mark Wielaard <mjw@redhat.com> 3.9.0-14.svn20140513r13961
 - Add valgrind-3.9.0-aarch64-glibc-2.19.90-gcc-4.9.patch
 
 * Tue May 13 2014 Mark Wielaard <mjw@redhat.com> 3.9.0-13.svn20140513r13961
