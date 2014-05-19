@@ -277,11 +277,6 @@ done
 # necessary. See also configure above.
 make %{?_smp_mflags} CFLAGS="" check || :
 
-# Remove and cleanup fake 32-bit libgcc package created in  %%build.
-%if %{build_multilib}
-rm -rf libgcc
-%endif
-
 echo ===============TESTING===================
 ./close_fds make regtest || :
 # Make sure test failures show up in build.log
@@ -331,6 +326,10 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Mon May 19 2014 Mark Wielaard <mjw@redhat.com>
+- Don't cleanup fake 32-bit libgcc created in %%build.
+  make regtest might depend on it to build -m32 binaries.
+
 * Fri May 16 2014 Mark Wielaard <mjw@redhat.com> 3.9.0-15.svn20140513r13961
 - Add SHL_d_d_#imm to valgrind-3.9.0-aarch64-glibc-2.19.90-gcc-4.9.patch
 
