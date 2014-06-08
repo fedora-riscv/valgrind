@@ -6,7 +6,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.9.0
-Release: 15.svn%{?svn_date}r%{?svn_rev}%{?dist}
+Release: 16.svn%{?svn_date}r%{?svn_rev}%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -326,6 +326,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Sun Jun 08 2014 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1:3.9.0-16.svn20140513r13961
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_21_Mass_Rebuild
+
 * Mon May 19 2014 Mark Wielaard <mjw@redhat.com>
 - Don't cleanup fake 32-bit libgcc created in %%build.
   make regtest might depend on it to build -m32 binaries.
