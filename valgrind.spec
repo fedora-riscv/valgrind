@@ -6,7 +6,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.9.0
-Release: 16.svn%{?svn_date}r%{?svn_rev}%{?dist}
+Release: 17.svn%{?svn_date}r%{?svn_rev}%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -15,9 +15,9 @@ Group: Development/Debuggers
 # Only necessary for RHEL, will be ignored on Fedora
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
-# Note that s390x and aarch64 are not multilib.
-# Only x86_64 and ppc64 support 32bit too.
-%ifarch x86_64 ppc64
+# Only arches that are supported upstream as multilib and that fedora
+# has multilib builds for should set build_multilib 1.
+%ifarch x86_64
 %global build_multilib 1
 %else
 %global build_multilib 0
@@ -64,6 +64,9 @@ Patch6: valgrind-3.9.0-msghdr.patch
 Patch7: valgrind-3.9.0-format-security.patch
 
 Patch8: valgrind-3.9.0-aarch64-glibc-2.19.90-gcc-4.9.patch
+
+# KDE#337094 - ifunc wrapper is broken on ppc64
+Patch9: valgrind-3.9.0-ppc64-ifunc.patch
 
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -172,6 +175,7 @@ Valgrind User Manual for details.
 %patch6 -p1
 %patch7 -p1
 %patch8 -p1
+%patch9 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -326,6 +330,10 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Fri Jul  4 2014 Mark Wielaard <mjw@redhat.com> 3.9.0-17.svn20140513r13961
+- Remove ppc multilib support (#1116110)
+- Add valgrind-3.9.0-ppc64-ifunc.patch
+
 * Sun Jun 08 2014 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1:3.9.0-16.svn20140513r13961
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_21_Mass_Rebuild
 
