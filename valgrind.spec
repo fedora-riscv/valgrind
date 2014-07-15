@@ -1,12 +1,12 @@
 %{?scl:%scl_package valgrind}
 
-%define svn_date 20140513
-%define svn_rev 13961
+%define svn_date 20140715
+%define svn_rev 14165
 
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.9.0
-Release: 17.svn%{?svn_date}r%{?svn_rev}%{?dist}
+Release: 18.svn%{?svn_date}r%{?svn_rev}%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -56,17 +56,6 @@ Patch4: valgrind-3.9.0-ldso-supp.patch
 
 # KDE#327943 - s390x missing index/strchr suppression for ld.so bad backtrace?
 Patch5: valgrind-3.9.0-s390x-ld-supp.patch
-
-# KDE#334705 - sendmsg and recvmsg should guard against bogus msghdr fields
-Patch6: valgrind-3.9.0-msghdr.patch
-
-# KDE#334727 - Build fails with -Werror=format-security
-Patch7: valgrind-3.9.0-format-security.patch
-
-Patch8: valgrind-3.9.0-aarch64-glibc-2.19.90-gcc-4.9.patch
-
-# KDE#337094 - ifunc wrapper is broken on ppc64
-Patch9: valgrind-3.9.0-ppc64-ifunc.patch
 
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -171,11 +160,6 @@ Valgrind User Manual for details.
 %ifarch s390x
 %patch5 -p1
 %endif
-
-%patch6 -p1
-%patch7 -p1
-%patch8 -p1
-%patch9 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -330,6 +314,13 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Tue Jul 15 2014 Mark Wielaard <mjw@redhat.com> 3.9.0-18.svn20140715r14165
+- Update to upstream svn r14165.
+- Remove valgrind-3.9.0-ppc64-ifunc.patch.
+- Remove valgrind-3.9.0-aarch64-glibc-2.19.90-gcc-4.9.patch
+- Remove valgrind-3.9.0-format-security.patch
+- Remove valgrind-3.9.0-msghdr.patch
+
 * Fri Jul  4 2014 Mark Wielaard <mjw@redhat.com> 3.9.0-17.svn20140513r13961
 - Remove ppc multilib support (#1116110)
 - Add valgrind-3.9.0-ppc64-ifunc.patch
