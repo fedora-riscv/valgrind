@@ -6,7 +6,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.9.0
-Release: 18.svn%{?svn_date}r%{?svn_rev}%{?dist}
+Release: 19.svn%{?svn_date}r%{?svn_rev}%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -23,8 +23,8 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 %global build_multilib 0
 %endif
 
-# Note s390x and aarch64 don't have an openmpi port available.
-%ifarch %{ix86} x86_64 ppc ppc64 %{arm}
+# Note s390x doesn't have an openmpi port available.
+%ifarch %{ix86} x86_64 ppc ppc64 %{arm} aarch64
 %global build_openmpi 1
 %else
 %global build_openmpi 0
@@ -56,6 +56,10 @@ Patch4: valgrind-3.9.0-ldso-supp.patch
 
 # KDE#327943 - s390x missing index/strchr suppression for ld.so bad backtrace?
 Patch5: valgrind-3.9.0-s390x-ld-supp.patch
+
+# Newer glibc define user_regs_struct and don't include the kernel
+# asm/ptrace.h header that defines user_pt_regs.
+Patch6: valgrind-3.9.0-arm64-user_regs.patch
 
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -160,6 +164,8 @@ Valgrind User Manual for details.
 %ifarch s390x
 %patch5 -p1
 %endif
+
+%patch6 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -266,7 +272,14 @@ done
 make %{?_smp_mflags} CFLAGS="" check || :
 
 echo ===============TESTING===================
+# On aarch64 the gdb integration tests hang for unknown reasons.
+# Only run the main tools tests.
+%ifarch aarch64
+./close_fds make nonexp-regtest || :
+%else
 ./close_fds make regtest || :
+%endif
+
 # Make sure test failures show up in build.log
 # Gather up the diffs (at most the first 20 lines for each one)
 MAX_LINES=20
@@ -314,6 +327,11 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Tue Jul 15 2014 Mark Wielaard <mjw@redhat.com> 3.9.0-19.svn20140715r14165
+- Add valgrind-3.9.0-arm64-user_regs.patch
+- Disable full regtest on aarch64 (gdb integration tests sometimes hang).
+- Enable openmpi support on aarch64.
+
 * Tue Jul 15 2014 Mark Wielaard <mjw@redhat.com> 3.9.0-18.svn20140715r14165
 - Update to upstream svn r14165.
 - Remove valgrind-3.9.0-ppc64-ifunc.patch.
