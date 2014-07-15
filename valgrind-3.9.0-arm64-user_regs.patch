@@ -1,0 +1,22 @@
+Index: valgrind/coregrind/vgdb-invoker-ptrace.c
+===================================================================
+--- valgrind/coregrind/vgdb-invoker-ptrace.c	(revision 14165)
++++ valgrind/coregrind/vgdb-invoker-ptrace.c	(working copy)
+@@ -515,7 +515,7 @@
+ }
+ 
+ #  if defined(VGA_arm64)
+-static struct user_pt_regs user_save;
++static struct user_regs_struct user_save;
+ #  else
+ static struct user user_save;
+ #  endif
+@@ -783,7 +783,7 @@
+    long res;
+    Bool stopped;
+ #  if defined(VGA_arm64)
+-   struct user_pt_regs user_mod;
++   struct user_regs_struct user_mod;
+ #  else
+    struct user user_mod;
+ #  endif
