@@ -1,12 +1,12 @@
 %{?scl:%scl_package valgrind}
 
-%define svn_date 20140715
-%define svn_rev 14165
+%define svn_date 20140718
+%define svn_rev 14176
 
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.9.0
-Release: 19.svn%{?svn_date}r%{?svn_rev}%{?dist}
+Release: 20.svn%{?svn_date}r%{?svn_rev}%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -24,7 +24,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 %endif
 
 # Note s390x doesn't have an openmpi port available.
-%ifarch %{ix86} x86_64 ppc ppc64 %{arm} aarch64
+%ifarch %{ix86} x86_64 ppc ppc64 ppc64le %{arm} aarch64
 %global build_openmpi 1
 %else
 %global build_openmpi 0
@@ -57,9 +57,15 @@ Patch4: valgrind-3.9.0-ldso-supp.patch
 # KDE#327943 - s390x missing index/strchr suppression for ld.so bad backtrace?
 Patch5: valgrind-3.9.0-s390x-ld-supp.patch
 
-# Newer glibc define user_regs_struct and don't include the kernel
-# asm/ptrace.h header that defines user_pt_regs.
-Patch6: valgrind-3.9.0-arm64-user_regs.patch
+# ppc64le
+# Initial PPC LE support KDE#334384
+# PPC LE functional support KDE#334834
+# PPC LE testsuite change KDE#334836
+# Note these require regeneration of the auto* files in %%build.
+Patch1001: valgrind-3.9.0-ppc64le-initial.patch
+Patch1002: valgrind-3.9.0-ppc64le-functional.patch
+Patch1003: valgrind-3.9.0-ppc64le-test.patch
+Patch1004: valgrind-3.9.0-ppc64le-extra.patch
 
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -88,9 +94,12 @@ BuildRequires: %{?scl_prefix}binutils
 # gdbserver_tests/filter_make_empty uses ps in test
 BuildRequires: procps
 
+# ppc64le needs to regenerate auto* files.
+BuildRequires: autoconf automake
+
 %{?scl:Requires:%scl_runtime}
 
-ExclusiveArch: %{ix86} x86_64 ppc ppc64 s390x %{arm} aarch64
+ExclusiveArch: %{ix86} x86_64 ppc ppc64 ppc64le s390x %{arm} aarch64
 %ifarch %{ix86}
 %define valarch x86
 %define valsecarch %{nil}
@@ -106,6 +115,10 @@ ExclusiveArch: %{ix86} x86_64 ppc ppc64 s390x %{arm} aarch64
 %ifarch ppc64
 %define valarch ppc64
 %define valsecarch ppc32
+%endif
+%ifarch ppc64le
+%define valarch ppc64le
+%define valsecarch %{nil}
 %endif
 %ifarch s390x
 %define valarch s390x
@@ -165,9 +178,26 @@ Valgrind User Manual for details.
 %patch5 -p1
 %endif
 
-%patch6 -p1
+# ppc64le support.
+%patch1001 -p1
+%patch1002 -p1
+%patch1003 -p1
+%patch1004 -p1
+
+# In the svn setup, these are symlinked, but not in our source archive.
+# So the above ppc64le patches only patched the ppc32 variants. Sync up
+# the ppc64 versions of these tests.
+cp none/tests/ppc32/jm-insns.c none/tests/ppc64/jm-insns.c
+cp none/tests/ppc32/test_dfp4.c none/tests/ppc64/test_dfp4.c
+cp none/tests/ppc32/test_dfp5.c none/tests/ppc64/test_dfp5.c
+cp none/tests/ppc32/test_isa_2_06_part1.c none/tests/ppc64/test_isa_2_06_part1.c
+cp none/tests/ppc32/test_isa_2_06_part2.c none/tests/ppc64/test_isa_2_06_part2.c
+cp none/tests/ppc32/test_isa_2_06_part3.c none/tests/ppc64/test_isa_2_06_part3.c
 
 %build
+# The ppc64le patches touch a lot of auto* files. Lets just regenerate.
+./autogen.sh
+
 # We need to use the software collection compiler and binutils if available.
 # The configure checks might otherwise miss support for various newer
 # assembler instructions.
@@ -327,6 +357,15 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Fri Jul 18 2014 Mark Wielaard <mjw@redhat.com> 3.9.0-20.svn20140718r14176
+- Update to upstream svn r14176
+  Remove valgrind-3.9.0-arm64-user_regs.patch
+- Add ppc64le support
+  valgrind-3.9.0-ppc64le-initial.patch
+  valgrind-3.9.0-ppc64le-functional.patch
+  valgrind-3.9.0-ppc64le-test.patch
+  valgrind-3.9.0-ppc64le-extra.patch
+
 * Tue Jul 15 2014 Mark Wielaard <mjw@redhat.com> 3.9.0-19.svn20140715r14165
 - Add valgrind-3.9.0-arm64-user_regs.patch
 - Disable full regtest on aarch64 (gdb integration tests sometimes hang).
