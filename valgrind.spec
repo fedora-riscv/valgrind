@@ -6,7 +6,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.9.0
-Release: 20.svn%{?svn_date}r%{?svn_rev}%{?dist}
+Release: 21.svn%{?svn_date}r%{?svn_rev}%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -302,9 +302,9 @@ done
 make %{?_smp_mflags} CFLAGS="" check || :
 
 echo ===============TESTING===================
-# On aarch64 the gdb integration tests hang for unknown reasons.
+# On arm and aarch64 the gdb integration tests hang for unknown reasons.
 # Only run the main tools tests.
-%ifarch aarch64
+%ifarch %{arm} aarch64
 ./close_fds make nonexp-regtest || :
 %else
 ./close_fds make regtest || :
@@ -357,6 +357,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Sat Jul 19 2014 Mark Wielaard <mjw@redhat.com> 3.9.0-21.svn20140718r14176
+- Disable full regtest on arm (gdb integration tests sometimes hang).
+
 * Fri Jul 18 2014 Mark Wielaard <mjw@redhat.com> 3.9.0-20.svn20140718r14176
 - Update to upstream svn r14176
   Remove valgrind-3.9.0-arm64-user_regs.patch
