@@ -1,12 +1,12 @@
 %{?scl:%scl_package valgrind}
 
-%define svn_date 20140718
-%define svn_rev 14176
+%define svn_date 20140809
+%define svn_rev 14250
 
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.9.0
-Release: 21.svn%{?svn_date}r%{?svn_rev}%{?dist}
+Release: 22.svn%{?svn_date}r%{?svn_rev}%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -56,16 +56,6 @@ Patch4: valgrind-3.9.0-ldso-supp.patch
 
 # KDE#327943 - s390x missing index/strchr suppression for ld.so bad backtrace?
 Patch5: valgrind-3.9.0-s390x-ld-supp.patch
-
-# ppc64le
-# Initial PPC LE support KDE#334384
-# PPC LE functional support KDE#334834
-# PPC LE testsuite change KDE#334836
-# Note these require regeneration of the auto* files in %%build.
-Patch1001: valgrind-3.9.0-ppc64le-initial.patch
-Patch1002: valgrind-3.9.0-ppc64le-functional.patch
-Patch1003: valgrind-3.9.0-ppc64le-test.patch
-Patch1004: valgrind-3.9.0-ppc64le-extra.patch
 
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -177,12 +167,6 @@ Valgrind User Manual for details.
 %ifarch s390x
 %patch5 -p1
 %endif
-
-# ppc64le support.
-%patch1001 -p1
-%patch1002 -p1
-%patch1003 -p1
-%patch1004 -p1
 
 # In the svn setup, these are symlinked, but not in our source archive.
 # So the above ppc64le patches only patched the ppc32 variants. Sync up
@@ -357,6 +341,14 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Sat Aug  9 2014 Mark Wielaard <mjw@redhat.com> 3.9.0-22.svn20140809r14250
+- Update to upstream svn r14250
+  - ppc64le support got integrated upstream. Remove patches:
+    valgrind-3.9.0-ppc64le-initial.patch
+    valgrind-3.9.0-ppc64le-functional.patch
+    valgrind-3.9.0-ppc64le-test.patch
+    valgrind-3.9.0-ppc64le-extra.patch
+
 * Sat Jul 19 2014 Mark Wielaard <mjw@redhat.com> 3.9.0-21.svn20140718r14176
 - Disable full regtest on arm (gdb integration tests sometimes hang).
 
