@@ -1,12 +1,12 @@
 %{?scl:%scl_package valgrind}
 
-%define svn_date 20140809
-%define svn_rev 14250
+%define svn_date 20140818
+%define svn_rev 14303
 
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.9.0
-Release: 23.svn%{?svn_date}r%{?svn_rev}%{?dist}
+Release: 24.svn%{?svn_date}r%{?svn_rev}%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -83,9 +83,6 @@ BuildRequires: %{?scl_prefix}binutils
 
 # gdbserver_tests/filter_make_empty uses ps in test
 BuildRequires: procps
-
-# ppc64le needs to regenerate auto* files.
-BuildRequires: autoconf automake
 
 %{?scl:Requires:%scl_runtime}
 
@@ -179,9 +176,6 @@ cp none/tests/ppc32/test_isa_2_06_part2.c none/tests/ppc64/test_isa_2_06_part2.c
 cp none/tests/ppc32/test_isa_2_06_part3.c none/tests/ppc64/test_isa_2_06_part3.c
 
 %build
-# The ppc64le patches touch a lot of auto* files. Lets just regenerate.
-./autogen.sh
-
 # We need to use the software collection compiler and binutils if available.
 # The configure checks might otherwise miss support for various newer
 # assembler instructions.
@@ -190,10 +184,10 @@ cp none/tests/ppc32/test_isa_2_06_part3.c none/tests/ppc64/test_isa_2_06_part3.c
 CC=gcc
 %if %{build_multilib}
 # Ugly hack - libgcc 32-bit package might not be installed
-mkdir -p libgcc/32
-ar r libgcc/32/libgcc_s.a
-ar r libgcc/libgcc_s_32.a
-CC="gcc -B `pwd`/libgcc/"
+mkdir -p shared/libgcc/32
+ar r shared/libgcc/32/libgcc_s.a
+ar r shared/libgcc/libgcc_s_32.a
+CC="gcc -B `pwd`/shared/libgcc/"
 %endif
 
 # Old openmpi-devel has version depended paths for mpicc.
@@ -341,6 +335,11 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Mon Aug 18 2014 Mark Wielaard <mjw@redhat.com> - 3.9.0-24.svn20140818r14303
+- Update to upstream svn r14303
+- Move fake libgcc into shared to not break post-regtest-checks.
+- autogen.sh execution no longer needed in %%build.
+
 * Mon Aug 18 2014 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1:3.9.0-23.svn20140809r14250
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_21_22_Mass_Rebuild
 
