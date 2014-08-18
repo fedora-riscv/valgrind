@@ -6,7 +6,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.9.0
-Release: 22.svn%{?svn_date}r%{?svn_rev}%{?dist}
+Release: 23.svn%{?svn_date}r%{?svn_rev}%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -341,6 +341,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Mon Aug 18 2014 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1:3.9.0-23.svn20140809r14250
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_21_22_Mass_Rebuild
+
 * Sat Aug  9 2014 Mark Wielaard <mjw@redhat.com> 3.9.0-22.svn20140809r14250
 - Update to upstream svn r14250
   - ppc64le support got integrated upstream. Remove patches:
