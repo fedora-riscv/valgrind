@@ -1,12 +1,12 @@
 %{?scl:%scl_package valgrind}
 
-%define svn_date 20140818
-%define svn_rev 14303
+%define svn_date 20140827
+%define svn_rev 14371
 
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.9.0
-Release: 24.svn%{?svn_date}r%{?svn_rev}%{?dist}
+Release: 25.svn%{?svn_date}r%{?svn_rev}%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -165,16 +165,6 @@ Valgrind User Manual for details.
 %patch5 -p1
 %endif
 
-# In the svn setup, these are symlinked, but not in our source archive.
-# So the above ppc64le patches only patched the ppc32 variants. Sync up
-# the ppc64 versions of these tests.
-cp none/tests/ppc32/jm-insns.c none/tests/ppc64/jm-insns.c
-cp none/tests/ppc32/test_dfp4.c none/tests/ppc64/test_dfp4.c
-cp none/tests/ppc32/test_dfp5.c none/tests/ppc64/test_dfp5.c
-cp none/tests/ppc32/test_isa_2_06_part1.c none/tests/ppc64/test_isa_2_06_part1.c
-cp none/tests/ppc32/test_isa_2_06_part2.c none/tests/ppc64/test_isa_2_06_part2.c
-cp none/tests/ppc32/test_isa_2_06_part3.c none/tests/ppc64/test_isa_2_06_part3.c
-
 %build
 # We need to use the software collection compiler and binutils if available.
 # The configure checks might otherwise miss support for various newer
@@ -270,7 +260,7 @@ done
 %endif
 
 %check
-# Make sure the basic binary runs.
+# Make sure a basic binary runs.
 ./vg-in-place /bin/true
 
 # Build the test files with the software collection compiler if available.
@@ -335,6 +325,10 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Wed Aug 27 2014 Mark Wielaard <mjw@redhat.com> - 3.9.0-25.svn20140827r14370
+- Update to upstream svn r14370
+- Remove ppc testfile copying (no longer patched in)
+
 * Mon Aug 18 2014 Mark Wielaard <mjw@redhat.com> - 3.9.0-24.svn20140818r14303
 - Update to upstream svn r14303
 - Move fake libgcc into shared to not break post-regtest-checks.
