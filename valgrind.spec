@@ -1,12 +1,12 @@
 %{?scl:%scl_package valgrind}
 
-%define svn_date 20140827
-%define svn_rev 14371
+%define svn_date 20140829
+%define svn_rev 14384
 
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.9.0
-Release: 25.svn%{?svn_date}r%{?svn_rev}%{?dist}
+Release: 26.svn%{?svn_date}r%{?svn_rev}%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -198,9 +198,6 @@ OPTFLAGS="`echo " %{optflags} " | sed 's/ -m\(64\|3[21]\) / /g;s/ -fexceptions /
 %if %{build_openmpi}
   --with-mpicc=%{mpiccpath} \
 %endif
-%ifarch aarch64
-  --enable-only64bit \
-%endif
   GDB=%{_bindir}/gdb
 
 make %{?_smp_mflags}
@@ -270,13 +267,7 @@ done
 make %{?_smp_mflags} CFLAGS="" check || :
 
 echo ===============TESTING===================
-# On arm and aarch64 the gdb integration tests hang for unknown reasons.
-# Only run the main tools tests.
-%ifarch %{arm} aarch64
-./close_fds make nonexp-regtest || :
-%else
 ./close_fds make regtest || :
-%endif
 
 # Make sure test failures show up in build.log
 # Gather up the diffs (at most the first 20 lines for each one)
@@ -325,6 +316,10 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Fri Aug 29 2014 Mark Wielaard <mjw@redhat.com> - 3.9.0-26.svn20140829r14384
+- Update to upstream svn r14384
+- Enable gdb_server tests again for arm and aarch64
+
 * Wed Aug 27 2014 Mark Wielaard <mjw@redhat.com> - 3.9.0-25.svn20140827r14370
 - Update to upstream svn r14370
 - Remove ppc testfile copying (no longer patched in)
