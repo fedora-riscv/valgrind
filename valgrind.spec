@@ -1,12 +1,9 @@
 %{?scl:%scl_package valgrind}
 
-%define svn_date 20140829
-%define svn_rev 14384
-
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
-Version: 3.9.0
-Release: 26.svn%{?svn_date}r%{?svn_rev}%{?dist}
+Version: 3.10.0
+Release: 0.1.BETA1%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -31,16 +28,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 %endif
 
 #Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
-#
-# svn co svn://svn.valgrind.org/valgrind/trunk valgrind
-# cd valgrind
-# ./autogen.sh
-# ./configure
-# make dist
-# tar jxf valgrind-3.10.0.SVN.tar.bz2
-# mv valgrind-3.10.0.SVN valgrind-3.9.0-svn%{svn_date}r%{svn_rev}
-# tar jcf valgrind-3.9.0-svn%{svn_date}r%{svn_rev}.tar.bz2 valgrind-3.9.0-svn%{svn_date}r%{svn_rev}
-Source0: valgrind-%{version}-svn%{svn_date}r%{svn_rev}.tar.bz2
+Source0: valgrind-3.10.0.BETA1.tar.bz2
 
 # Needs investigation and pushing upstream
 Patch1: valgrind-3.9.0-cachegrind-improvements.patch
@@ -153,8 +141,7 @@ See the section on Debugging MPI Parallel Programs with Valgrind in the
 Valgrind User Manual for details.
 
 %prep
-#%setup -q -n %{?scl:%{pkg_name}}%{!?scl:%{name}}-%{version}
-%setup -q -n %{?scl:%{pkg_name}}%{!?scl:%{name}}-%{version}-svn%{svn_date}r%{svn_rev}
+%setup -q -n %{?scl:%{pkg_name}}%{!?scl:%{name}}-%{version}.BETA1
 
 %patch1 -p1
 %patch2 -p1
@@ -316,6 +303,10 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Tue Sep  2 2014 Mark Wielaard <mjw@redhat.com> - 3.10.0-0.1.BETA1
+- Update to official upstream 3.10.0 BETA1.
+  - Enables inlined frames in stacktraces.
+
 * Fri Aug 29 2014 Mark Wielaard <mjw@redhat.com> - 3.9.0-26.svn20140829r14384
 - Update to upstream svn r14384
 - Enable gdb_server tests again for arm and aarch64
