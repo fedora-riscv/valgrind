@@ -27,6 +27,12 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 %global build_openmpi 0
 %endif
 
+# Don't run dwz or generate minisymtab, valgrind doesn't handle compressed
+# DWARF very well and it might read its own vgpreload libraries. Generating
+# minisymtabs doesn't really work for the staticly linked tools.
+%define _find_debuginfo_dwz_opts %{nil}
+%undefine _include_minidebuginfo
+
 #Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
 Source0: valgrind-3.10.0.BETA1.tar.bz2
 
@@ -303,6 +309,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Mon Sep  8 2014 Mark Wielaard <mjw@redhat.com>
+- Don't run dwz or generate minisymtab.
+
 * Tue Sep  2 2014 Mark Wielaard <mjw@redhat.com> - 3.10.0-0.1.BETA1
 - Update to official upstream 3.10.0 BETA1.
   - Enables inlined frames in stacktraces.
