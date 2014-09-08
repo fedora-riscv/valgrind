@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.10.0
-Release: 0.1.BETA1%{?dist}
+Release: 0.2.BETA2%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -34,7 +34,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 %undefine _include_minidebuginfo
 
 #Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
-Source0: valgrind-3.10.0.BETA1.tar.bz2
+Source0: valgrind-3.10.0.BETA2.tar.bz2
 
 # Needs investigation and pushing upstream
 Patch1: valgrind-3.9.0-cachegrind-improvements.patch
@@ -147,7 +147,7 @@ See the section on Debugging MPI Parallel Programs with Valgrind in the
 Valgrind User Manual for details.
 
 %prep
-%setup -q -n %{?scl:%{pkg_name}}%{!?scl:%{name}}-%{version}.BETA1
+%setup -q -n %{?scl:%{pkg_name}}%{!?scl:%{name}}-%{version}.BETA2
 
 %patch1 -p1
 %patch2 -p1
@@ -309,7 +309,8 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
-* Mon Sep  8 2014 Mark Wielaard <mjw@redhat.com>
+* Mon Sep  8 2014 Mark Wielaard <mjw@redhat.com> - 3.10.0-0.2.BETA2
+- Update to 3.10.0.BETA2.
 - Don't run dwz or generate minisymtab.
 
 * Tue Sep  2 2014 Mark Wielaard <mjw@redhat.com> - 3.10.0-0.1.BETA1
