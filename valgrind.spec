@@ -48,6 +48,9 @@ Patch3: valgrind-3.9.0-stat_h.patch
 # Make ld.so supressions slightly less specific.
 Patch4: valgrind-3.9.0-ldso-supp.patch
 
+# Recognize glibc 2.20 final. Upstream valgrind svn r14505.
+Patch5: valgrind-3.10-configure-glibc-2.20.patch
+
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -150,6 +153,7 @@ Valgrind User Manual for details.
 %patch2 -p1
 %patch3 -p1
 %patch4 -p1
+%patch5 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -306,6 +310,7 @@ echo ===============END TESTING===============
 - Update to 3.10.0.BETA2.
 - Don't run dwz or generate minisymtab.
 - Remove valgrind-3.9.0-s390x-ld-supp.patch fixed upstream.
+- Add valgrind-3.10-configure-glibc-2.20.patch.
 
 * Tue Sep  2 2014 Mark Wielaard <mjw@redhat.com> - 3.10.0-0.1.BETA1
 - Update to official upstream 3.10.0 BETA1.
