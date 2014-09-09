@@ -48,9 +48,6 @@ Patch3: valgrind-3.9.0-stat_h.patch
 # Make ld.so supressions slightly less specific.
 Patch4: valgrind-3.9.0-ldso-supp.patch
 
-# KDE#327943 - s390x missing index/strchr suppression for ld.so bad backtrace?
-Patch5: valgrind-3.9.0-s390x-ld-supp.patch
-
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -153,10 +150,6 @@ Valgrind User Manual for details.
 %patch2 -p1
 %patch3 -p1
 %patch4 -p1
-
-%ifarch s390x
-%patch5 -p1
-%endif
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -312,6 +305,7 @@ echo ===============END TESTING===============
 * Mon Sep  8 2014 Mark Wielaard <mjw@redhat.com> - 3.10.0-0.2.BETA2
 - Update to 3.10.0.BETA2.
 - Don't run dwz or generate minisymtab.
+- Remove valgrind-3.9.0-s390x-ld-supp.patch fixed upstream.
 
 * Tue Sep  2 2014 Mark Wielaard <mjw@redhat.com> - 3.10.0-0.1.BETA1
 - Update to official upstream 3.10.0 BETA1.
