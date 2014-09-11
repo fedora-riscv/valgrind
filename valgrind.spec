@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.10.0
-Release: 0.2.BETA2%{?dist}
+Release: 1%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -33,8 +33,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 %define _find_debuginfo_dwz_opts %{nil}
 %undefine _include_minidebuginfo
 
-#Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
-Source0: valgrind-3.10.0.BETA2.tar.bz2
+Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
 
 # Needs investigation and pushing upstream
 Patch1: valgrind-3.9.0-cachegrind-improvements.patch
@@ -47,9 +46,6 @@ Patch3: valgrind-3.9.0-stat_h.patch
 
 # Make ld.so supressions slightly less specific.
 Patch4: valgrind-3.9.0-ldso-supp.patch
-
-# Recognize glibc 2.20 final. Upstream valgrind svn r14505.
-Patch5: valgrind-3.10-configure-glibc-2.20.patch
 
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -147,13 +143,12 @@ See the section on Debugging MPI Parallel Programs with Valgrind in the
 Valgrind User Manual for details.
 
 %prep
-%setup -q -n %{?scl:%{pkg_name}}%{!?scl:%{name}}-%{version}.BETA2
+%setup -q -n %{?scl:%{pkg_name}}%{!?scl:%{name}}-%{version}
 
 %patch1 -p1
 %patch2 -p1
 %patch3 -p1
 %patch4 -p1
-%patch5 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -306,6 +301,10 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Thu Sep 11 2014 Mark Wielaard <mjw@redhat.com> - 3.10.0-1
+- Update to 3.10.0 final.
+- Remove valgrind-3.10-configure-glibc-2.20.patch fixed upstream.
+
 * Mon Sep  8 2014 Mark Wielaard <mjw@redhat.com> - 3.10.0-0.2.BETA2
 - Update to 3.10.0.BETA2.
 - Don't run dwz or generate minisymtab.
