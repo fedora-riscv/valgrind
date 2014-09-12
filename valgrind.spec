@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.10.0
-Release: 1%{?dist}
+Release: 2%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -12,12 +12,23 @@ Group: Development/Debuggers
 # Only necessary for RHEL, will be ignored on Fedora
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
-# Only arches that are supported upstream as multilib and that fedora
-# has multilib builds for should set build_multilib 1.
-%ifarch x86_64
-%global build_multilib 1
-%else
+# Only arches that are supported upstream as multilib and that the distro
+# has multilib builds for should set build_multilib 1. In practice that
+# is only x86_64 and ppc64 (but not in fedora 21 and later, and never
+# for ppc64le).
 %global build_multilib 0
+
+%ifarch x86_64
+ %global build_multilib 1
+%endif
+
+%ifarch ppc64
+  %if 0%{?rhel}
+    %global build_multilib 1
+  %endif
+  %if 0%{?fedora}
+    %global build_multilib (%fedora < 21)
+  %endif
 %endif
 
 # Note s390x doesn't have an openmpi port available.
@@ -76,7 +87,7 @@ BuildRequires: procps
 
 %{?scl:Requires:%scl_runtime}
 
-ExclusiveArch: %{ix86} x86_64 ppc ppc64 ppc64le s390x %{arm} aarch64
+ExclusiveArch: %{ix86} x86_64 ppc ppc64 ppc64le s390x armv7hl aarch64
 %ifarch %{ix86}
 %define valarch x86
 %define valsecarch %{nil}
@@ -87,11 +98,15 @@ ExclusiveArch: %{ix86} x86_64 ppc ppc64 ppc64le s390x %{arm} aarch64
 %endif
 %ifarch ppc
 %define valarch ppc32
-%define valsecarch ppc64
+%define valsecarch %{nil}
 %endif
 %ifarch ppc64
-%define valarch ppc64
-%define valsecarch ppc32
+  %define valarch ppc64be
+  %if %{build_multilib}
+    %define valsecarch ppc32
+  %else
+    %define valsecarch %{nil}
+  %endif
 %endif
 %ifarch ppc64le
 %define valarch ppc64le
@@ -102,11 +117,7 @@ ExclusiveArch: %{ix86} x86_64 ppc ppc64 ppc64le s390x %{arm} aarch64
 %define valsecarch %{nil}
 %endif
 %ifarch armv7hl
-%define valarch armv7hl
-%define valsecarch %{nil}
-%endif
-%ifarch armv5tel
-%define valarch armv5tel
+%define valarch arm
 %define valsecarch %{nil}
 %endif
 %ifarch aarch64
@@ -217,11 +228,7 @@ pushd $RPM_BUILD_ROOT%{_libdir}/valgrind/
 rm -f *-%{valsecarch}-* || :
 for i in *-%{valarch}-*; do
   j=`echo $i | sed 's/-%{valarch}-/-%{valsecarch}-/'`
-%ifarch ppc
-  ln -sf ../../lib64/valgrind/$j $j
-%else
   ln -sf ../../lib/valgrind/$j $j
-%endif
 done
 popd
 %endif
@@ -301,6 +308,11 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Fri Sep 12 2014 Mark Wielaard <mjw@redhat.com> - 3.10.0-2
+- Fix ppc32 multilib handling on ppc64[be].
+- Drop ppc64 secondary for ppc32 primary support.
+- Except for armv7hl we don't support any other arm[32] arch.
+
 * Thu Sep 11 2014 Mark Wielaard <mjw@redhat.com> - 3.10.0-1
 - Update to 3.10.0 final.
 - Remove valgrind-3.10-configure-glibc-2.20.patch fixed upstream.
