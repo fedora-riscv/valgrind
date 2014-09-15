@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.10.0
-Release: 2%{?dist}
+Release: 3%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -57,6 +57,10 @@ Patch3: valgrind-3.9.0-stat_h.patch
 
 # Make ld.so supressions slightly less specific.
 Patch4: valgrind-3.9.0-ldso-supp.patch
+
+# Recognize and warn about usage of old (broken) ppc32 magic instr preamble.
+# https://bugs.kde.org/show_bug.cgi?id=278808#c6
+Patch5: valgrind-3.10.0-old-ppc32-instr-magic.patch
 
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -160,6 +164,7 @@ Valgrind User Manual for details.
 %patch2 -p1
 %patch3 -p1
 %patch4 -p1
+%patch5 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -308,6 +313,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Mon Sep 15 2014 Mark Wielaard <mjw@redhat.com> - 3.10.0-3
+- Add valgrind-3.10.0-old-ppc32-instr-magic.patch.
+
 * Fri Sep 12 2014 Mark Wielaard <mjw@redhat.com> - 3.10.0-2
 - Fix ppc32 multilib handling on ppc64[be].
 - Drop ppc64 secondary for ppc32 primary support.
