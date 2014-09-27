@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.9.0
-Release: 8%{?dist}
+Release: 9%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -64,6 +64,9 @@ Patch16: valgrind-3.9.0-glibc-2.19.patch
 
 # KDE#331830 - ppc64: WARNING: unhandled syscall: 96/97
 Patch17: valgrind-3.9.0-ppc64-priority.patch
+
+# KDE#333666 - Recognize MPX instructions and bnd prefix.
+Patch18: valgrind-3.9.0-mpx.patch
 
 %ifarch x86_64 ppc64
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -174,6 +177,7 @@ Valgrind User Manual for details.
 %patch15 -p1
 %patch16 -p1
 %patch17 -p1
+%patch18 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -327,6 +331,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Sat Sep 27 2014 Mark Wielaard <mjw@redhat.com> - 3.9.0-9
+- Add valgrind-3.9.0-mpx.patch (#1147137)
+
 * Mon Mar 10 2014 Mark Wielaard <mjw@redhat.com> - 3.9.0-8
 - Add valgrind-3.9.0-ppc64-priority.patch
 
