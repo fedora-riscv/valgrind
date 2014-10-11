@@ -62,6 +62,9 @@ Patch4: valgrind-3.9.0-ldso-supp.patch
 # https://bugs.kde.org/show_bug.cgi?id=278808#c6
 Patch5: valgrind-3.10.0-old-ppc32-instr-magic.patch
 
+# KDE#339853 arm64 times syscall unknown
+Patch6: valgrind-3.10.0-aarch64-times.patch
+
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -165,6 +168,7 @@ Valgrind User Manual for details.
 %patch3 -p1
 %patch4 -p1
 %patch5 -p1
+%patch6 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -313,6 +317,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Sat Oct 11 2014 Mark Wielaard <mjw@redhat.com>
+- Add valgrind-3.10.0-aarch64-times.patch
+
 * Mon Sep 15 2014 Mark Wielaard <mjw@redhat.com> - 3.10.0-3
 - Add valgrind-3.10.0-old-ppc32-instr-magic.patch.
 
