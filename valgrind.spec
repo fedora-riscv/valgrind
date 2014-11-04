@@ -63,13 +63,15 @@ Patch4: valgrind-3.9.0-ldso-supp.patch
 Patch5: valgrind-3.10.0-old-ppc32-instr-magic.patch
 
 # KDE#339853 arm64 times syscall unknown
-Patch6: valgrind-3.10.0-aarch64-times.patch
-
-# KDE#339855 arm64 unhandled getsid/setsid syscalls.
-Patch7: valgrind-3.10.0-aarch64-getsetsid.patch
+# KDE#339856 arm64 unhandled getsid/setsid syscalls.
+# KDE#339940 arm64 unhandled syscall: 83 (sys_fdatasync)
+# KDE#340028 unhandled syscalls for arm64 (msync, pread64, setreuid, setregid)
+# KDE#340236 arm64 mknodat (33), fchdir (50), chroot (51), fchownat (54)
+# KDE#340630 arm64 fchmod (52) and fchown (55) syscalls not recognized.
+Patch6: valgrind-3.10.0-aarch64-syscalls.patch
 
 # KDE#339858 arm64 recognize dmb sy. Data Memory Barrier full SYstem variant.
-Patch8: valgrind-3.10.0-aarch64-dmb-sy.patch
+Patch7: valgrind-3.10.0-aarch64-dmb-sy.patch
 
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -176,7 +178,6 @@ Valgrind User Manual for details.
 %patch5 -p1
 %patch6 -p1
 %patch7 -p1
-%patch8 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -325,6 +326,13 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Tue Nov  4 2014 Mark Wielaard <mjw@redhat.com>
+- Merge valgrind-3.10.0-aarch64-times.patch
+  and valgrind-3.10.0-aarch64-getsetsid.patch
+  into valgrind-3.10.0-aarch64-syscalls.patch
+  add fdatasync, msync, pread64, setreuid, setregid,
+  mknodat, fchdir, chroot, fchownat, fchmod and fchown.
+
 * Sat Oct 11 2014 Mark Wielaard <mjw@redhat.com> - 3.10.0-4
 - Add valgrind-3.10.0-aarch64-times.patch
 - Add valgrind-3.10.0-aarch64-getsetsid.patch
