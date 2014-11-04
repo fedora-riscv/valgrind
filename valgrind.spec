@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.10.0
-Release: 4%{?dist}
+Release: 5%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -78,6 +78,10 @@ Patch8: valgrind-3.10.0-aarch64-frint.patch
 
 # KDE#339927 Implement fcvtmu x_d.
 Patch9: valgrind-3.10.0-fcvtmu.patch
+
+# KDE#340509 Implement FCVTAS W_S and FCVTAU W_S.
+# KDE#340632 arm64: unhandled instruction fcvtas
+Patch10: valgrind-3.10.0-aarch64-fcvta.patch
 
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -186,6 +190,7 @@ Valgrind User Manual for details.
 %patch7 -p1
 %patch8 -p1
 %patch9 -p1
+%patch10 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -334,7 +339,7 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
-* Tue Nov  4 2014 Mark Wielaard <mjw@redhat.com>
+* Tue Nov  4 2014 Mark Wielaard <mjw@redhat.com> - 3.10.0-5
 - Merge valgrind-3.10.0-aarch64-times.patch
   and valgrind-3.10.0-aarch64-getsetsid.patch
   into valgrind-3.10.0-aarch64-syscalls.patch
@@ -342,6 +347,7 @@ echo ===============END TESTING===============
   mknodat, fchdir, chroot, fchownat, fchmod and fchown.
 - Add valgrind-3.10.0-aarch64-frint.patch
 - Add valgrind-3.10.0-fcvtmu.patch
+- Add valgrind-3.10.0-aarch64-fcvta.patch
 
 * Sat Oct 11 2014 Mark Wielaard <mjw@redhat.com> - 3.10.0-4
 - Add valgrind-3.10.0-aarch64-times.patch
