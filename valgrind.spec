@@ -73,6 +73,9 @@ Patch6: valgrind-3.10.0-aarch64-syscalls.patch
 # KDE#339858 arm64 recognize dmb sy. Data Memory Barrier full SYstem variant.
 Patch7: valgrind-3.10.0-aarch64-dmb-sy.patch
 
+# KDE#339926 Implement frintx d_d and s_s.
+Patch8: valgrind-3.10.0-aarch64-frint.patch
+
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -178,6 +181,7 @@ Valgrind User Manual for details.
 %patch5 -p1
 %patch6 -p1
 %patch7 -p1
+%patch8 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -332,6 +336,7 @@ echo ===============END TESTING===============
   into valgrind-3.10.0-aarch64-syscalls.patch
   add fdatasync, msync, pread64, setreuid, setregid,
   mknodat, fchdir, chroot, fchownat, fchmod and fchown.
+- Add valgrind-3.10.0-aarch64-frint.patch
 
 * Sat Oct 11 2014 Mark Wielaard <mjw@redhat.com> - 3.10.0-4
 - Add valgrind-3.10.0-aarch64-times.patch
