@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.10.0
-Release: 5%{?dist}
+Release: 6%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -68,6 +68,7 @@ Patch5: valgrind-3.10.0-old-ppc32-instr-magic.patch
 # KDE#340028 unhandled syscalls for arm64 (msync, pread64, setreuid, setregid)
 # KDE#340236 arm64 mknodat (33), fchdir (50), chroot (51), fchownat (54)
 # KDE#340630 arm64 fchmod (52) and fchown (55) syscalls not recognized.
+# KDE#340922 arm64: unhandled getgroups/setgroups syscalls.
 Patch6: valgrind-3.10.0-aarch64-syscalls.patch
 
 # KDE#339858 arm64 recognize dmb sy. Data Memory Barrier full SYstem variant.
@@ -339,6 +340,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Wed Nov 19 2014 Mark Wielaard <mjw@redhat.com> - 3.10.0-6
+- Add getgroups/setgroups to valgrind-3.10.0-aarch64-syscalls.patch
+
 * Tue Nov  4 2014 Mark Wielaard <mjw@redhat.com> - 3.10.0-5
 - Merge valgrind-3.10.0-aarch64-times.patch
   and valgrind-3.10.0-aarch64-getsetsid.patch

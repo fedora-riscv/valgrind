@@ -243,3 +243,33 @@ index 54238ed..f8a59c1 100644
  //ZZ    LINX_(__NR_setresuid32,       sys_setresuid),      // 208
  //ZZ    LINXY(__NR_getresuid32,       sys_getresuid),      // 209
  //ZZ 
+commit 2562dd489ed5ff9d5eb73f7d2957eb3b2c5dc801
+Author: mjw <mjw@a5019735-40e9-0310-863c-91ae7b9d1cf9>
+Date:   Thu Nov 13 13:03:25 2014 +0000
+
+    Bug 340922 arm64: unhandled getgroups/setgroups syscalls.
+    
+    git-svn-id: svn://svn.valgrind.org/valgrind/trunk@14716 a5019735-40e9-0310-863c-91ae7b9d1cf9
+
+diff --git a/coregrind/m_syswrap/syswrap-arm64-linux.c b/coregrind/m_syswrap/syswrap-arm64-linux.c
+index 59e1cf6..cd27ad2 100644
+--- a/coregrind/m_syswrap/syswrap-arm64-linux.c
++++ b/coregrind/m_syswrap/syswrap-arm64-linux.c
+@@ -968,6 +968,8 @@ static SyscallTableEntry syscall_main_table[] = {
+    GENX_(__NR_getpgid,           sys_getpgid),           // 155
+    GENX_(__NR_getsid,            sys_getsid),            // 156
+    GENX_(__NR_setsid,            sys_setsid),            // 157
++   GENXY(__NR_getgroups,         sys_getgroups),         // 158
++   GENX_(__NR_setgroups,         sys_setgroups),         // 159
+    GENXY(__NR_uname,             sys_newuname),          // 160
+    GENXY(__NR_getrlimit,         sys_old_getrlimit),     // 163
+    GENX_(__NR_setrlimit,         sys_setrlimit),         // 164
+@@ -1237,8 +1239,6 @@ static SyscallTableEntry syscall_main_table[] = {
+ //ZZ    GENX_(__NR_setreuid32,        sys_setreuid),       // 203
+ //ZZ    GENX_(__NR_setregid32,        sys_setregid),       // 204
+ //ZZ 
+-//ZZ    GENXY(__NR_getgroups32,       sys_getgroups),      // 205
+-//ZZ    GENX_(__NR_setgroups32,       sys_setgroups),      // 206
+ //ZZ    LINX_(__NR_setresuid32,       sys_setresuid),      // 208
+ //ZZ    LINXY(__NR_getresuid32,       sys_getresuid),      // 209
+ //ZZ 
