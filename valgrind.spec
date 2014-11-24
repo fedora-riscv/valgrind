@@ -2,8 +2,8 @@
 
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
-Version: 3.10.0
-Release: 6%{?dist}
+Version: 3.10.1
+Release: 0.1.TEST1%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -44,7 +44,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 %define _find_debuginfo_dwz_opts %{nil}
 %undefine _include_minidebuginfo
 
-Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
+Source0: http://www.valgrind.org/downloads/valgrind-%{version}.TEST1.tar.bz2
 
 # Needs investigation and pushing upstream
 Patch1: valgrind-3.9.0-cachegrind-improvements.patch
@@ -57,32 +57,6 @@ Patch3: valgrind-3.9.0-stat_h.patch
 
 # Make ld.so supressions slightly less specific.
 Patch4: valgrind-3.9.0-ldso-supp.patch
-
-# Recognize and warn about usage of old (broken) ppc32 magic instr preamble.
-# https://bugs.kde.org/show_bug.cgi?id=278808#c6
-Patch5: valgrind-3.10.0-old-ppc32-instr-magic.patch
-
-# KDE#339853 arm64 times syscall unknown
-# KDE#339856 arm64 unhandled getsid/setsid syscalls.
-# KDE#339940 arm64 unhandled syscall: 83 (sys_fdatasync)
-# KDE#340028 unhandled syscalls for arm64 (msync, pread64, setreuid, setregid)
-# KDE#340236 arm64 mknodat (33), fchdir (50), chroot (51), fchownat (54)
-# KDE#340630 arm64 fchmod (52) and fchown (55) syscalls not recognized.
-# KDE#340922 arm64: unhandled getgroups/setgroups syscalls.
-Patch6: valgrind-3.10.0-aarch64-syscalls.patch
-
-# KDE#339858 arm64 recognize dmb sy. Data Memory Barrier full SYstem variant.
-Patch7: valgrind-3.10.0-aarch64-dmb-sy.patch
-
-# KDE#339926 Implement frintx d_d and s_s.
-Patch8: valgrind-3.10.0-aarch64-frint.patch
-
-# KDE#339927 Implement fcvtmu x_d.
-Patch9: valgrind-3.10.0-fcvtmu.patch
-
-# KDE#340509 Implement FCVTAS W_S and FCVTAU W_S.
-# KDE#340632 arm64: unhandled instruction fcvtas
-Patch10: valgrind-3.10.0-aarch64-fcvta.patch
 
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -180,18 +154,12 @@ See the section on Debugging MPI Parallel Programs with Valgrind in the
 Valgrind User Manual for details.
 
 %prep
-%setup -q -n %{?scl:%{pkg_name}}%{!?scl:%{name}}-%{version}
+%setup -q -n %{?scl:%{pkg_name}}%{!?scl:%{name}}-%{version}.TEST1
 
 %patch1 -p1
 %patch2 -p1
 %patch3 -p1
 %patch4 -p1
-%patch5 -p1
-%patch6 -p1
-%patch7 -p1
-%patch8 -p1
-%patch9 -p1
-%patch10 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -340,6 +308,16 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Mon Nov 24 2014 Mark Wielaard <mjw@redhat.com> - 3.10.1-0.1.TEST1
+- Upgrade to valgrind 3.10.1.TEST1
+- Remove patches that are now upstream:
+  - valgrind-3.10.0-old-ppc32-instr-magic.patch
+  - valgrind-3.10.0-aarch64-syscalls.patch
+  - valgrind-3.10.0-aarch64-dmb-sy.patch
+  - valgrind-3.10.0-aarch64-frint.patch
+  - valgrind-3.10.0-fcvtmu.patch
+  - valgrind-3.10.0-aarch64-fcvta.patch
+
 * Wed Nov 19 2014 Mark Wielaard <mjw@redhat.com> - 3.10.0-6
 - Add getgroups/setgroups to valgrind-3.10.0-aarch64-syscalls.patch
 
