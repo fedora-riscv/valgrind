@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.10.1
-Release: 0.1.TEST1%{?dist}
+Release: 1%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -44,7 +44,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 %define _find_debuginfo_dwz_opts %{nil}
 %undefine _include_minidebuginfo
 
-Source0: http://www.valgrind.org/downloads/valgrind-%{version}.TEST1.tar.bz2
+Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
 
 # Needs investigation and pushing upstream
 Patch1: valgrind-3.9.0-cachegrind-improvements.patch
@@ -154,7 +154,7 @@ See the section on Debugging MPI Parallel Programs with Valgrind in the
 Valgrind User Manual for details.
 
 %prep
-%setup -q -n %{?scl:%{pkg_name}}%{!?scl:%{name}}-%{version}.TEST1
+%setup -q -n %{?scl:%{pkg_name}}%{!?scl:%{name}}-%{version}
 
 %patch1 -p1
 %patch2 -p1
@@ -308,6 +308,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Wed Nov 26 2014 Mark Wielaard <mjw@redhat.com> - 3.10.1-1
+- Upgrade to 3.10.1 final.
+
 * Mon Nov 24 2014 Mark Wielaard <mjw@redhat.com> - 3.10.1-0.1.TEST1
 - Upgrade to valgrind 3.10.1.TEST1
 - Remove patches that are now upstream:
