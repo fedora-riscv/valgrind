@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.10.1
-Release: 2%{?dist}
+Release: 3%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -60,6 +60,9 @@ Patch4: valgrind-3.9.0-ldso-supp.patch
 
 # KDE#342795 Internal glibc __GI_mempcpy call should be intercepted
 Patch5: valgrind-3.10.1-mempcpy.patch
+
+# KDE#343802 - s390x memcheck reports spurious conditional jump
+Patch6: valgrind-3.10-s390-spechelper.patch
 
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -164,6 +167,7 @@ Valgrind User Manual for details.
 %patch3 -p1
 %patch4 -p1
 %patch5 -p1
+%patch6 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -312,6 +316,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Thu Feb 05 2015 Mark Wielaard <mjw@redhat.com> - 3.10.1-3
+- Add valgrind-3.10-s390-spechelper.patch.
+
 * Tue Jan 13 2015 Mark Wielaard <mjw@redhat.com> - 3.10.1-2
 - Add valgrind-3.10.1-mempcpy.patch.
 
