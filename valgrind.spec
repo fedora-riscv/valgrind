@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.10.1
-Release: 3%{?dist}
+Release: 4%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -63,6 +63,11 @@ Patch5: valgrind-3.10.1-mempcpy.patch
 
 # KDE#343802 - s390x memcheck reports spurious conditional jump
 Patch6: valgrind-3.10-s390-spechelper.patch
+
+# KDE#342038, KDE#343732, KDE#343733
+# mbind, get_mempolicy, set_mempolicy, flock, setgid, msgget, msgctl,
+# msgrcv, msgsnd
+Patch7: valgrind-3.10.1-aarch64-syscalls.patch
 
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -168,6 +173,7 @@ Valgrind User Manual for details.
 %patch4 -p1
 %patch5 -p1
 %patch6 -p1
+%patch7 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -316,6 +322,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Sun Feb 08 2015 Mark Wielaard <mjw@redhat.com> - 3.10.1-4
+- Add valgrind-3.10.1-aarch64-syscalls.patch.
+
 * Thu Feb 05 2015 Mark Wielaard <mjw@redhat.com> - 3.10.1-3
 - Add valgrind-3.10-s390-spechelper.patch.
 
