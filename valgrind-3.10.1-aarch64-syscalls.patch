@@ -113,3 +113,37 @@ index ed66227..c23e6f7 100644
  //ZZ 
  //ZZ    LINX_(__NR_request_key,       sys_request_key),    // 287
  //ZZ //   LINX_(__NR_ioprio_set,        sys_ioprio_set),     // 289
+commit c79fe53e9e31d5c8e5d2ad3a0943b21e84129ccb
+Author: mjw <mjw@a5019735-40e9-0310-863c-91ae7b9d1cf9>
+Date:   Tue Feb 10 13:39:04 2015 +0000
+
+    Bug #344007 accept4 syscall unhandled on arm64 (242) and ppc64 (344)
+    
+    ppc64 might fall back to socketcall in some cases, but arm64 always uses
+    accept4 syscall directly. Some (confusing) background on when/how glibc
+    (wrongly) decides to use a direct accept4 or the socketcall system call:
+    https://sourceware.org/ml/libc-alpha/2013-12/msg00014.html
+    
+    git-svn-id: svn://svn.valgrind.org/valgrind/trunk@14926 a5019735-40e9-0310-863c-91ae7b9d1cf9
+
+diff --git a/coregrind/m_syswrap/syswrap-arm64-linux.c b/coregrind/m_syswrap/syswrap-arm64-linux.c
+index c23e6f7..1f9670a 100644
+--- a/coregrind/m_syswrap/syswrap-arm64-linux.c
++++ b/coregrind/m_syswrap/syswrap-arm64-linux.c
+@@ -1040,6 +1040,7 @@ static SyscallTableEntry syscall_main_table[] = {
+    LINX_(__NR_mbind,             sys_mbind),             // 235
+    LINXY(__NR_get_mempolicy,     sys_get_mempolicy),     // 236
+    LINX_(__NR_set_mempolicy,     sys_set_mempolicy),     // 237
++   LINXY(__NR_accept4,           sys_accept4),           // 242
+    GENXY(__NR_wait4,             sys_wait4),             // 260
+ 
+    LINXY(__NR_process_vm_readv,  sys_process_vm_readv),  // 270
+@@ -1379,8 +1380,6 @@ static SyscallTableEntry syscall_main_table[] = {
+ //ZZ    LINXY(__NR_rt_tgsigqueueinfo, sys_rt_tgsigqueueinfo),// 363
+ //ZZ    LINXY(__NR_perf_event_open,   sys_perf_event_open),  // 364
+ //ZZ 
+-//ZZ    LINXY(__NR_accept4,           sys_accept4),          // 366
+-//ZZ 
+ //ZZ    LINXY(__NR_name_to_handle_at, sys_name_to_handle_at),// 370
+ //ZZ    LINXY(__NR_open_by_handle_at, sys_open_by_handle_at),// 371
+ //ZZ    LINXY(__NR_clock_adjtime,     sys_clock_adjtime)     // 372

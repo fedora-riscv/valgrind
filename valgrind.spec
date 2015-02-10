@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.10.1
-Release: 4%{?dist}
+Release: 5%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -64,10 +64,13 @@ Patch5: valgrind-3.10.1-mempcpy.patch
 # KDE#343802 - s390x memcheck reports spurious conditional jump
 Patch6: valgrind-3.10-s390-spechelper.patch
 
-# KDE#342038, KDE#343732, KDE#343733
+# KDE#342038, KDE#343732, KDE#343733, KDE#344007
 # mbind, get_mempolicy, set_mempolicy, flock, setgid, msgget, msgctl,
-# msgrcv, msgsnd
+# msgrcv, msgsnd, accept4
 Patch7: valgrind-3.10.1-aarch64-syscalls.patch
+
+# KDE#344007 ppc64 missing accept4 syscall
+Patch8: valgrind-3.10.1-ppc64-accept4.patch
 
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -174,6 +177,7 @@ Valgrind User Manual for details.
 %patch5 -p1
 %patch6 -p1
 %patch7 -p1
+%patch8 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -322,6 +326,10 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Tue Feb 10 2015 Mark Wielaard <mjw@redhat.com> - 3.10.1-5
+- Add accept4 to valgrind-3.10.1-aarch64-syscalls.patch.
+- Add valgrind-3.10.1-ppc64-accept4.patch.
+
 * Sun Feb 08 2015 Mark Wielaard <mjw@redhat.com> - 3.10.1-4
 - Add valgrind-3.10.1-aarch64-syscalls.patch.
 
