@@ -147,3 +147,45 @@ index c23e6f7..1f9670a 100644
  //ZZ    LINXY(__NR_name_to_handle_at, sys_name_to_handle_at),// 370
  //ZZ    LINXY(__NR_open_by_handle_at, sys_open_by_handle_at),// 371
  //ZZ    LINXY(__NR_clock_adjtime,     sys_clock_adjtime)     // 372
+commit 52e770f94992d381dc1dbe104770ebc8cb9937c4
+Author: mjw <mjw@a5019735-40e9-0310-863c-91ae7b9d1cf9>
+Date:   Wed Feb 18 14:23:17 2015 +0000
+
+    Bug #344307 2 unhandled syscalls on aarch64/arm64: umount2(39), mount (40)
+    
+    Reporter: Branislav Blaskovic, bblaskov@redhat.com
+    Patch: Robin Hack, rhack@redhat.com
+    Test: Miloš Prchlík, mprchlik@redhat.com
+    
+    git-svn-id: svn://svn.valgrind.org/valgrind/trunk@14944 a5019735-40e9-0310-863c-91ae7b9d1cf9
+
+diff --git a/coregrind/m_syswrap/syswrap-arm64-linux.c b/coregrind/m_syswrap/syswrap-arm64-linux.c
+index 7b7e824..fc6ca08 100644
+--- a/coregrind/m_syswrap/syswrap-arm64-linux.c
++++ b/coregrind/m_syswrap/syswrap-arm64-linux.c
+@@ -887,6 +887,9 @@ static SyscallTableEntry syscall_main_table[] = {
+    LINX_(__NR_linkat,            sys_linkat),            // 37
+    LINX_(__NR_renameat,		 sys_renameat),          // 38
+ 
++   LINX_(__NR_umount2,            sys_umount),           // 39
++   LINX_(__NR_mount,              sys_mount),            // 40
++
+    // FIXME IS THIS CORRECT?  it may well not be.
+    GENXY(__NR3264_statfs,        sys_statfs),            // 43
+    GENXY(__NR3264_fstatfs,       sys_fstatfs),           // 44
+@@ -1075,7 +1078,6 @@ static SyscallTableEntry syscall_main_table[] = {
+ //ZZ    LINX_(__NR_lseek,             sys_lseek),          // 19
+ //ZZ 
+ //ZZ    GENX_(__NR_getpid,            sys_getpid),         // 20
+-//ZZ    LINX_(__NR_mount,             sys_mount),          // 21
+ //ZZ    LINX_(__NR_umount,            sys_oldumount),      // 22
+ //ZZ    LINX_(__NR_setuid,            sys_setuid16),       // 23 ## P
+ //ZZ    LINX_(__NR_getuid,            sys_getuid16),       // 24 ## P
+@@ -1107,7 +1109,6 @@ static SyscallTableEntry syscall_main_table[] = {
+ //ZZ 
+ //ZZ    LINX_(__NR_getegid,           sys_getegid16),      // 50
+ //ZZ    GENX_(__NR_acct,              sys_acct),           // 51
+-//ZZ    LINX_(__NR_umount2,           sys_umount),         // 52
+ //ZZ //   GENX_(__NR_lock,              sys_ni_syscall),     // 53
+ //ZZ 
+ //ZZ    LINXY(__NR_fcntl,             sys_fcntl),          // 55
