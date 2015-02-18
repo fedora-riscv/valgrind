@@ -77,6 +77,9 @@ Patch8: valgrind-3.10.1-ppc64-accept4.patch
 # KDE#344318 - socketcall should wrap recvmmsg and sendmmsg
 Patch9: valgrind-3.10.1-send-recv-mmsg.patch
 
+# Upstream valgrind svn r14530
+Patch10: valgrind-3.10.1-glibc-version-check.patch
+
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -184,6 +187,7 @@ Valgrind User Manual for details.
 %patch7 -p1
 %patch8 -p1
 %patch9 -p1
+%patch10 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -335,6 +339,7 @@ echo ===============END TESTING===============
 * Wed Feb 18 2015 Mark Wielaard <mjw@redhat.com> - 3.10.1-6
 - Add valgrind-3.10.1-send-recv-mmsg.patch
 - Add mount and umount2 to valgrind-3.10.1-aarch64-syscalls.patch.
+- Add valgrind-3.10.1-glibc-version-check.patch
 
 * Tue Feb 10 2015 Mark Wielaard <mjw@redhat.com> - 3.10.1-5
 - Add accept4 to valgrind-3.10.1-aarch64-syscalls.patch.
