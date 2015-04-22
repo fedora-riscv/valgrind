@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.10.1
-Release: 6%{?dist}
+Release: 7%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -79,6 +79,9 @@ Patch9: valgrind-3.10.1-send-recv-mmsg.patch
 
 # Upstream valgrind svn r14530
 Patch10: valgrind-3.10.1-glibc-version-check.patch
+
+# Upstream valgrind svn r15133
+Patch11: valgrind-3.10-1-ppc64-sigpending.patch
 
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -188,6 +191,7 @@ Valgrind User Manual for details.
 %patch8 -p1
 %patch9 -p1
 %patch10 -p1
+%patch11 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -336,6 +340,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Wed Apr 22 2015 Mark Wielaard <mjw@redhat.com> - 3.10.1-7
+- Add valgrind-3.10-1-ppc64-sigpending.patch
+
 * Wed Feb 18 2015 Mark Wielaard <mjw@redhat.com> - 3.10.1-6
 - Add valgrind-3.10.1-send-recv-mmsg.patch
 - Add mount and umount2 to valgrind-3.10.1-aarch64-syscalls.patch.
