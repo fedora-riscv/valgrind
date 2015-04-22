@@ -221,7 +221,8 @@ CC="gcc -B `pwd`/shared/libgcc/"
 # compiled with -O2 unless explicitely requested. Same for any -mcpu flag.
 # Ideally we will change this to only be done for the non-primary build
 # and the test suite.
-OPTFLAGS="`echo " %{optflags} " | sed 's/ -m\(64\|3[21]\) / /g;s/ -fexceptions / /g;s/ -fstack-protector / / g;s/ -Wp,-D_FORTIFY_SOURCE=2 / /g;s/ -O2 / /g;s/ -mcpu=\([a-z0-9]\+\) / /g;s/^ //;s/ $//'`"
+%undefine _hardened_build
+OPTFLAGS="`echo " %{optflags} " | sed 's/ -m\(64\|3[21]\) / /g;s/ -fexceptions / /g;s/ -fstack-protector\([-a-z]*\) / / g;s/ -Wp,-D_FORTIFY_SOURCE=2 / /g;s/ -O2 / /g;s/ -mcpu=\([a-z0-9]\+\) / /g;s/^ //;s/ $//'`"
 %configure CC="$CC" CFLAGS="$OPTFLAGS" CXXFLAGS="$OPTFLAGS" \
 %if %{build_openmpi}
   --with-mpicc=%{mpiccpath} \
@@ -342,6 +343,7 @@ echo ===============END TESTING===============
 %changelog
 * Wed Apr 22 2015 Mark Wielaard <mjw@redhat.com> - 3.10.1-7
 - Add valgrind-3.10-1-ppc64-sigpending.patch
+- Filter out -fstack-protector-strong and disable _hardened_build.
 
 * Wed Feb 18 2015 Mark Wielaard <mjw@redhat.com> - 3.10.1-6
 - Add valgrind-3.10.1-send-recv-mmsg.patch
