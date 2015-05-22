@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.10.1
-Release: 7%{?dist}
+Release: 8%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -292,7 +292,13 @@ done
 make %{?_smp_mflags} CFLAGS="" check || :
 
 echo ===============TESTING===================
+# On arm the gdb integration tests hang for unknown reasons.
+# Only run the main tools tests.
+%ifarch %{arm}
+./close_fds make nonexp-regtest || :
+%else
 ./close_fds make regtest || :
+%endif
 
 # Make sure test failures show up in build.log
 # Gather up the diffs (at most the first 20 lines for each one)
@@ -341,6 +347,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Fri May 22 2015 Mark Wielaard <mjw@redhat.com> - 3.10.1-8
+- Disable extended regtest on arm. The gdb tests hang for unknown reasons.
+
 * Wed Apr 22 2015 Mark Wielaard <mjw@redhat.com> - 3.10.1-7
 - Add valgrind-3.10-1-ppc64-sigpending.patch
 - Filter out -fstack-protector-strong and disable _hardened_build.
