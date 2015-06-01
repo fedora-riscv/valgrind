@@ -349,6 +349,8 @@ echo ===============END TESTING===============
 %changelog
 * Fri May 22 2015 Mark Wielaard <mjw@redhat.com> - 3.10.1-8
 - Disable extended regtest on arm. The gdb tests hang for unknown reasons.
+  The reason is a glibc bug #1196181 which causes:
+  "GDB fails with Cannot parse expression `.L1055 4@r4'."
 
 * Wed Apr 22 2015 Mark Wielaard <mjw@redhat.com> - 3.10.1-7
 - Add valgrind-3.10-1-ppc64-sigpending.patch
