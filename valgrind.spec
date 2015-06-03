@@ -86,8 +86,11 @@ Patch11: valgrind-3.10-1-ppc64-sigpending.patch
 # KDE#343012 - Unhandled syscall 319 (memfd_create)
 Patch12: valgrind-3.10.1-memfd_create.patch
 
-# 347389 - Add support for the syncfs system call.
+# KDE#347389 - Add support for the syncfs system call.
 Patch13: valgrind-3.10.1-syncfs.patch
+
+# Upstream valgrind svn r15304
+Patch14: valgrind-3.10.1-arm-process_vm_readv_writev.patch
 
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -200,6 +203,7 @@ Valgrind User Manual for details.
 %patch11 -p1
 %patch12 -p1
 %patch13 -p1
+%patch14 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -358,6 +362,7 @@ echo ===============END TESTING===============
 * Wed Jun 03 2015 Mark Wielaard <mjw@redhat.com>
 - Add valgrind-3.10.1-memfd_create.patch.
 - Add valgrind-3.10.1-syncfs.patch.
+- Add valgrind-3.10.1-arm-process_vm_readv_writev.patch.
 
 * Fri May 22 2015 Mark Wielaard <mjw@redhat.com> - 3.10.1-8
 - Disable extended regtest on arm. The gdb tests hang for unknown reasons.
