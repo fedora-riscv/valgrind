@@ -95,6 +95,9 @@ Patch14: valgrind-3.10.1-arm-process_vm_readv_writev.patch
 # Upstream valgrind svn r15305
 Patch15: valgrind-3.10.1-fno-ipa-icf.patch
 
+# Upstream valgrind svn r14780 and r15308
+Patch16: valgrind-3.10.1-demangle-q.patch
+
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -208,6 +211,7 @@ Valgrind User Manual for details.
 %patch13 -p1
 %patch14 -p1
 %patch15 -p1
+%patch16 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -368,6 +372,7 @@ echo ===============END TESTING===============
 - Add valgrind-3.10.1-syncfs.patch.
 - Add valgrind-3.10.1-arm-process_vm_readv_writev.patch.
 - Add valgrind-3.10.1-fno-ipa-icf.patch.
+- Add valgrind-3.10.1-demangle-q.patch
 
 * Fri May 22 2015 Mark Wielaard <mjw@redhat.com> - 3.10.1-8
 - Disable extended regtest on arm. The gdb tests hang for unknown reasons.
