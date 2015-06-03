@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.10.1
-Release: 8%{?dist}
+Release: 9%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -367,7 +367,7 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
-* Wed Jun 03 2015 Mark Wielaard <mjw@redhat.com>
+* Wed Jun 03 2015 Mark Wielaard <mjw@redhat.com> - 3.10.1-9
 - Add valgrind-3.10.1-memfd_create.patch.
 - Add valgrind-3.10.1-syncfs.patch.
 - Add valgrind-3.10.1-arm-process_vm_readv_writev.patch.
