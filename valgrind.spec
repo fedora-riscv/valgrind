@@ -104,6 +104,9 @@ Patch17: valgrind-3.10.1-cfi-redzone.patch
 # KDE#344499 Fix compilation for Linux kernel >= 4.
 Patch18: valgrind-3.10.1-kernel-4.0.patch
 
+# KDE#349941 VG_(di_notify_mmap) might create DebugInfoMapping with wrong segment start/size
+Patch19: valgrind-3.10.1-di_notify_mmap.patch
+
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -220,6 +223,7 @@ Valgrind User Manual for details.
 %patch16 -p1
 %patch17 -p1
 %patch18 -p1
+%patch19 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -375,6 +379,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Mon Jul 06 2015 Mark Wielaard <mjw@redhat.com>
+- Add valgrind-3.10.1-di_notify_mmap.patch
+
 * Fri Jun 19 2015 Mark Wielaard <mjw@redhat.com> - 3.10.1-12
 - Add valgrind-3.10.1-kernel-4.0.patch.
 
