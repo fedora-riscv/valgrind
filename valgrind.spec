@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.10.1
-Release: 12%{?dist}
+Release: 13%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -104,8 +104,11 @@ Patch17: valgrind-3.10.1-cfi-redzone.patch
 # KDE#344499 Fix compilation for Linux kernel >= 4.
 Patch18: valgrind-3.10.1-kernel-4.0.patch
 
-# KDE#349941 VG_(di_notify_mmap) might create DebugInfoMapping with wrong segment start/size
+# KDE#349941 di_notify_mmap might create wrong start/size DebugInfoMapping
 Patch19: valgrind-3.10.1-di_notify_mmap.patch
+
+# KDE#349828 memcpy intercepts memmove causing src/dst overlap error
+Patch20: valgrind-3.10.1-memmove-ld_so-ppc64.patch
 
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -224,6 +227,7 @@ Valgrind User Manual for details.
 %patch17 -p1
 %patch18 -p1
 %patch19 -p1
+%patch20 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -379,8 +383,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
-* Mon Jul 06 2015 Mark Wielaard <mjw@redhat.com>
+* Tue Jul 07 2015 Mark Wielaard <mjw@redhat.com> - 3.10.1-13
 - Add valgrind-3.10.1-di_notify_mmap.patch
+- Add valgrind-3.10.1-memmove-ld_so-ppc64.patch
 
 * Fri Jun 19 2015 Mark Wielaard <mjw@redhat.com> - 3.10.1-12
 - Add valgrind-3.10.1-kernel-4.0.patch.
