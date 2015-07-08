@@ -1,4 +1,4 @@
-Subject: [PATCH] s390x: Fix unrecognized instruction fiebra
+Subject: [PATCH v2] s390x: Fix unrecognized instruction fiebra
 
 Add support for the z/Architecture instructions FIEBRA and FIDBRA.
 Also add a suitable test case.
@@ -10,24 +10,24 @@ GCC may emit FIEBRA since the following GCC patch:
 
 Index: valgrind/none/tests/s390x/rounding-6.c
 ===================================================================
---- valgrind.orig/none/tests/s390x/rounding-6.c	2015-07-08 10:53:04.000000000 +0200
-+++ valgrind/none/tests/s390x/rounding-6.c	2015-07-08 12:53:31.000000000 +0200
+--- valgrind.orig/none/tests/s390x/rounding-6.c
++++ valgrind/none/tests/s390x/rounding-6.c
 @@ -44,6 +44,20 @@ do { \
            opcode, src, dst, cc, rtext(round));        \
  } while (0)
  
-+#define round_to_int(mnem,opcode,type,round,value)	\
-+do { \
-+   type src = value;     \
-+   type dst;             \
-+                         \
-+   __asm__ volatile (".insn rrf,0x" opcode "0000, %[dst],%[src]," #round ",4\n\t" \
-+                     : [dst] "=f"(dst)                                  \
-+                     : [src] "f"(src)                                   \
-+                     : );                                               \
-+                                                                        \
-+   printf("%s %.5f\t-> %g  %s\n",					\
-+          mnem, src, dst, rtext(round));				\
++#define round_to_int(opcode,type,round,value)                   \
++do {                                                            \
++   type src = value;                                            \
++   type dst;                                                    \
++                                                                \
++   __asm__ volatile (opcode " %[dst]," #round ",%[src]\n\t"     \
++                     : [dst] "=f"(dst)                          \
++                     : [src] "f"(src)                           \
++                     : );                                       \
++                                                                \
++   printf("%s %.5f\t-> %g  %s\n",                               \
++          opcode, src, dst, rtext(round));                      \
 +} while (0)
 +
  
@@ -37,10 +37,10 @@ Index: valgrind/none/tests/s390x/rounding-6.c
  #define cgdbr(value, round) \
          convert_to_int("cgdbr",double,int64_t,PRId64,round,value)
  
-+#define fiebra(value, round) \
-+        round_to_int("fiebra","b357",float,round,value)
-+#define fidbra(value, round) \
-+        round_to_int("fidbra","b35f",double,round,value)
++#define fiebr(value, round) \
++        round_to_int("fiebr",float,round,value)
++#define fidbr(value, round) \
++        round_to_int("fidbr",double,round,value)
 +
  void
  set_rounding_mode(unsigned mode)
@@ -52,120 +52,116 @@ Index: valgrind/none/tests/s390x/rounding-6.c
 +   /* f32 -> f32, round to int */
 +   for (j = 0; j < sizeof dval / sizeof dval[0]; ++j) {
 +      set_rounding_mode(FPC_BFP_ROUND_ZERO);
-+      fiebra(dval[j], M3_BFP_ROUND_NEAREST_EVEN);
++      fiebr(dval[j], M3_BFP_ROUND_NEAREST_EVEN);
 +      set_rounding_mode(FPC_BFP_ROUND_NEAREST_EVEN);
-+      fiebra(dval[j], M3_BFP_ROUND_ZERO);
-+      fiebra(dval[j], M3_BFP_ROUND_POSINF);
-+      fiebra(dval[j], M3_BFP_ROUND_NEGINF);
++      fiebr(dval[j], M3_BFP_ROUND_ZERO);
++      fiebr(dval[j], M3_BFP_ROUND_POSINF);
++      fiebr(dval[j], M3_BFP_ROUND_NEGINF);
 +   }
 +
 +   /* f64 -> f64, round to int */
 +   for (j = 0; j < sizeof dval / sizeof dval[0]; ++j) {
 +      set_rounding_mode(FPC_BFP_ROUND_ZERO);
-+      fidbra(dval[j], M3_BFP_ROUND_NEAREST_EVEN);
++      fidbr(dval[j], M3_BFP_ROUND_NEAREST_EVEN);
 +      set_rounding_mode(FPC_BFP_ROUND_NEAREST_EVEN);
-+      fidbra(dval[j], M3_BFP_ROUND_ZERO);
-+      fidbra(dval[j], M3_BFP_ROUND_POSINF);
-+      fidbra(dval[j], M3_BFP_ROUND_NEGINF);
++      fidbr(dval[j], M3_BFP_ROUND_ZERO);
++      fidbr(dval[j], M3_BFP_ROUND_POSINF);
++      fidbr(dval[j], M3_BFP_ROUND_NEGINF);
 +   }
 +
     return 0;
  }
 Index: valgrind/none/tests/s390x/rounding-6.stdout.exp
 ===================================================================
---- valgrind.orig/none/tests/s390x/rounding-6.stdout.exp	2015-07-08 10:53:04.000000000 +0200
-+++ valgrind/none/tests/s390x/rounding-6.stdout.exp	2015-07-08 12:53:31.000000000 +0200
+--- valgrind.orig/none/tests/s390x/rounding-6.stdout.exp
++++ valgrind/none/tests/s390x/rounding-6.stdout.exp
 @@ -142,3 +142,75 @@ cgdbr 0.000000	-> 0	cc = 0  [-> nearest
  cgdbr 0.000000	-> 0	cc = 0  [-> 0]
  cgdbr 0.000000	-> 0	cc = 0  [-> +inf]
  cgdbr 0.000000	-> 0	cc = 0  [-> -inf]
-+fiebra 1.25000	-> 1  [-> nearest even]
-+fiebra 1.25000	-> 1  [-> 0]
-+fiebra 1.25000	-> 2  [-> +inf]
-+fiebra 1.25000	-> 1  [-> -inf]
-+fiebra 1.50000	-> 2  [-> nearest even]
-+fiebra 1.50000	-> 1  [-> 0]
-+fiebra 1.50000	-> 2  [-> +inf]
-+fiebra 1.50000	-> 1  [-> -inf]
-+fiebra 2.50000	-> 2  [-> nearest even]
-+fiebra 2.50000	-> 2  [-> 0]
-+fiebra 2.50000	-> 3  [-> +inf]
-+fiebra 2.50000	-> 2  [-> -inf]
-+fiebra 1.75000	-> 2  [-> nearest even]
-+fiebra 1.75000	-> 1  [-> 0]
-+fiebra 1.75000	-> 2  [-> +inf]
-+fiebra 1.75000	-> 1  [-> -inf]
-+fiebra -1.25000	-> -1  [-> nearest even]
-+fiebra -1.25000	-> -1  [-> 0]
-+fiebra -1.25000	-> -1  [-> +inf]
-+fiebra -1.25000	-> -2  [-> -inf]
-+fiebra -1.50000	-> -2  [-> nearest even]
-+fiebra -1.50000	-> -1  [-> 0]
-+fiebra -1.50000	-> -1  [-> +inf]
-+fiebra -1.50000	-> -2  [-> -inf]
-+fiebra -2.50000	-> -2  [-> nearest even]
-+fiebra -2.50000	-> -2  [-> 0]
-+fiebra -2.50000	-> -2  [-> +inf]
-+fiebra -2.50000	-> -3  [-> -inf]
-+fiebra -1.75000	-> -2  [-> nearest even]
-+fiebra -1.75000	-> -1  [-> 0]
-+fiebra -1.75000	-> -1  [-> +inf]
-+fiebra -1.75000	-> -2  [-> -inf]
-+fiebra 0.00000	-> 0  [-> nearest even]
-+fiebra 0.00000	-> 0  [-> 0]
-+fiebra 0.00000	-> 0  [-> +inf]
-+fiebra 0.00000	-> 0  [-> -inf]
-+fidbra 1.25000	-> 1  [-> nearest even]
-+fidbra 1.25000	-> 1  [-> 0]
-+fidbra 1.25000	-> 2  [-> +inf]
-+fidbra 1.25000	-> 1  [-> -inf]
-+fidbra 1.50000	-> 2  [-> nearest even]
-+fidbra 1.50000	-> 1  [-> 0]
-+fidbra 1.50000	-> 2  [-> +inf]
-+fidbra 1.50000	-> 1  [-> -inf]
-+fidbra 2.50000	-> 2  [-> nearest even]
-+fidbra 2.50000	-> 2  [-> 0]
-+fidbra 2.50000	-> 3  [-> +inf]
-+fidbra 2.50000	-> 2  [-> -inf]
-+fidbra 1.75000	-> 2  [-> nearest even]
-+fidbra 1.75000	-> 1  [-> 0]
-+fidbra 1.75000	-> 2  [-> +inf]
-+fidbra 1.75000	-> 1  [-> -inf]
-+fidbra -1.25000	-> -1  [-> nearest even]
-+fidbra -1.25000	-> -1  [-> 0]
-+fidbra -1.25000	-> -1  [-> +inf]
-+fidbra -1.25000	-> -2  [-> -inf]
-+fidbra -1.50000	-> -2  [-> nearest even]
-+fidbra -1.50000	-> -1  [-> 0]
-+fidbra -1.50000	-> -1  [-> +inf]
-+fidbra -1.50000	-> -2  [-> -inf]
-+fidbra -2.50000	-> -2  [-> nearest even]
-+fidbra -2.50000	-> -2  [-> 0]
-+fidbra -2.50000	-> -2  [-> +inf]
-+fidbra -2.50000	-> -3  [-> -inf]
-+fidbra -1.75000	-> -2  [-> nearest even]
-+fidbra -1.75000	-> -1  [-> 0]
-+fidbra -1.75000	-> -1  [-> +inf]
-+fidbra -1.75000	-> -2  [-> -inf]
-+fidbra 0.00000	-> 0  [-> nearest even]
-+fidbra 0.00000	-> 0  [-> 0]
-+fidbra 0.00000	-> 0  [-> +inf]
-+fidbra 0.00000	-> 0  [-> -inf]
++fiebr 1.25000	-> 1  [-> nearest even]
++fiebr 1.25000	-> 1  [-> 0]
++fiebr 1.25000	-> 2  [-> +inf]
++fiebr 1.25000	-> 1  [-> -inf]
++fiebr 1.50000	-> 2  [-> nearest even]
++fiebr 1.50000	-> 1  [-> 0]
++fiebr 1.50000	-> 2  [-> +inf]
++fiebr 1.50000	-> 1  [-> -inf]
++fiebr 2.50000	-> 2  [-> nearest even]
++fiebr 2.50000	-> 2  [-> 0]
++fiebr 2.50000	-> 3  [-> +inf]
++fiebr 2.50000	-> 2  [-> -inf]
++fiebr 1.75000	-> 2  [-> nearest even]
++fiebr 1.75000	-> 1  [-> 0]
++fiebr 1.75000	-> 2  [-> +inf]
++fiebr 1.75000	-> 1  [-> -inf]
++fiebr -1.25000	-> -1  [-> nearest even]
++fiebr -1.25000	-> -1  [-> 0]
++fiebr -1.25000	-> -1  [-> +inf]
++fiebr -1.25000	-> -2  [-> -inf]
++fiebr -1.50000	-> -2  [-> nearest even]
++fiebr -1.50000	-> -1  [-> 0]
++fiebr -1.50000	-> -1  [-> +inf]
++fiebr -1.50000	-> -2  [-> -inf]
++fiebr -2.50000	-> -2  [-> nearest even]
++fiebr -2.50000	-> -2  [-> 0]
++fiebr -2.50000	-> -2  [-> +inf]
++fiebr -2.50000	-> -3  [-> -inf]
++fiebr -1.75000	-> -2  [-> nearest even]
++fiebr -1.75000	-> -1  [-> 0]
++fiebr -1.75000	-> -1  [-> +inf]
++fiebr -1.75000	-> -2  [-> -inf]
++fiebr 0.00000	-> 0  [-> nearest even]
++fiebr 0.00000	-> 0  [-> 0]
++fiebr 0.00000	-> 0  [-> +inf]
++fiebr 0.00000	-> 0  [-> -inf]
++fidbr 1.25000	-> 1  [-> nearest even]
++fidbr 1.25000	-> 1  [-> 0]
++fidbr 1.25000	-> 2  [-> +inf]
++fidbr 1.25000	-> 1  [-> -inf]
++fidbr 1.50000	-> 2  [-> nearest even]
++fidbr 1.50000	-> 1  [-> 0]
++fidbr 1.50000	-> 2  [-> +inf]
++fidbr 1.50000	-> 1  [-> -inf]
++fidbr 2.50000	-> 2  [-> nearest even]
++fidbr 2.50000	-> 2  [-> 0]
++fidbr 2.50000	-> 3  [-> +inf]
++fidbr 2.50000	-> 2  [-> -inf]
++fidbr 1.75000	-> 2  [-> nearest even]
++fidbr 1.75000	-> 1  [-> 0]
++fidbr 1.75000	-> 2  [-> +inf]
++fidbr 1.75000	-> 1  [-> -inf]
++fidbr -1.25000	-> -1  [-> nearest even]
++fidbr -1.25000	-> -1  [-> 0]
++fidbr -1.25000	-> -1  [-> +inf]
++fidbr -1.25000	-> -2  [-> -inf]
++fidbr -1.50000	-> -2  [-> nearest even]
++fidbr -1.50000	-> -1  [-> 0]
++fidbr -1.50000	-> -1  [-> +inf]
++fidbr -1.50000	-> -2  [-> -inf]
++fidbr -2.50000	-> -2  [-> nearest even]
++fidbr -2.50000	-> -2  [-> 0]
++fidbr -2.50000	-> -2  [-> +inf]
++fidbr -2.50000	-> -3  [-> -inf]
++fidbr -1.75000	-> -2  [-> nearest even]
++fidbr -1.75000	-> -1  [-> 0]
++fidbr -1.75000	-> -1  [-> +inf]
++fidbr -1.75000	-> -2  [-> -inf]
++fidbr 0.00000	-> 0  [-> nearest even]
++fidbr 0.00000	-> 0  [-> 0]
++fidbr 0.00000	-> 0  [-> +inf]
++fidbr 0.00000	-> 0  [-> -inf]
 Index: valgrind/VEX/priv/guest_s390_toIR.c
 ===================================================================
---- valgrind.orig/VEX/priv/guest_s390_toIR.c	2015-07-08 10:53:23.000000000 +0200
-+++ valgrind/VEX/priv/guest_s390_toIR.c	2015-07-08 12:53:31.000000000 +0200
-@@ -12384,6 +12384,40 @@ s390_irgen_LXEB(UChar r1, IRTemp op2addr
+--- valgrind.orig/VEX/priv/guest_s390_toIR.c
++++ valgrind/VEX/priv/guest_s390_toIR.c
+@@ -12384,6 +12384,32 @@ s390_irgen_LXEB(UChar r1, IRTemp op2addr
  }
  
  static const HChar *
 +s390_irgen_FIEBRA(UChar m3, UChar m4 __attribute__((unused)),
 +		  UChar r1, UChar r2)
 +{
-+   if (! s390_host_has_fpext && m3 != S390_BFP_ROUND_PER_FPC) {
-+      emulation_warning(EmWarn_S390X_fpext_rounding);
-+      m3 = S390_BFP_ROUND_PER_FPC;
-+   }
 +   IRTemp result = newTemp(Ity_F32);
 +
 +   assign(result, binop(Iop_RoundF32toInt, mkexpr(encode_bfp_rounding_mode(m3)),
@@ -179,10 +175,6 @@ Index: valgrind/VEX/priv/guest_s390_toIR.c
 +s390_irgen_FIDBRA(UChar m3, UChar m4 __attribute__((unused)),
 +		  UChar r1, UChar r2)
 +{
-+   if (! s390_host_has_fpext && m3 != S390_BFP_ROUND_PER_FPC) {
-+      emulation_warning(EmWarn_S390X_fpext_rounding);
-+      m3 = S390_BFP_ROUND_PER_FPC;
-+   }
 +   IRTemp result = newTemp(Ity_F64);
 +
 +   assign(result, binop(Iop_RoundF64toInt, mkexpr(encode_bfp_rounding_mode(m3)),
@@ -196,7 +188,7 @@ Index: valgrind/VEX/priv/guest_s390_toIR.c
  s390_irgen_LNEBR(UChar r1, UChar r2)
  {
     IRTemp result = newTemp(Ity_F32);
-@@ -14520,11 +14554,15 @@ s390_decode_4byte_and_irgen(const UChar
+@@ -14520,11 +14546,15 @@ s390_decode_4byte_and_irgen(const UChar
     case 0xb350: /* TBEDR */ goto unimplemented;
     case 0xb351: /* TBDR */ goto unimplemented;
     case 0xb353: /* DIEBR */ goto unimplemented;
@@ -216,8 +208,8 @@ Index: valgrind/VEX/priv/guest_s390_toIR.c
     case 0xb362: /* LTXR */ goto unimplemented;
 Index: valgrind/VEX/priv/host_s390_defs.c
 ===================================================================
---- valgrind.orig/VEX/priv/host_s390_defs.c	2015-07-08 10:53:23.000000000 +0200
-+++ valgrind/VEX/priv/host_s390_defs.c	2015-07-08 12:53:31.000000000 +0200
+--- valgrind.orig/VEX/priv/host_s390_defs.c
++++ valgrind/VEX/priv/host_s390_defs.c
 @@ -3939,6 +3939,40 @@ s390_emit_LEXBRA(UChar *p, UChar m3, UCh
  
  
@@ -228,7 +220,7 @@ Index: valgrind/VEX/priv/host_s390_defs.c
 +
 +   if (UNLIKELY(vex_traceflags & VEX_TRACE_ASM)) {
 +      if (m4 == 0)
-+         s390_disasm(ENC3(MNM, FPR, FPR), "fiebr", r1, r2);
++         s390_disasm(ENC4(MNM, FPR, UINT, FPR), "fiebr", r1, m3, r2);
 +      else
 +         s390_disasm(ENC5(MNM, FPR, UINT, FPR, UINT),
 +                     "fiebra", r1, m3, r2, m4);
@@ -245,7 +237,7 @@ Index: valgrind/VEX/priv/host_s390_defs.c
 +
 +   if (UNLIKELY(vex_traceflags & VEX_TRACE_ASM)) {
 +      if (m4 == 0)
-+         s390_disasm(ENC3(MNM, FPR, FPR), "fidbr", r1, r2);
++         s390_disasm(ENC4(MNM, FPR, UINT, FPR), "fidbr", r1, m3, r2);
 +      else
 +         s390_disasm(ENC5(MNM, FPR, UINT, FPR, UINT),
 +                     "fidbra", r1, m3, r2, m4);
@@ -281,8 +273,8 @@ Index: valgrind/VEX/priv/host_s390_defs.c
  
 Index: valgrind/VEX/priv/host_s390_defs.h
 ===================================================================
---- valgrind.orig/VEX/priv/host_s390_defs.h	2015-07-08 10:53:23.000000000 +0200
-+++ valgrind/VEX/priv/host_s390_defs.h	2015-07-08 12:53:31.000000000 +0200
+--- valgrind.orig/VEX/priv/host_s390_defs.h
++++ valgrind/VEX/priv/host_s390_defs.h
 @@ -242,7 +242,9 @@ typedef enum {
     S390_BFP_F128_TO_U32,
     S390_BFP_F128_TO_U64,
@@ -296,8 +288,8 @@ Index: valgrind/VEX/priv/host_s390_defs.h
  /* Type conversion operations: to and/or from decimal floating point */
 Index: valgrind/VEX/priv/host_s390_isel.c
 ===================================================================
---- valgrind.orig/VEX/priv/host_s390_isel.c	2015-07-08 10:53:23.000000000 +0200
-+++ valgrind/VEX/priv/host_s390_isel.c	2015-07-08 12:53:31.000000000 +0200
+--- valgrind.orig/VEX/priv/host_s390_isel.c
++++ valgrind/VEX/priv/host_s390_isel.c
 @@ -2378,6 +2378,8 @@ s390_isel_float_expr_wrk(ISelEnv *env, I
           return dst;
  

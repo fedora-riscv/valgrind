@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.10.1
-Release: 14%{?dist}
+Release: 15%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -387,6 +387,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Wed Jul 08 2015 Mark Wielaard <mjw@redhat.com> - 3.10.1-15
+- Update valgrind-3.10.1-s390x-fiebra.patch
+
 * Wed Jul 08 2015 Mark Wielaard <mjw@redhat.com> - 3.10.1-14
 - Add valgrind-3.10.1-s390x-fiebra.patch
 
