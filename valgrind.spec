@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.10.1
-Release: 17%{?dist}
+Release: 18%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -391,6 +391,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Mon Aug 10 2015 Sandro Mani <manisandro@gmail.com> - 1:3.10.1-18
+- Rebuild for RPM MPI Requires Provides Change
+
 * Mon Aug 10 2015 Mark Wielaard <mjw@redhat.com> - 3.10.1-17
 - Add setuid and setresgid to valgrind-3.10.1-aarch64-syscalls.patch.
 
