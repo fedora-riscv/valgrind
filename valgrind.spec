@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.10.1
-Release: 15%{?dist}
+Release: 16%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -112,6 +112,9 @@ Patch20: valgrind-3.10.1-memmove-ld_so-ppc64.patch
 
 # KDE#342841 s390x unrecognized instruction fiebra
 Patch21: valgrind-3.10.1-s390x-fiebra.patch
+
+# KDE#345695 Add POWERPC support for AT_DCACHESIZE and HWCAP2
+Patch22: valgrind-3.10.1-ppc64-hwcap2.patch
 
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -232,6 +235,7 @@ Valgrind User Manual for details.
 %patch19 -p1
 %patch20 -p1
 %patch21 -p1
+%patch22 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -387,6 +391,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Mon Aug 03 2015 Mark Wielaard <mjw@redhat.com> - 3.10.1-16
+- Add valgrind-3.10.1-ppc64-hwcap2.patch
+
 * Wed Jul 08 2015 Mark Wielaard <mjw@redhat.com> - 3.10.1-15
 - Update valgrind-3.10.1-s390x-fiebra.patch
 

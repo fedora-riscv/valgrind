@@ -1,0 +1,246 @@
+commit a7907a271cd158db319edc516299353213acb958
+Author: carll <carll@a5019735-40e9-0310-863c-91ae7b9d1cf9>
+Date:   Thu Apr 9 16:23:20 2015 +0000
+
+    ADD AT_DCACHEBSIZE and AT_HWCAP2 support for POWER PC
+    
+    Valgrind currently does not support the following AUX vector entries:
+    AT_DCACHEBSIZE, and AT_HWCAP2. By default these entries are suppressed by
+    Valgrind. The attached patch adds the needed support so the user level programs
+    can correctly determine that hardware level they are running on. Specifically
+    that the ISA 2.07 for Power 8 is supported.
+    
+    Bugzilla 345695
+    
+    This fix adds the needed support.  It makes a minor change to allow the
+    VEX settings of the host platform to be passed down so they can be checked
+    against the HWCAP values.
+    
+    The files touched are:
+      coregrind/m_initimg/initimg-linux.c
+      coregrind/pub_core_initimg.h
+      coregrind/m_main.c
+    
+    committed by Carl Love cel@us.ibm.com
+    
+    
+    git-svn-id: svn://svn.valgrind.org/valgrind/trunk@15078 a5019735-40e9-0310-863c-91ae7b9d1cf9
+
+diff --git a/coregrind/m_initimg/initimg-linux.c b/coregrind/m_initimg/initimg-linux.c
+index 964e355..b198dbf 100644
+--- a/coregrind/m_initimg/initimg-linux.c
++++ b/coregrind/m_initimg/initimg-linux.c
+@@ -246,6 +246,10 @@ static HChar** setup_client_env ( HChar** origenv, const HChar* toolname)
+ /*=== Setting up the client's stack                                ===*/
+ /*====================================================================*/
+ 
++#ifndef AT_DCACHEBSIZE
++#define AT_DCACHEBSIZE		19
++#endif /* AT_DCACHEBSIZE */
++
+ #ifndef AT_ICACHEBSIZE
+ #define AT_ICACHEBSIZE		20
+ #endif /* AT_ICACHEBSIZE */
+@@ -262,6 +266,10 @@ static HChar** setup_client_env ( HChar** origenv, const HChar* toolname)
+ #define AT_RANDOM		25
+ #endif /* AT_RANDOM */
+ 
++#ifndef AT_HWCAP2
++#define AT_HWCAP2		26
++#endif /* AT_HWCAP2 */
++
+ #ifndef AT_EXECFN
+ #define AT_EXECFN		31
+ #endif /* AT_EXECFN */
+@@ -377,8 +385,14 @@ Addr setup_client_stack( void*  init_sp,
+                          const ExeInfo* info,
+                          UInt** client_auxv,
+                          Addr   clstack_end,
+-                         SizeT  clstack_max_size )
++                         SizeT  clstack_max_size,
++                         const VexArchInfo* vex_archinfo )
+ {
++  /* The HW configuration setting (hwcaps) of the target can be
++   * checked against the Vex settings of the host platform as given
++   * by the values in vex_archinfo.
++   */
++
+    SysRes res;
+    HChar **cpp;
+    HChar *strtab;		/* string table */
+@@ -690,8 +704,44 @@ Addr setup_client_stack( void*  init_sp,
+             }
+ #           endif
+             break;
++#        if defined(VGP_ppc64be_linux) || defined(VGP_ppc64le_linux)
++         case AT_HWCAP2:
++            /* The HWCAP2 value has the entry arch_2_07 which indicates the
++             * processor is a Power 8 or beyond.  The Valgrind vai.hwcaps
++             * value (coregrind/m_machine.c) has the VEX_HWCAPS_PPC64_ISA2_07
++             * flag set so Valgrind knows about Power8.  Need to pass the
++             * HWCAP2 value along so the user level programs can detect that
++             * the processor supports ISA 2.07 and beyond.
++             */
++            /*  Power Architecture 64-Bit ELF V2 ABI Specification
++                July 21, 2014, version 1.0, Page 124
++                www-03.ibm.com/technologyconnect/tgcm/TGCMServlet.wss?alias=OpenPOWER&linkid=1n0000
++
++                AT_HWCAP2
++                The a_val member of this entry is a bit map of hardware
++                capabilities. Some bit mask values include:
++
++                PPC_FEATURE2_ARCH_2_07        0x80000000
++                PPC_FEATURE2_HAS_HTM          0x40000000
++                PPC_FEATURE2_HAS_DSCR         0x20000000
++                PPC_FEATURE2_HAS_EBB          0x10000000
++                PPC_FEATURE2_HAS_ISEL         0x08000000
++                PPC_FEATURE2_HAS_TAR          0x04000000
++                PPC_FEATURE2_HAS_VCRYPTO      0x02000000
++            */
++
++	    if ((auxv->u.a_val & ~(0x80000000ULL)) != 0) {
++                /* Verify if PPC_FEATURE2_ARCH_2_07 is set in HWCAP2
++                 * that arch_2_07 is also set in VEX HWCAPS
++                 */
++		vg_assert((vex_archinfo->hwcaps & VEX_HWCAPS_PPC64_ISA2_07) == VEX_HWCAPS_PPC64_ISA2_07);
++	      }
++
++            break;
++#           endif
+ 
+          case AT_ICACHEBSIZE:
++         case AT_DCACHEBSIZE:
+          case AT_UCACHEBSIZE:
+ #           if defined(VGP_ppc32_linux)
+             /* acquire cache info */
+@@ -852,7 +902,8 @@ static void setup_client_dataseg ( SizeT max_size )
+ /*====================================================================*/
+ 
+ /* Create the client's initial memory image. */
+-IIFinaliseImageInfo VG_(ii_create_image)( IICreateImageInfo iicii )
++IIFinaliseImageInfo VG_(ii_create_image)( IICreateImageInfo iicii,
++                                          const VexArchInfo* vex_archinfo )
+ {
+    ExeInfo info;
+    HChar** env = NULL;
+@@ -913,7 +964,8 @@ IIFinaliseImageInfo VG_(ii_create_image)( IICreateImageInfo iicii )
+       iifii.initial_client_SP
+          = setup_client_stack( init_sp, env, 
+                                &info, &iifii.client_auxv, 
+-                               iicii.clstack_end, iifii.clstack_max_size );
++                               iicii.clstack_end, iifii.clstack_max_size,
++                               vex_archinfo );
+ 
+       VG_(free)(env);
+ 
+diff --git a/coregrind/m_main.c b/coregrind/m_main.c
+index 732e60e..05ddc35 100644
+--- a/coregrind/m_main.c
++++ b/coregrind/m_main.c
+@@ -1822,9 +1822,12 @@ Int valgrind_main ( Int argc, HChar **argv, HChar **envp )
+    //--------------------------------------------------------------
+    // Figure out what sort of CPU we're on, and whether it is 
+    // able to run V.
++   /* The vex_archinfo structure is passed down later to the client
++    * to verify the HW info settings are consistent.
++    */
++   VexArchInfo vex_archinfo;
+    VG_(debugLog)(1, "main", "Get hardware capabilities ...\n");
+    { VexArch     vex_arch;
+-     VexArchInfo vex_archinfo;
+      Bool ok = VG_(machine_get_hwcaps)();
+      if (!ok) {
+         VG_(printf)("\n");
+@@ -1952,7 +1955,7 @@ Int valgrind_main ( Int argc, HChar **argv, HChar **envp )
+ #     endif
+ 
+       /* NOTE: this call reads VG_(clo_main_stacksize). */
+-      the_iifii = VG_(ii_create_image)( the_iicii );
++      the_iifii = VG_(ii_create_image)( the_iicii, &vex_archinfo );
+    }
+ 
+    //==============================================================
+diff --git a/coregrind/pub_core_initimg.h b/coregrind/pub_core_initimg.h
+index 5623498..428b0c2 100644
+--- a/coregrind/pub_core_initimg.h
++++ b/coregrind/pub_core_initimg.h
+@@ -33,6 +33,7 @@
+ #define __PUB_CORE_INITIMG_H
+ 
+ #include "pub_core_basics.h"      // Addr
++#include "libvex.h"
+ 
+ //--------------------------------------------------------------------
+ // PURPOSE: Map the client executable into memory, then set up its
+@@ -50,7 +51,8 @@ typedef  struct _IIFinaliseImageInfo  IIFinaliseImageInfo;
+    structure, which is gathered in an OS-specific way at startup.
+    This returns an IIFinaliseImageInfo structure: */
+ extern 
+-IIFinaliseImageInfo VG_(ii_create_image)( IICreateImageInfo );
++IIFinaliseImageInfo VG_(ii_create_image)( IICreateImageInfo,
++                                          const VexArchInfo* vex_archinfo );
+ 
+ /* Just before starting the client, we may need to make final
+    adjustments to its initial image.  Also we need to set up the VEX
+commit 21340a2747ac0dbe531949f2e6fbdb2683f1e444
+Author: carll <carll@a5019735-40e9-0310-863c-91ae7b9d1cf9>
+Date:   Tue May 19 16:08:05 2015 +0000
+
+    Fix for the HWCAP2 aux vector.
+    
+    The support assumed that if HWCAP2 is present that the system also supports
+    ISA2.07.  That assumption is not correct as we have found a few systems (OS)
+    where the HWCAP2 entry is present but the ISA2.07 bit is not set.  This patch
+    fixes the assertion test to specifically check the ISA2.07 support bit setting
+    in the HWCAP2 and vex_archinfo->hwcaps variable.  The setting for the
+    ISA2.07 support must be the same in both variables if the HWCAP2 entry exists.
+    
+    This patch updates Vagrind bugzilla 345695.
+    
+    
+    git-svn-id: svn://svn.valgrind.org/valgrind/trunk@15257 a5019735-40e9-0310-863c-91ae7b9d1cf9
+
+diff --git a/coregrind/m_initimg/initimg-linux.c b/coregrind/m_initimg/initimg-linux.c
+index cd0b7f3..d8ff159 100644
+--- a/coregrind/m_initimg/initimg-linux.c
++++ b/coregrind/m_initimg/initimg-linux.c
+@@ -704,10 +704,12 @@ Addr setup_client_stack( void*  init_sp,
+ #           endif
+             break;
+ #        if defined(VGP_ppc64be_linux) || defined(VGP_ppc64le_linux)
+-         case AT_HWCAP2:
+-            /* The HWCAP2 value has the entry arch_2_07 which indicates the
+-             * processor is a Power 8 or beyond.  The Valgrind vai.hwcaps
+-             * value (coregrind/m_machine.c) has the VEX_HWCAPS_PPC64_ISA2_07
++         case AT_HWCAP2:  {
++            Bool auxv_2_07, hw_caps_2_07;
++	    /* The HWCAP2 field may contain an arch_2_07 entry that indicates
++             * if the processor is compliant with the 2.07 ISA. (i.e. Power 8
++             * or beyond).  The Valgrind vai.hwcaps value
++             * (coregrind/m_machine.c) has the VEX_HWCAPS_PPC64_ISA2_07
+              * flag set so Valgrind knows about Power8.  Need to pass the
+              * HWCAP2 value along so the user level programs can detect that
+              * the processor supports ISA 2.07 and beyond.
+@@ -728,13 +730,15 @@ Addr setup_client_stack( void*  init_sp,
+                 PPC_FEATURE2_HAS_TAR          0x04000000
+                 PPC_FEATURE2_HAS_VCRYPTO      0x02000000
+             */
+-
+-	    if ((auxv->u.a_val & ~(0x80000000ULL)) != 0) {
+-                /* Verify if PPC_FEATURE2_ARCH_2_07 is set in HWCAP2
+-                 * that arch_2_07 is also set in VEX HWCAPS
+-                 */
+-		vg_assert((vex_archinfo->hwcaps & VEX_HWCAPS_PPC64_ISA2_07) == VEX_HWCAPS_PPC64_ISA2_07);
+-	      }
++            auxv_2_07 = (auxv->u.a_val & 0x80000000ULL) == 0x80000000ULL;
++            hw_caps_2_07 = (vex_archinfo->hwcaps & VEX_HWCAPS_PPC64_ISA2_07)
++               == VEX_HWCAPS_PPC64_ISA2_07;
++
++            /* Verify the PPC_FEATURE2_ARCH_2_07 setting in HWCAP2
++	     * matches the setting in VEX HWCAPS.
++	     */
++            vg_assert(auxv_2_07 == hw_caps_2_07);
++            }
+ 
+             break;
+ #           endif
