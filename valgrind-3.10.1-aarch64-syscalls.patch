@@ -189,3 +189,26 @@ index 7b7e824..fc6ca08 100644
  //ZZ //   GENX_(__NR_lock,              sys_ni_syscall),     // 53
  //ZZ 
  //ZZ    LINXY(__NR_fcntl,             sys_fcntl),          // 55
+commit 53d91c0f31aba5d1c9a896b4fdb0ef5f7eca47cf
+Author: mjw <mjw@a5019735-40e9-0310-863c-91ae7b9d1cf9>
+Date:   Sun Aug 9 22:37:52 2015 +0000
+
+    Bug #351140 arm64 syscalls setuid (146) and setresgid (149) not implemented.
+    
+    git-svn-id: svn://svn.valgrind.org/valgrind/trunk@15517 a5019735-40e9-0310-863c-91ae7b9d1cf9
+
+diff --git a/coregrind/m_syswrap/syswrap-arm64-linux.c b/coregrind/m_syswrap/syswrap-arm64-linux.c
+index ee224ca..10872fa 100644
+--- a/coregrind/m_syswrap/syswrap-arm64-linux.c
++++ b/coregrind/m_syswrap/syswrap-arm64-linux.c
+@@ -957,8 +957,10 @@ static SyscallTableEntry syscall_main_table[] = {
+    GENX_(__NR_setregid,          sys_setregid),          // 143
+    GENX_(__NR_setgid,            sys_setgid),            // 144
+    GENX_(__NR_setreuid,          sys_setreuid),          // 145
++   GENX_(__NR_setuid,            sys_setuid),            // 146
+    LINX_(__NR_setresuid,         sys_setresuid),         // 147
+    LINXY(__NR_getresuid,         sys_getresuid),         // 148
++   LINX_(__NR_setresgid,         sys_setresgid),         // 149
+    LINXY(__NR_getresgid,         sys_getresgid),         // 150
+    GENXY(__NR_times,             sys_times),             // 153
+    GENX_(__NR_setpgid,           sys_setpgid),           // 154
