@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.10.1
-Release: 18%{?dist}
+Release: 19%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -300,6 +300,17 @@ mkdir docs/installed
 mv $RPM_BUILD_ROOT%{_datadir}/doc/valgrind/* docs/installed/
 rm -f docs/installed/*.ps
 
+# We want the MPI wrapper installed under the openmpi libdir so the script
+# generating the MPI library requires picks them up and sets up the right
+# openmpi libmpi.so requires. Install symlinks in the original/upstream
+# location for backwards compatibility.
+pushd $RPM_BUILD_ROOT%{_libdir}
+mkdir -p openmpi/valgrind
+cd valgrind
+mv libmpiwrap-%{valarch}-linux.so ../openmpi/valgrind/
+ln -s ../openmpi/valgrind/libmpiwrap-%{valarch}-linux.so
+popd
+
 %if "%{valsecarch}" != ""
 pushd $RPM_BUILD_ROOT%{_libdir}/valgrind/
 rm -f *-%{valsecarch}-* || :
@@ -387,10 +398,14 @@ echo ===============END TESTING===============
 %files openmpi
 %defattr(-,root,root)
 %dir %{_libdir}/valgrind
+%{_libdir}/openmpi/valgrind/libmpiwrap*.so
 %{_libdir}/valgrind/libmpiwrap*.so
 %endif
 
 %changelog
+* Fri Aug 14 2015 Mark Wielaard <mjw@redhat.com> - 3.10.1-19
+- Install libmpiwrap library under {_libdir}/openmpi/valgrind (#1238428)
+
 * Mon Aug 10 2015 Sandro Mani <manisandro@gmail.com> - 1:3.10.1-18
 - Rebuild for RPM MPI Requires Provides Change
 
