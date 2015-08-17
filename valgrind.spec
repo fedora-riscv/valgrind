@@ -1,9 +1,12 @@
 %{?scl:%scl_package valgrind}
 
+%define svn_date 20150817
+%define svn_rev 15561
+
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.10.1
-Release: 20%{?dist}
+Release: 21.svn%{?svn_date}r%{?svn_rev}%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -44,7 +47,18 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 %define _find_debuginfo_dwz_opts %{nil}
 %undefine _include_minidebuginfo
 
-Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
+#Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
+#
+# svn co svn://svn.valgrind.org/valgrind/trunk valgrind
+# cd valgrind
+# ./autogen.sh
+# ./configure
+# make dist
+# tar jxf valgrind-3.11.0.SVN.tar.bz2
+# mv valgrind-3.11.0.SVN valgrind-3.10.1-svn%{svn_date}r%{svn_rev}
+# tar jcf valgrind-3.10.1-svn%{svn_date}r%{svn_rev}.tar.bz2 valgrind-3.10.1-svn%{svn_date}r%{svn_rev}
+Source0: valgrind-%{version}-svn%{svn_date}r%{svn_rev}.tar.bz2
+
 
 # Needs investigation and pushing upstream
 Patch1: valgrind-3.9.0-cachegrind-improvements.patch
@@ -57,64 +71,6 @@ Patch3: valgrind-3.9.0-stat_h.patch
 
 # Make ld.so supressions slightly less specific.
 Patch4: valgrind-3.9.0-ldso-supp.patch
-
-# KDE#342795 Internal glibc __GI_mempcpy call should be intercepted
-Patch5: valgrind-3.10.1-mempcpy.patch
-
-# KDE#343802 - s390x memcheck reports spurious conditional jump
-Patch6: valgrind-3.10-s390-spechelper.patch
-
-# KDE#342038, KDE#343732, KDE#343733, KDE#344007, KDE#344307, KDE##351140
-# mbind, get_mempolicy, set_mempolicy, flock, setgid, msgget, msgctl,
-# msgrcv, msgsnd, accept4, mount, umount2, setuid, setresgid
-Patch7: valgrind-3.10.1-aarch64-syscalls.patch
-
-# KDE#344007 ppc64 missing accept4 syscall
-Patch8: valgrind-3.10.1-ppc64-accept4.patch
-
-# KDE#344279 - syscall sendmmsg on arm64 (269) and ppc32/64 (349) unhandled
-# KDE#344295 - syscall recvmmsg on arm64 (243) and ppc32/64 (343) unhandled
-# KDE#344318 - socketcall should wrap recvmmsg and sendmmsg
-Patch9: valgrind-3.10.1-send-recv-mmsg.patch
-
-# Upstream valgrind svn r14530
-Patch10: valgrind-3.10.1-glibc-version-check.patch
-
-# Upstream valgrind svn r15133
-Patch11: valgrind-3.10-1-ppc64-sigpending.patch
-
-# KDE#343012 - Unhandled syscall 319 (memfd_create)
-Patch12: valgrind-3.10.1-memfd_create.patch
-
-# KDE#347389 - Add support for the syncfs system call.
-Patch13: valgrind-3.10.1-syncfs.patch
-
-# Upstream valgrind svn r15304
-Patch14: valgrind-3.10.1-arm-process_vm_readv_writev.patch
-
-# Upstream valgrind svn r15305
-Patch15: valgrind-3.10.1-fno-ipa-icf.patch
-
-# Upstream valgrind svn r14780 and r15308
-Patch16: valgrind-3.10.1-demangle-q.patch
-
-# KDE#345928 callstack only contains current function for small stacks
-Patch17: valgrind-3.10.1-cfi-redzone.patch
-
-# KDE#344499 Fix compilation for Linux kernel >= 4.
-Patch18: valgrind-3.10.1-kernel-4.0.patch
-
-# KDE#349941 di_notify_mmap might create wrong start/size DebugInfoMapping
-Patch19: valgrind-3.10.1-di_notify_mmap.patch
-
-# KDE#349828 memcpy intercepts memmove causing src/dst overlap error
-Patch20: valgrind-3.10.1-memmove-ld_so-ppc64.patch
-
-# KDE#342841 s390x unrecognized instruction fiebra
-Patch21: valgrind-3.10.1-s390x-fiebra.patch
-
-# KDE#345695 Add POWERPC support for AT_DCACHESIZE and HWCAP2
-Patch22: valgrind-3.10.1-ppc64-hwcap2.patch
 
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -212,30 +168,13 @@ See the section on Debugging MPI Parallel Programs with Valgrind in the
 Valgrind User Manual for details.
 
 %prep
-%setup -q -n %{?scl:%{pkg_name}}%{!?scl:%{name}}-%{version}
+#%setup -q -n %{?scl:%{pkg_name}}%{!?scl:%{name}}-%{version}
+%setup -q -n %{?scl:%{pkg_name}}%{!?scl:%{name}}-%{version}-svn%{svn_date}r%{svn_rev}
 
 %patch1 -p1
 %patch2 -p1
 %patch3 -p1
 %patch4 -p1
-%patch5 -p1
-%patch6 -p1
-%patch7 -p1
-%patch8 -p1
-%patch9 -p1
-%patch10 -p1
-%patch11 -p1
-%patch12 -p1
-%patch13 -p1
-%patch14 -p1
-%patch15 -p1
-%patch16 -p1
-%patch17 -p1
-%patch18 -p1
-%patch19 -p1
-%patch20 -p1
-%patch21 -p1
-%patch22 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -405,6 +344,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Mon Aug 17 2015 Mark Wielaard <mjw@redhat.com> - 3.10.1-21.svn20150817r15561
+- Update to current valgrind svn. Drop patches now upstream.
+
 * Mon Aug 17 2015 Mark Wielaard <mjw@redhat.com> - 3.10.1-20
 - Don't try to move around libmpiwrap when not building for openmpi (s390x)
 
