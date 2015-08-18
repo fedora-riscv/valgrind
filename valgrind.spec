@@ -66,11 +66,8 @@ Patch1: valgrind-3.9.0-cachegrind-improvements.patch
 # KDE#211352 - helgrind races in helgrind's own mythread_wrapper
 Patch2: valgrind-3.9.0-helgrind-race-supp.patch
 
-# undef st_atime, st_mtime and st_ctime. Unknown why this is (still?) needed.
-Patch3: valgrind-3.9.0-stat_h.patch
-
 # Make ld.so supressions slightly less specific.
-Patch4: valgrind-3.9.0-ldso-supp.patch
+Patch3: valgrind-3.9.0-ldso-supp.patch
 
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -174,7 +171,6 @@ Valgrind User Manual for details.
 %patch1 -p1
 %patch2 -p1
 %patch3 -p1
-%patch4 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -344,6 +340,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Tue Aug 18 2015 Mark Wielaard <mjw@redhat.com>
+- Drop valgrind-3.9.0-stat_h.patch.
+
 * Mon Aug 17 2015 Mark Wielaard <mjw@redhat.com> - 3.10.1-21.svn20150817r15561
 - Update to current valgrind svn. Drop patches now upstream.
 
