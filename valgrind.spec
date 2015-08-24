@@ -96,6 +96,9 @@ BuildRequires: %{?scl_prefix}binutils
 # gdbserver_tests/filter_make_empty uses ps in test
 BuildRequires: procps
 
+# Some testcases require g++ to build
+BuildRequires: gcc-c++
+
 %{?scl:Requires:%scl_runtime}
 
 ExclusiveArch: %{ix86} x86_64 ppc ppc64 ppc64le s390x armv7hl aarch64
@@ -342,6 +345,7 @@ echo ===============END TESTING===============
 %changelog
 * Tue Aug 18 2015 Mark Wielaard <mjw@redhat.com>
 - Drop valgrind-3.9.0-stat_h.patch.
+- Add BuildRequires gcc-c++.
 
 * Mon Aug 17 2015 Mark Wielaard <mjw@redhat.com> - 3.10.1-21.svn20150817r15561
 - Update to current valgrind svn. Drop patches now upstream.
