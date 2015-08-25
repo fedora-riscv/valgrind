@@ -1,12 +1,12 @@
 %{?scl:%scl_package valgrind}
 
-%define svn_date 20150817
-%define svn_rev 15561
+%define svn_date 20150825
+%define svn_rev 15589
 
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.10.1
-Release: 21.svn%{?svn_date}r%{?svn_rev}%{?dist}
+Release: 22.svn%{?svn_date}r%{?svn_rev}%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -68,6 +68,9 @@ Patch2: valgrind-3.9.0-helgrind-race-supp.patch
 
 # Make ld.so supressions slightly less specific.
 Patch3: valgrind-3.9.0-ldso-supp.patch
+
+# Filter out new gdb warning
+Patch4: valgrind-3.10.1-gdb-file-warning.patch
 
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -174,6 +177,7 @@ Valgrind User Manual for details.
 %patch1 -p1
 %patch2 -p1
 %patch3 -p1
+%patch4 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -343,9 +347,11 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
-* Tue Aug 18 2015 Mark Wielaard <mjw@redhat.com>
+* Tue Aug 25 2015 Mark Wielaard <mjw@redhat.com> - 3.10.1-22.svn20150825r15589
 - Drop valgrind-3.9.0-stat_h.patch.
 - Add BuildRequires gcc-c++.
+- Update to current valgrind svn (svn20150825r15589)
+- Add valgrind-3.10.1-gdb-file-warning.patch
 
 * Mon Aug 17 2015 Mark Wielaard <mjw@redhat.com> - 3.10.1-21.svn20150817r15561
 - Update to current valgrind svn. Drop patches now upstream.
