@@ -102,6 +102,9 @@ BuildRequires: procps
 # Some testcases require g++ to build
 BuildRequires: gcc-c++
 
+# check_headers_and_includes uses Getopt::Long
+BuildRequires: perl(Getopt::Long)
+
 %{?scl:Requires:%scl_runtime}
 
 ExclusiveArch: %{ix86} x86_64 ppc ppc64 ppc64le s390x armv7hl aarch64
@@ -347,6 +350,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Fri Sep 04 2015 Mark Wielaard <mjw@redhat.com>
+- Add BuildRequires perl(Getopt::Long)
+
 * Tue Aug 25 2015 Mark Wielaard <mjw@redhat.com> - 3.10.1-22.svn20150825r15589
 - Drop valgrind-3.9.0-stat_h.patch.
 - Add BuildRequires gcc-c++.
