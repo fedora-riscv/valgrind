@@ -1,12 +1,9 @@
 %{?scl:%scl_package valgrind}
 
-%define svn_date 20150825
-%define svn_rev 15589
-
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
-Version: 3.10.1
-Release: 22.svn%{?svn_date}r%{?svn_rev}%{?dist}
+Version: 3.11.0
+Release: 0.1.TEST1%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -47,18 +44,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 %define _find_debuginfo_dwz_opts %{nil}
 %undefine _include_minidebuginfo
 
-#Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
-#
-# svn co svn://svn.valgrind.org/valgrind/trunk valgrind
-# cd valgrind
-# ./autogen.sh
-# ./configure
-# make dist
-# tar jxf valgrind-3.11.0.SVN.tar.bz2
-# mv valgrind-3.11.0.SVN valgrind-3.10.1-svn%{svn_date}r%{svn_rev}
-# tar jcf valgrind-3.10.1-svn%{svn_date}r%{svn_rev}.tar.bz2 valgrind-3.10.1-svn%{svn_date}r%{svn_rev}
-Source0: valgrind-%{version}-svn%{svn_date}r%{svn_rev}.tar.bz2
-
+Source0: http://www.valgrind.org/downloads/valgrind-%{version}.TEST1.tar.bz2
 
 # Needs investigation and pushing upstream
 Patch1: valgrind-3.9.0-cachegrind-improvements.patch
@@ -68,9 +54,6 @@ Patch2: valgrind-3.9.0-helgrind-race-supp.patch
 
 # Make ld.so supressions slightly less specific.
 Patch3: valgrind-3.9.0-ldso-supp.patch
-
-# Filter out new gdb warning
-Patch4: valgrind-3.10.1-gdb-file-warning.patch
 
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -174,13 +157,11 @@ See the section on Debugging MPI Parallel Programs with Valgrind in the
 Valgrind User Manual for details.
 
 %prep
-#%setup -q -n %{?scl:%{pkg_name}}%{!?scl:%{name}}-%{version}
-%setup -q -n %{?scl:%{pkg_name}}%{!?scl:%{name}}-%{version}-svn%{svn_date}r%{svn_rev}
+%setup -q -n %{?scl:%{pkg_name}}%{!?scl:%{name}}-%{version}.TEST1
 
 %patch1 -p1
 %patch2 -p1
 %patch3 -p1
-%patch4 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -350,8 +331,10 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
-* Fri Sep 04 2015 Mark Wielaard <mjw@redhat.com>
+* Thu Sep 10 2015 Mark Wielaard <mjw@redhat.com> - 3.11.0-0.1.TEST1
 - Add BuildRequires perl(Getopt::Long)
+- Upgrade to valgrind 3.11.0.TEST1
+- Remove upstreamed valgrind-3.10.1-gdb-file-warning.patch
 
 * Tue Aug 25 2015 Mark Wielaard <mjw@redhat.com> - 3.10.1-22.svn20150825r15589
 - Drop valgrind-3.9.0-stat_h.patch.
