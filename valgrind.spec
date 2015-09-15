@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.11.0
-Release: 0.1.TEST1%{?dist}
+Release: 0.2.TEST1%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -331,6 +331,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Tue Sep 15 2015 Orion Poplawski <orion@cora.nwra.com> - 1:3.11.0-0.2.TEST1
+- Rebuild for openmpi 1.10.0
+
 * Thu Sep 10 2015 Mark Wielaard <mjw@redhat.com> - 3.11.0-0.1.TEST1
 - Add BuildRequires perl(Getopt::Long)
 - Upgrade to valgrind 3.11.0.TEST1
