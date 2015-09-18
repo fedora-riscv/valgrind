@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.11.0
-Release: 0.2.TEST1%{?dist}
+Release: 0.3.TEST1%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -357,7 +357,7 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
-* Fri Sep 18 2015 Mark Wielaard <mjw@redhat.com>
+* Fri Sep 18 2015 Mark Wielaard <mjw@redhat.com> - 3.11.0-0.3.TEST1
 - Make sure some info about the system is in the build.log before check.
 - Add valgrind-3.11.0-glibc-futex-message.patch
 - Add valgrind-3.11.0-arm64-libvex_test.patch
