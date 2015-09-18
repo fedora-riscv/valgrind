@@ -265,6 +265,12 @@ done
 %endif
 
 %check
+# Make sure some info about the system is in the build.log
+uname -a
+rpm -q glibc gcc %{?scl_prefix}binutils %{?scl_prefix}gdb
+LD_SHOW_AUXV=1 /bin/true
+cat /proc/cpuinfo
+
 # Make sure a basic binary runs.
 ./vg-in-place /bin/true
 
@@ -331,6 +337,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Fri Sep 18 2015 Mark Wielaard <mjw@redhat.com>
+- Make sure some info about the system is in the build.log before check.
+
 * Tue Sep 15 2015 Orion Poplawski <orion@cora.nwra.com> - 1:3.11.0-0.2.TEST1
 - Rebuild for openmpi 1.10.0
 
