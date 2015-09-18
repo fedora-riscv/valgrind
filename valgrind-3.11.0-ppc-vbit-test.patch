@@ -1,0 +1,282 @@
+commit f559672f0691e8a9913ef573f5ab507401646159
+Author: carll <carll@a5019735-40e9-0310-863c-91ae7b9d1cf9>
+Date:   Wed Sep 16 23:33:40 2015 +0000
+
+    Add Power PC ISA check to the vbit-test
+    
+    The support for the Valgrind Iops is dependent on the Power processor
+    support for various instructions.  The instructions supported by a
+    given Power processor is based on the version of the ISA.  The patch
+    add a check to the vbit-test to ensure it does not try to test an Iop
+    that generates an instruction on the host that is not supported.
+    
+    This patch fixes bugzilla 352765.
+    
+    
+    git-svn-id: svn://svn.valgrind.org/valgrind/trunk@15653 a5019735-40e9-0310-863c-91ae7b9d1cf9
+
+diff --git a/memcheck/tests/vbit-test/irops.c b/memcheck/tests/vbit-test/irops.c
+index d0e3b58..9e9f017 100644
+--- a/memcheck/tests/vbit-test/irops.c
++++ b/memcheck/tests/vbit-test/irops.c
+@@ -1143,6 +1143,38 @@ get_irop(IROp op)
+          return p->amd64 ? p : NULL;
+ #endif
+ #ifdef __powerpc__
++#define  MIN_POWER_ISA  "../../../tests/min_power_isa"
++
++         switch (op) {
++         case Iop_DivS64E:
++         case Iop_DivU64E:
++         case Iop_DivU32E:
++         case Iop_DivS32E:
++         case Iop_F64toI64U:
++         case Iop_F64toI32U:
++         case Iop_I64UtoF64:
++         case Iop_I64UtoF32:
++         case Iop_I64StoD64: {
++            int rc;
++            /* IROps require a processor that supports ISA 2.06 or newer */
++            rc = system(MIN_POWER_ISA " 2.06 ");
++            rc /= 256;
++            /* MIN_POWER_ISA returns 0 if underlying HW supports the
++             * specified ISA or newer. Returns 1 if the HW does not support
++             * the specified ISA.  Returns 2 on error.
++             */
++            if (rc == 1) return NULL;
++            if (rc > 2) {
++               panic(" ERROR, min_power_isa() return code is invalid.\n");
++            }
++         }
++         break;
++
++         /* Other */
++         default:
++         break;
++         }
++
+ #ifdef __powerpc64__
+          return p->ppc64 ? p : NULL;
+ #else
+diff --git a/tests/Makefile.am b/tests/Makefile.am
+index 708c28e..9c0cc3a 100644
+--- a/tests/Makefile.am
++++ b/tests/Makefile.am
+@@ -1,6 +1,26 @@
+ 
+ include $(top_srcdir)/Makefile.tool-tests.am
+ 
++if HAS_ISA_2_05
++ISA_2_05_FLAG = -DHAS_ISA_2_05
++else
++ISA_2_05_FLAG =
++endif
++
++if HAS_ISA_2_06
++ISA_2_06_FLAG = -DHAS_ISA_2_06
++else
++ISA_2_06_FLAG =
++endif
++
++if HAS_ISA_2_07
++ISA_2_07_FLAG = -DHAS_ISA_2_07
++else
++ISA_2_07_FLAG =
++endif
++
++min_power_isa_FLAGS = $(ISA_2_05_FLAG)  $(ISA_2_06_FLAG) $(ISA_2_07_FLAG)
++
+ dist_noinst_SCRIPTS = \
+ 	check_headers_and_includes \
+ 	check_makefile_consistency \
+@@ -29,7 +49,8 @@ check_PROGRAMS = \
+ 	s390x_features \
+ 	mips_features \
+ 	power_insn_available \
+-	is_ppc64_BE
++	is_ppc64_BE \
++	min_power_isa
+ 
+ AM_CFLAGS   += $(AM_FLAG_M3264_PRI)
+ AM_CXXFLAGS += $(AM_FLAG_M3264_PRI)
+@@ -40,3 +61,4 @@ else
+ x86_amd64_features_CFLAGS = $(AM_CFLAGS)
+ endif
+ 
++min_power_isa_CFLAGS = $(min_power_isa_FLAGS)
+diff --git a/tests/min_power_isa.c b/tests/min_power_isa.c
+new file mode 100644
+index 0000000..efcf526
+--- /dev/null
++++ b/tests/min_power_isa.c
+@@ -0,0 +1,65 @@
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++
++/* main() */
++int main(int argc, char **argv)
++{
++   /* This program is passed in a minimum ISA that the underlying hardwre
++    * needs to support.  If the HW supports this ISA or newer, return 0
++    * for supported.  Otherwise, return 1 for not supported.  Return 2 for
++    * usage error.
++    *
++    *  First argument is required, it must be an ISA version number.
++    *  Second argument "-debug" is optional.  If passed, then the defined ISA
++    *  values are printed.
++    */
++   char *min_isa;
++   int isa_level = 0;
++   int debug = 0;
++
++   /* set the isa_level set by the Make */
++
++   if ((argc == 3) && (strcmp(argv[2], "-debug") == 0)) {
++      debug = 1;
++
++   } else if (argc != 2) {
++      fprintf(stderr, "usage: min_power_ISA <ISA> [-debug]\n" );
++      exit(2);
++   }
++
++   min_isa = argv[1];
++
++#ifdef HAS_ISA_2_05
++   if (debug) printf("HAS_ISA_2_05 is set\n");
++   isa_level = 5;
++#endif
++
++#ifdef HAS_ISA_2_06
++   if (debug) printf("HAS_ISA_2_06 is set\n");
++   isa_level = 6;
++#endif
++
++#ifdef HAS_ISA_2_07
++   if (debug) printf("HAS_ISA_2_07 is set\n");
++   isa_level = 7;
++#endif
++
++   /* return 0 for supported (success), 1 for not supported (failure) */
++   if (strcmp (min_isa, "2.05") == 0) {
++      return !(isa_level >= 5);
++
++   } else if (strcmp (min_isa, "2.06") == 0) {
++      return !(isa_level >= 6);
++
++   } else if (strcmp (min_isa, "2.07") == 0) {
++      return !(isa_level >= 7);
++
++   } else {
++      fprintf(stderr, "ERROR: invalid ISA version.  Valid versions numbers are:\n" );
++      fprintf(stderr, "       2.05, 2.06, 2.07\n" );
++      exit(2);
++   }
++
++   return 1;
++}
+Only in valgrind-3.11.0.TEST1: autom4te.cache
+diff -ur valgrind-3.11.0.TEST1.orig/tests/Makefile.in valgrind-3.11.0.TEST1/tests/Makefile.in
+--- valgrind-3.11.0.TEST1.orig/tests/Makefile.in	2015-09-18 22:39:24.604895071 +0200
++++ valgrind-3.11.0.TEST1/tests/Makefile.in	2015-09-18 22:39:41.996861793 +0200
+@@ -117,7 +117,7 @@
+ check_PROGRAMS = arch_test$(EXEEXT) os_test$(EXEEXT) true$(EXEEXT) \
+ 	x86_amd64_features$(EXEEXT) s390x_features$(EXEEXT) \
+ 	mips_features$(EXEEXT) power_insn_available$(EXEEXT) \
+-	is_ppc64_BE$(EXEEXT)
++	is_ppc64_BE$(EXEEXT) min_power_isa$(EXEEXT)
+ subdir = tests
+ ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
+ am__aclocal_m4_deps = $(top_srcdir)/configure.ac
+@@ -133,6 +133,11 @@
+ is_ppc64_BE_SOURCES = is_ppc64_BE.c
+ is_ppc64_BE_OBJECTS = is_ppc64_BE.$(OBJEXT)
+ is_ppc64_BE_LDADD = $(LDADD)
++min_power_isa_SOURCES = min_power_isa.c
++min_power_isa_OBJECTS = min_power_isa-min_power_isa.$(OBJEXT)
++min_power_isa_LDADD = $(LDADD)
++min_power_isa_LINK = $(CCLD) $(min_power_isa_CFLAGS) $(CFLAGS) \
++	$(AM_LDFLAGS) $(LDFLAGS) -o $@
+ mips_features_SOURCES = mips_features.c
+ mips_features_OBJECTS = mips_features.$(OBJEXT)
+ mips_features_LDADD = $(LDADD)
+@@ -187,12 +192,12 @@
+ am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
+ am__v_CCLD_0 = @echo "  CCLD    " $@;
+ am__v_CCLD_1 = 
+-SOURCES = arch_test.c is_ppc64_BE.c mips_features.c os_test.c \
+-	power_insn_available.c s390x_features.c true.c \
+-	x86_amd64_features.c
+-DIST_SOURCES = arch_test.c is_ppc64_BE.c mips_features.c os_test.c \
+-	power_insn_available.c s390x_features.c true.c \
++SOURCES = arch_test.c is_ppc64_BE.c min_power_isa.c mips_features.c \
++	os_test.c power_insn_available.c s390x_features.c true.c \
+ 	x86_amd64_features.c
++DIST_SOURCES = arch_test.c is_ppc64_BE.c min_power_isa.c \
++	mips_features.c os_test.c power_insn_available.c \
++	s390x_features.c true.c x86_amd64_features.c
+ am__can_run_installinfo = \
+   case $$AM_UPDATE_INFO_DIR in \
+     n|no|NO) false;; \
+@@ -583,6 +588,13 @@
+ # automake;  see comments in Makefile.all.am for more detail.
+ AM_CCASFLAGS = $(AM_CPPFLAGS)
+ @VGCONF_OS_IS_DARWIN_TRUE@noinst_DSYMS = $(check_PROGRAMS)
++@HAS_ISA_2_05_FALSE@ISA_2_05_FLAG = 
++@HAS_ISA_2_05_TRUE@ISA_2_05_FLAG = -DHAS_ISA_2_05
++@HAS_ISA_2_06_FALSE@ISA_2_06_FLAG = 
++@HAS_ISA_2_06_TRUE@ISA_2_06_FLAG = -DHAS_ISA_2_06
++@HAS_ISA_2_07_FALSE@ISA_2_07_FLAG = 
++@HAS_ISA_2_07_TRUE@ISA_2_07_FLAG = -DHAS_ISA_2_07
++min_power_isa_FLAGS = $(ISA_2_05_FLAG)  $(ISA_2_06_FLAG) $(ISA_2_07_FLAG)
+ dist_noinst_SCRIPTS = \
+ 	check_headers_and_includes \
+ 	check_makefile_consistency \
+@@ -605,6 +617,7 @@
+ 
+ @VGCONF_OS_IS_DARWIN_FALSE@x86_amd64_features_CFLAGS = $(AM_CFLAGS)
+ @VGCONF_OS_IS_DARWIN_TRUE@x86_amd64_features_CFLAGS = $(AM_CFLAGS) -mdynamic-no-pic
++min_power_isa_CFLAGS = $(min_power_isa_FLAGS)
+ all: all-am
+ 
+ .SUFFIXES:
+@@ -654,6 +667,10 @@
+ 	@rm -f is_ppc64_BE$(EXEEXT)
+ 	$(AM_V_CCLD)$(LINK) $(is_ppc64_BE_OBJECTS) $(is_ppc64_BE_LDADD) $(LIBS)
+ 
++min_power_isa$(EXEEXT): $(min_power_isa_OBJECTS) $(min_power_isa_DEPENDENCIES) $(EXTRA_min_power_isa_DEPENDENCIES) 
++	@rm -f min_power_isa$(EXEEXT)
++	$(AM_V_CCLD)$(min_power_isa_LINK) $(min_power_isa_OBJECTS) $(min_power_isa_LDADD) $(LIBS)
++
+ mips_features$(EXEEXT): $(mips_features_OBJECTS) $(mips_features_DEPENDENCIES) $(EXTRA_mips_features_DEPENDENCIES) 
+ 	@rm -f mips_features$(EXEEXT)
+ 	$(AM_V_CCLD)$(LINK) $(mips_features_OBJECTS) $(mips_features_LDADD) $(LIBS)
+@@ -686,6 +703,7 @@
+ 
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/arch_test.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/is_ppc64_BE.Po@am__quote@
++@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/min_power_isa-min_power_isa.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mips_features.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/os_test.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/power_insn_available.Po@am__quote@
+@@ -709,6 +727,20 @@
+ @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+ @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(COMPILE) -c -o $@ `$(CYGPATH_W) '$<'`
+ 
++min_power_isa-min_power_isa.o: min_power_isa.c
++@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(min_power_isa_CFLAGS) $(CFLAGS) -MT min_power_isa-min_power_isa.o -MD -MP -MF $(DEPDIR)/min_power_isa-min_power_isa.Tpo -c -o min_power_isa-min_power_isa.o `test -f 'min_power_isa.c' || echo '$(srcdir)/'`min_power_isa.c
++@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/min_power_isa-min_power_isa.Tpo $(DEPDIR)/min_power_isa-min_power_isa.Po
++@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='min_power_isa.c' object='min_power_isa-min_power_isa.o' libtool=no @AMDEPBACKSLASH@
++@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
++@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(min_power_isa_CFLAGS) $(CFLAGS) -c -o min_power_isa-min_power_isa.o `test -f 'min_power_isa.c' || echo '$(srcdir)/'`min_power_isa.c
++
++min_power_isa-min_power_isa.obj: min_power_isa.c
++@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(min_power_isa_CFLAGS) $(CFLAGS) -MT min_power_isa-min_power_isa.obj -MD -MP -MF $(DEPDIR)/min_power_isa-min_power_isa.Tpo -c -o min_power_isa-min_power_isa.obj `if test -f 'min_power_isa.c'; then $(CYGPATH_W) 'min_power_isa.c'; else $(CYGPATH_W) '$(srcdir)/min_power_isa.c'; fi`
++@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/min_power_isa-min_power_isa.Tpo $(DEPDIR)/min_power_isa-min_power_isa.Po
++@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='min_power_isa.c' object='min_power_isa-min_power_isa.obj' libtool=no @AMDEPBACKSLASH@
++@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
++@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(min_power_isa_CFLAGS) $(CFLAGS) -c -o min_power_isa-min_power_isa.obj `if test -f 'min_power_isa.c'; then $(CYGPATH_W) 'min_power_isa.c'; else $(CYGPATH_W) '$(srcdir)/min_power_isa.c'; fi`
++
+ x86_amd64_features-x86_amd64_features.o: x86_amd64_features.c
+ @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(x86_amd64_features_CFLAGS) $(CFLAGS) -MT x86_amd64_features-x86_amd64_features.o -MD -MP -MF $(DEPDIR)/x86_amd64_features-x86_amd64_features.Tpo -c -o x86_amd64_features-x86_amd64_features.o `test -f 'x86_amd64_features.c' || echo '$(srcdir)/'`x86_amd64_features.c
+ @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/x86_amd64_features-x86_amd64_features.Tpo $(DEPDIR)/x86_amd64_features-x86_amd64_features.Po

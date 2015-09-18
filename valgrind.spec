@@ -67,6 +67,9 @@ Patch6: valgrind-3.11.0-arm-warnings.patch
 # Don't use -Wcast-align on arm
 Patch7: valgrind-3.11.0-arm-no-cast-align.patch
 
+# ppc vbit test fix
+Patch8: valgrind-3.11.0-ppc-vbit-test.patch
+
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -178,6 +181,7 @@ Valgrind User Manual for details.
 %patch5 -p1
 %patch6 -p1
 %patch7 -p1
+%patch8 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -359,6 +363,7 @@ echo ===============END TESTING===============
 - Add valgrind-3.11.0-arm64-libvex_test.patch
 - Add valgrind-3.11.0-arm-warnings.patch
 - Add valgrind-3.11.0-arm-no-cast-align.patch
+- Add valgrind-3.11.0-ppc-vbit-test.patch
 
 * Tue Sep 15 2015 Orion Poplawski <orion@cora.nwra.com> - 1:3.11.0-0.2.TEST1
 - Rebuild for openmpi 1.10.0
