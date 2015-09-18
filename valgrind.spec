@@ -55,6 +55,9 @@ Patch2: valgrind-3.9.0-helgrind-race-supp.patch
 # Make ld.so supressions slightly less specific.
 Patch3: valgrind-3.9.0-ldso-supp.patch
 
+# Suppress glibc futex warning messages in testsuite.
+Patch4: valgrind-3.11.0-glibc-futex-message.patch
+
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -162,6 +165,7 @@ Valgrind User Manual for details.
 %patch1 -p1
 %patch2 -p1
 %patch3 -p1
+%patch4 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -339,6 +343,7 @@ echo ===============END TESTING===============
 %changelog
 * Fri Sep 18 2015 Mark Wielaard <mjw@redhat.com>
 - Make sure some info about the system is in the build.log before check.
+- Add valgrind-3.11.0-glibc-futex-message.patch
 
 * Tue Sep 15 2015 Orion Poplawski <orion@cora.nwra.com> - 1:3.11.0-0.2.TEST1
 - Rebuild for openmpi 1.10.0
