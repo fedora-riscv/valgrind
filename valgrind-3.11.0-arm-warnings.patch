@@ -1,0 +1,97 @@
+commit e697c535392ce5b9644f4b5039420a333da1fe3f
+Author: florian <florian@a5019735-40e9-0310-863c-91ae7b9d1cf9>
+Date:   Sun Sep 13 20:27:17 2015 +0000
+
+    Fix various compiler warnings for the arm architecture.
+    
+    
+    git-svn-id: svn://svn.valgrind.org/valgrind/trunk@15650 a5019735-40e9-0310-863c-91ae7b9d1cf9
+
+diff --git a/coregrind/m_debuginfo/readexidx.c b/coregrind/m_debuginfo/readexidx.c
+index 2dd89cf..06a9a5f 100644
+--- a/coregrind/m_debuginfo/readexidx.c
++++ b/coregrind/m_debuginfo/readexidx.c
+@@ -205,7 +205,7 @@ typedef
+ 
+ 
+ /* Helper function for fishing bits out of the EXIDX representation. */
+-static void* Prel31ToAddr(const void* addr)
++static const void* Prel31ToAddr(const void* addr)
+ {
+    UInt offset32 = *(const UInt*)addr;
+    // sign extend offset32[30:0] to 64 bits -- copy bit 30 to positions
+@@ -215,7 +215,7 @@ static void* Prel31ToAddr(const void* addr)
+       offset64 |= 0xFFFFFFFF80000000ULL;
+    else
+       offset64 &= 0x000000007FFFFFFFULL;
+-   return ((UChar*)addr) + (UWord)offset64;
++   return ((const UChar*)addr) + (UWord)offset64;
+ }
+ 
+ 
+@@ -242,9 +242,9 @@ ExExtractResult ExtabEntryExtract ( MemoryRange* mr_exidx,
+            buf[(*buf_used)++] = (_byte); } while (0)
+ 
+ #  define GET_EX_U32(_lval, _addr, _mr) \
+-      do { if (!MemoryRange__covers((_mr), (void*)(_addr), 4)) \
++      do { if (!MemoryRange__covers((_mr), (const void*)(_addr), 4)) \
+               return ExInBufOverflow; \
+-           (_lval) = *(UInt*)(_addr); } while (0)
++           (_lval) = *(const UInt*)(_addr); } while (0)
+ 
+ #  define GET_EXIDX_U32(_lval, _addr) \
+       GET_EX_U32(_lval, _addr, mr_exidx)
+@@ -263,7 +263,7 @@ ExExtractResult ExtabEntryExtract ( MemoryRange* mr_exidx,
+    UInt  pers;          // personality number
+    UInt  extra;         // number of extra data words required
+    UInt  extra_allowed; // number of extra data words allowed
+-   UInt* extbl_data;    // the handler entry, if not inlined
++   const UInt* extbl_data;    // the handler entry, if not inlined
+ 
+    if (data & ARM_EXIDX_COMPACT) {
+       // The handler table entry has been inlined into the index table entry.
+@@ -283,7 +283,7 @@ ExExtractResult ExtabEntryExtract ( MemoryRange* mr_exidx,
+       // The index table entry is a pointer to the handler entry.  Note
+       // that Prel31ToAddr will read the given address, but we already
+       // range-checked above.
+-      extbl_data = (UInt*)(Prel31ToAddr(&entry->data));
++      extbl_data = Prel31ToAddr(&entry->data);
+       GET_EXTAB_U32(data, extbl_data);
+       if (!(data & ARM_EXIDX_COMPACT)) {
+          // This denotes a "generic model" handler.  That will involve
+@@ -941,7 +941,7 @@ void ML_(read_exidx) ( /*MOD*/DebugInfo* di,
+       VG_(printf)("BEGIN ML_(read_exidx) exidx_img=[%p, +%lu) "
+                   "extab_img=[%p, +%lu) text_last_svma=%lx text_bias=%lx\n",
+                   exidx_img, exidx_size, extab_img, extab_size,
+-                  text_last_svma, text_bias);
++                  text_last_svma, (UWord)text_bias);
+    Bool ok;
+    MemoryRange mr_exidx, mr_extab;
+    ok =       MemoryRange__init(&mr_exidx, exidx_img, exidx_size);
+diff --git a/coregrind/m_sigframe/sigframe-arm-linux.c b/coregrind/m_sigframe/sigframe-arm-linux.c
+index 2f7781a..185367c 100644
+--- a/coregrind/m_sigframe/sigframe-arm-linux.c
++++ b/coregrind/m_sigframe/sigframe-arm-linux.c
+@@ -248,7 +248,6 @@ void VG_(sigframe_destroy)( ThreadId tid, Bool isRT )
+    struct vg_sig_private *priv;
+    Addr sp;
+    UInt frame_size;
+-   struct vki_sigcontext *mc;
+    Int sigNo;
+    Bool has_siginfo = isRT;
+ 
+@@ -259,14 +258,12 @@ void VG_(sigframe_destroy)( ThreadId tid, Bool isRT )
+    if (has_siginfo) {
+       struct rt_sigframe *frame = (struct rt_sigframe *)sp;
+       frame_size = sizeof(*frame);
+-      mc = &frame->sig.uc.uc_mcontext;
+       priv = &frame->sig.vp;
+       vg_assert(priv->magicPI == 0x31415927);
+       tst->sig_mask = frame->sig.uc.uc_sigmask;
+    } else {
+       struct sigframe *frame = (struct sigframe *)sp;
+       frame_size = sizeof(*frame);
+-      mc = &frame->uc.uc_mcontext;
+       priv = &frame->vp;
+       vg_assert(priv->magicPI == 0x31415927);
+       tst->sig_mask = frame->uc.uc_sigmask;
