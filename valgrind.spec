@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.11.0
-Release: 0.3.TEST1%{?dist}
+Release: 0.4.TEST1%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -69,6 +69,15 @@ Patch7: valgrind-3.11.0-arm-no-cast-align.patch
 
 # ppc vbit test fix
 Patch8: valgrind-3.11.0-ppc-vbit-test.patch
+
+# VEXr3188 guard dis_dfp_fmt_conv and dis_dfp_exponent_test with allow_DFP
+Patch9: valgrind-3.11.0-ppc-dfp-guard.patch
+
+# KDE#352769 Power PC program priority register (PPR) is not supported
+Patch10: valgrind-3.11.0-ppc-ppr.patch
+
+# KDE#352768 The mbar instruction is missing from the Power PC support
+Patch11: valgrind-3.11.0-ppc-mbar.patch
 
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -182,6 +191,9 @@ Valgrind User Manual for details.
 %patch6 -p1
 %patch7 -p1
 %patch8 -p1
+%patch9 -p1
+%patch10 -p1
+%patch11 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -357,6 +369,11 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Sat Sep 19 2015 Mark Wielaard <mjw@redhat.com> - 3.11.0-0.4.TEST1
+- Add valgrind-3.11.0-ppc-dfp-guard.patch
+- Add valgrind-3.11.0-ppc-ppr.patch
+- Add valgrind-3.11.0-ppc-mbar.patch
+
 * Fri Sep 18 2015 Mark Wielaard <mjw@redhat.com> - 3.11.0-0.3.TEST1
 - Make sure some info about the system is in the build.log before check.
 - Add valgrind-3.11.0-glibc-futex-message.patch

@@ -1,0 +1,31 @@
+commit e90d8b4d1ebeccc098a701962111dcdc4d68b1ff
+Author: florian <florian@8f6e269a-dfd6-0310-a8e1-e2731360e62c>
+Date:   Mon Sep 14 19:36:29 2015 +0000
+
+    ppc: The functions dis_dfp_fmt_conv and dis_dfp_exponent_test
+    should only be executed in case DFP is supported. Add missing
+    guards.
+    
+    
+    git-svn-id: svn://svn.valgrind.org/vex/trunk@3188 8f6e269a-dfd6-0310-a8e1-e2731360e62c
+
+diff --git a/VEX/priv/guest_ppc_toIR.c b/VEX/priv/guest_ppc_toIR.c
+index 1f28da6..bc0bdcb 100644
+--- a/VEX/priv/guest_ppc_toIR.c
++++ b/VEX/priv/guest_ppc_toIR.c
+@@ -19172,6 +19172,7 @@ DisResult disInstr_PPC_WRK (
+          case 0x322: // POWER 7 inst, dcffix - DFP convert from fixed
+             if (!allow_VX)
+                goto decode_failure;
++            if (!allow_DFP) goto decode_noDFP;
+             if (dis_dfp_fmt_conv( theInstr ))
+                goto decode_success;
+             goto decode_failure;
+@@ -19598,6 +19599,7 @@ DisResult disInstr_PPC_WRK (
+             goto decode_success;
+          goto decode_failure;
+       case 0xA2: // dtstexq - DFP Test exponent Quad
++         if (!allow_DFP) goto decode_noDFP;
+          if (dis_dfp_exponent_test( theInstr ) )
+             goto decode_success;
+          goto decode_failure;
