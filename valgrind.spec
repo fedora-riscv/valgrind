@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.11.0
-Release: 0.1.TEST1%{?dist}
+Release: 1%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -44,7 +44,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 %define _find_debuginfo_dwz_opts %{nil}
 %undefine _include_minidebuginfo
 
-Source0: http://www.valgrind.org/downloads/valgrind-%{version}.TEST1.tar.bz2
+Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
 
 # Needs investigation and pushing upstream
 Patch1: valgrind-3.9.0-cachegrind-improvements.patch
@@ -54,6 +54,12 @@ Patch2: valgrind-3.9.0-helgrind-race-supp.patch
 
 # Make ld.so supressions slightly less specific.
 Patch3: valgrind-3.9.0-ldso-supp.patch
+
+# KDE#353083 arm64 doesn't implement various xattr system calls.
+Patch4: valgrind-3.11.0-arm64-xattr.patch
+
+# KDE#353084 arm64 doesn't support sigpending system call.
+Patch5: valgrind-3.11.0-arm64-sigpending.patch
 
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -157,11 +163,13 @@ See the section on Debugging MPI Parallel Programs with Valgrind in the
 Valgrind User Manual for details.
 
 %prep
-%setup -q -n %{?scl:%{pkg_name}}%{!?scl:%{name}}-%{version}.TEST1
+%setup -q -n %{?scl:%{pkg_name}}%{!?scl:%{name}}-%{version}
 
 %patch1 -p1
 %patch2 -p1
 %patch3 -p1
+%patch4 -p1
+%patch5 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -265,6 +273,12 @@ done
 %endif
 
 %check
+# Make sure some info about the system is in the build.log
+uname -a
+rpm -q glibc gcc %{?scl_prefix}binutils %{?scl_prefix}gdb
+LD_SHOW_AUXV=1 /bin/true
+cat /proc/cpuinfo
+
 # Make sure a basic binary runs.
 ./vg-in-place /bin/true
 
@@ -331,6 +345,37 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Wed Sep 23 2015 Mark Wielaard <mjw@redhat.com> - 3.11.0-1
+- Upgrade to valgrind 3.11.0 final
+- Drop patches included upstream
+  - valgrind-3.11.0-ppc-dfp-guard.patch
+  - valgrind-3.11.0-ppc-ppr.patch
+  - valgrind-3.11.0-ppc-mbar.patch
+  - valgrind-3.11.0-glibc-futex-message.patch
+  - valgrind-3.11.0-arm64-libvex_test.patch
+  - valgrind-3.11.0-arm-warnings.patch
+  - valgrind-3.11.0-arm-no-cast-align.patch
+  - valgrind-3.11.0-ppc-vbit-test.patch
+- Add arm64 syscall patches
+  - valgrind-3.11.0-arm64-xattr.patch
+  - valgrind-3.11.0-arm64-sigpending.patch
+
+* Sat Sep 19 2015 Mark Wielaard <mjw@redhat.com> - 3.11.0-0.4.TEST1
+- Add valgrind-3.11.0-ppc-dfp-guard.patch
+- Add valgrind-3.11.0-ppc-ppr.patch
+- Add valgrind-3.11.0-ppc-mbar.patch
+
+* Fri Sep 18 2015 Mark Wielaard <mjw@redhat.com> - 3.11.0-0.3.TEST1
+- Make sure some info about the system is in the build.log before check.
+- Add valgrind-3.11.0-glibc-futex-message.patch
+- Add valgrind-3.11.0-arm64-libvex_test.patch
+- Add valgrind-3.11.0-arm-warnings.patch
+- Add valgrind-3.11.0-arm-no-cast-align.patch
+- Add valgrind-3.11.0-ppc-vbit-test.patch
+
+* Tue Sep 15 2015 Orion Poplawski <orion@cora.nwra.com> - 1:3.11.0-0.2.TEST1
+- Rebuild for openmpi 1.10.0
+
 * Thu Sep 10 2015 Mark Wielaard <mjw@redhat.com> - 3.11.0-0.1.TEST1
 - Add BuildRequires perl(Getopt::Long)
 - Upgrade to valgrind 3.11.0.TEST1
