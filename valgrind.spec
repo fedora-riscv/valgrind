@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.11.0
-Release: 2%{?dist}
+Release: 3%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -63,6 +63,9 @@ Patch5: valgrind-3.11.0-arm64-sigpending.patch
 
 # KDE#353370 don't advertise RDRAND in cpuid for Core-i7-4910-like avx2
 Patch6: valgrind-3.11.0-no-rdrand.patch
+
+# KDE#278744 cvtps2pd with redundant RexW
+Patch7: valgrind-3.11.0-rexw-cvtps2pd.patch
 
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -174,6 +177,7 @@ Valgrind User Manual for details.
 %patch4 -p1
 %patch5 -p1
 %patch6 -p1
+%patch7 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -349,6 +353,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Mon Oct 12 2015 Mark Wielaard <mjw@redhat.com> - 3.11.0-3
+- Add valgrind-3.11.0-rexw-cvtps2pd.patch.
+
 * Thu Oct 01 2015 Mark Wielaard <mjw@redhat.com> - 3.11.0-2
 - Add valgrind-3.11.0-no-rdrand.patch
 
