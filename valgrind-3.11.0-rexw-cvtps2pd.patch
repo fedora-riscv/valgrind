@@ -8,7 +8,7 @@ index 98596d2..06552e8 100644
           F64 in xmm(G). */
 -      if (haveNo66noF2noF3(pfx) && sz == 4) {
 +      if (haveNo66noF2noF3(pfx)
-+          && sz == 4 || /* ignore redundant REX.W */ sz == 8) {
++          && (sz == 4 || /* ignore redundant REX.W */ sz == 8)) {
           delta = dis_CVTPS2PD_128( vbi, pfx, delta, False/*!isAvx*/ );
           goto decode_success;
        }
