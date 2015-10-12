@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.11.0
-Release: 3%{?dist}
+Release: 4%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -66,6 +66,9 @@ Patch6: valgrind-3.11.0-no-rdrand.patch
 
 # KDE#278744 cvtps2pd with redundant RexW
 Patch7: valgrind-3.11.0-rexw-cvtps2pd.patch
+
+# KDE#353680 Crash with certain glibc versions due to non-implemented TBEGIN
+Patch8: valgrind-3.11.0-s390-hwcap.patch
 
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -178,6 +181,7 @@ Valgrind User Manual for details.
 %patch5 -p1
 %patch6 -p1
 %patch7 -p1
+%patch8 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -353,6 +357,10 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Mon Oct 12 2015 Mark Wielaard <mjw@redhat.com> - 3.11.0-4
+- Fix parenthesis in valgrind-3.11.0-rexw-cvtps2pd.patch.
+- Add valgrind-3.11.0-s390-hwcap.patch
+
 * Mon Oct 12 2015 Mark Wielaard <mjw@redhat.com> - 3.11.0-3
 - Add valgrind-3.11.0-rexw-cvtps2pd.patch.
 
