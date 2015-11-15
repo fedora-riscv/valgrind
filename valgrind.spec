@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.11.0
-Release: 4%{?dist}
+Release: 5%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -69,6 +69,9 @@ Patch7: valgrind-3.11.0-rexw-cvtps2pd.patch
 
 # KDE#353680 Crash with certain glibc versions due to non-implemented TBEGIN
 Patch8: valgrind-3.11.0-s390-hwcap.patch
+
+# KDE#355188 valgrind should intercept all malloc related global functions
+Patch9: valgrind-3.11.0-wrapmalloc.patch
 
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -182,6 +185,7 @@ Valgrind User Manual for details.
 %patch6 -p1
 %patch7 -p1
 %patch8 -p1
+%patch9 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -357,6 +361,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Sun Nov 15 2015 Mark Wielaard <mjw@redhat.com> - 3.11.0-5
+- Add valgrind-3.11.0-wrapmalloc.patch
+
 * Mon Oct 12 2015 Mark Wielaard <mjw@redhat.com> - 3.11.0-4
 - Fix parenthesis in valgrind-3.11.0-rexw-cvtps2pd.patch.
 - Add valgrind-3.11.0-s390-hwcap.patch
