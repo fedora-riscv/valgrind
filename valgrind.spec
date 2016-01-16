@@ -365,7 +365,7 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
-* Sat Jan 17 2016 Mark Wielaard <mjw@redhat.com> - 3.11.0-6
+* Sat Jan 16 2016 Mark Wielaard <mjw@redhat.com> - 3.11.0-6
 - Add valgrind-3.11.0-aspacemgr.patch (#1283774)
 
 * Sun Nov 15 2015 Mark Wielaard <mjw@redhat.com> - 3.11.0-5
