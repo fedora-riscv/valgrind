@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.11.0
-Release: 6%{?dist}
+Release: 7%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -75,6 +75,9 @@ Patch9: valgrind-3.11.0-wrapmalloc.patch
 
 # RHBZ#1283774 - Valgrind: FATAL: aspacem assertion failed
 Patch10: valgrind-3.11.0-aspacemgr.patch
+
+# KDE#358213 - helgrind bar_bad testcase hangs with new glibc pthread barrier
+Patch11: valgrind-3.11.0-pthread_barrier.patch
 
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -190,6 +193,7 @@ Valgrind User Manual for details.
 %patch8 -p1
 %patch9 -p1
 %patch10 -p1
+%patch11 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -365,6 +369,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Tue Jan 19 2016 Mark Wielaard <mjw@redhat.com> - 3.11.0-7
+- Add valgrind-3.11.0-pthread_barrier.patch
+
 * Sat Jan 16 2016 Mark Wielaard <mjw@redhat.com> - 3.11.0-6
 - Add valgrind-3.11.0-aspacemgr.patch (#1283774)
 
