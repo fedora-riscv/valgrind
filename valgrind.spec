@@ -82,8 +82,11 @@ Patch11: valgrind-3.11.0-pthread_barrier.patch
 # KDE#357833 - Valgrind is broken on recent linux kernel (RLIMIT_DATA)
 Patch12: valgrind-3.11.0-rlimit_data.patch
 
-# KDE##357887 VG_(fclose) ought to close the file, you silly.
+# KDE#357887 VG_(fclose) ought to close the file, you silly.
 Patch13: valgrind-3.11.0-fclose.patch
+
+# KDE#357871 Fix helgrind wrapper of pthread_spin_destroy
+Patch14: valgrind-3.11.0-pthread_spin_destroy.patch
 
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -202,6 +205,7 @@ Valgrind User Manual for details.
 %patch11 -p1
 %patch12 -p1
 %patch13 -p1
+%patch14 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -380,6 +384,7 @@ echo ===============END TESTING===============
 * Wed Jan 20 2016 Mark Wielaard <mjw@redhat.com>
 - Add valgrind-3.11.0-rlimit_data.patch
 - Add valgrind-3.11.0-fclose.patch
+- Add valgrind-3.11.0-pthread_spin_destroy.patch
 
 * Tue Jan 19 2016 Mark Wielaard <mjw@redhat.com> - 3.11.0-7
 - Add valgrind-3.11.0-pthread_barrier.patch
