@@ -54,3 +54,27 @@ index ef3d3ef..8e74356 100644
     put_slotsize(ix, len + 1);
     VG_(strcpy)(segnames + ix, name);
     segnames_used += need;
+commit e345eb50c0c5e96ac60b2bc21fbe9f281c20b9e6
+Author: florian <florian@a5019735-40e9-0310-863c-91ae7b9d1cf9>
+Date:   Sat Jan 16 21:12:57 2016 +0000
+
+    Remove code that has no effect. Looks like a leftover from early
+    debugging days.
+    
+    
+    git-svn-id: svn://svn.valgrind.org/valgrind/trunk@15760 a5019735-40e9-0310-863c-91ae7b9d1cf9
+
+diff --git a/coregrind/m_aspacemgr/aspacemgr-segnames.c b/coregrind/m_aspacemgr/aspacemgr-segnames.c
+index 761608d..ef3d3ef 100644
+--- a/coregrind/m_aspacemgr/aspacemgr-segnames.c
++++ b/coregrind/m_aspacemgr/aspacemgr-segnames.c
+@@ -250,9 +250,7 @@ dec_refcount(UInt ix)
+          UInt size = get_slotsize(ix);
+          /* Chain this slot in the freelist */
+          put_slotindex(ix, freeslot_chain);
+-         get_slotindex(ix);
+          put_slotsize(ix + slotsize_size, size);
+-         get_slotindex(ix);
+          freeslot_chain = ix;
+          --num_segnames;
+          if (0) VG_(am_show_nsegments)(0, "AFTER DECREASE rc -> 0");
