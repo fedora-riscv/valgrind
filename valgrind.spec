@@ -88,6 +88,9 @@ Patch13: valgrind-3.11.0-fclose.patch
 # KDE#357871 Fix helgrind wrapper of pthread_spin_destroy
 Patch14: valgrind-3.11.0-pthread_spin_destroy.patch
 
+# KDE#358030 Support direct socket calls on x86 32bit (new in linux 4.3)
+Patch15: valgrind-3.11.0-socketcall-x86-linux.patch
+
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -206,6 +209,7 @@ Valgrind User Manual for details.
 %patch12 -p1
 %patch13 -p1
 %patch14 -p1
+%patch15 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -385,6 +389,7 @@ echo ===============END TESTING===============
 - Add valgrind-3.11.0-rlimit_data.patch
 - Add valgrind-3.11.0-fclose.patch
 - Add valgrind-3.11.0-pthread_spin_destroy.patch
+- Add valgrind-3.11.0-socketcall-x86-linux.patch
 
 * Tue Jan 19 2016 Mark Wielaard <mjw@redhat.com> - 3.11.0-7
 - Add valgrind-3.11.0-pthread_barrier.patch
