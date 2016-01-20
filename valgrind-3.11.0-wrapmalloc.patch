@@ -972,3 +972,205 @@ diff -ur valgrind-3.11.0.orig/memcheck/tests/Makefile.in valgrind-3.11.0/memchec
  xml1-xml1.o: xml1.c
  @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(xml1_CFLAGS) $(CFLAGS) -MT xml1-xml1.o -MD -MP -MF $(DEPDIR)/xml1-xml1.Tpo -c -o xml1-xml1.o `test -f 'xml1.c' || echo '$(srcdir)/'`xml1.c
  @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/xml1-xml1.Tpo $(DEPDIR)/xml1-xml1.Po
+commit d35c2c3197a0ae8398228d19578e1dfcb8401c5f
+Author: iraisr <iraisr@a5019735-40e9-0310-863c-91ae7b9d1cf9>
+Date:   Wed Nov 18 04:13:12 2015 +0000
+
+    Expected stderr of test cases wrapmalloc and wrapmallocstatic are overconstrained.
+    Fixes BZ#355455.
+    
+    
+    git-svn-id: svn://svn.valgrind.org/valgrind/trunk@15727 a5019735-40e9-0310-863c-91ae7b9d1cf9
+
+diff --git a/memcheck/tests/wrapmalloc.stderr.exp b/memcheck/tests/wrapmalloc.stderr.exp
+index d937776..e69de29 100644
+--- a/memcheck/tests/wrapmalloc.stderr.exp
++++ b/memcheck/tests/wrapmalloc.stderr.exp
+@@ -1,10 +0,0 @@
+-
+-
+-HEAP SUMMARY:
+-    in use at exit: 0 bytes in 0 blocks
+-  total heap usage: 1 allocs, 1 frees, 1,024 bytes allocated
+-
+-For a detailed leak analysis, rerun with: --leak-check=full
+-
+-For counts of detected and suppressed errors, rerun with: -v
+-ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)
+diff --git a/memcheck/tests/wrapmalloc.vgtest b/memcheck/tests/wrapmalloc.vgtest
+index a6dff4e..c22f241 100644
+--- a/memcheck/tests/wrapmalloc.vgtest
++++ b/memcheck/tests/wrapmalloc.vgtest
+@@ -1,2 +1,2 @@
+ prog: wrapmalloc
+-
++vgopts: -q
+diff --git a/memcheck/tests/wrapmallocstatic.stderr.exp b/memcheck/tests/wrapmallocstatic.stderr.exp
+index d937776..e69de29 100644
+--- a/memcheck/tests/wrapmallocstatic.stderr.exp
++++ b/memcheck/tests/wrapmallocstatic.stderr.exp
+@@ -1,10 +0,0 @@
+-
+-
+-HEAP SUMMARY:
+-    in use at exit: 0 bytes in 0 blocks
+-  total heap usage: 1 allocs, 1 frees, 1,024 bytes allocated
+-
+-For a detailed leak analysis, rerun with: --leak-check=full
+-
+-For counts of detected and suppressed errors, rerun with: -v
+-ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)
+diff --git a/memcheck/tests/wrapmallocstatic.vgtest b/memcheck/tests/wrapmallocstatic.vgtest
+index 7b3c068..f040756 100644
+--- a/memcheck/tests/wrapmallocstatic.vgtest
++++ b/memcheck/tests/wrapmallocstatic.vgtest
+@@ -1,2 +1,2 @@
+ prog: wrapmallocstatic
+-
++vgopts: -q
+
+commit 194731c49eb7d448503a5e8625dd39779c2c9f8b
+Author: iraisr <iraisr@a5019735-40e9-0310-863c-91ae7b9d1cf9>
+Date:   Wed Nov 18 20:38:37 2015 +0000
+
+    When searching for global public symbols (like for the somalloc
+    synonym symbols), exclude the dynamic (runtime) linker as it is very
+    special.
+    Fixes BZ#355454
+    
+    
+    git-svn-id: svn://svn.valgrind.org/valgrind/trunk@15728 a5019735-40e9-0310-863c-91ae7b9d1cf9
+
+diff --git a/coregrind/m_redir.c b/coregrind/m_redir.c
+index 3d3f70a..dcf1fb4 100644
+--- a/coregrind/m_redir.c
++++ b/coregrind/m_redir.c
+@@ -809,8 +809,19 @@ void generate_and_add_actives (
+    anyMark = False;
+    for (sp = specs; sp; sp = sp->next) {
+       sp->done = False;
+-      sp->mark = VG_(string_match)( sp->from_sopatt, 
+-                                    VG_(DebugInfo_get_soname)(di) );
++      const HChar *soname = VG_(DebugInfo_get_soname)(di);
++
++      /* When searching for global public symbols (like for the somalloc
++         synonym symbols), exclude the dynamic (runtime) linker as it is very
++         special. See https://bugs.kde.org/show_bug.cgi?id=355454 */
++      if ((VG_(strcmp)(sp->from_sopatt, "*") == 0) &&
++          (sp->isGlobal == True) &&
++          VG_(is_soname_ld_so)(soname)) {
++         sp->mark = False;
++         continue;
++      }
++
++      sp->mark = VG_(string_match)( sp->from_sopatt, soname );
+       anyMark = anyMark || sp->mark;
+    }
+ 
+@@ -1179,6 +1190,29 @@ Addr VG_(redir_do_lookup) ( Addr orig, Bool* isWrap )
+    return r->to_addr;
+ }
+ 
++/* Does the soname represent a dynamic (runtime) linker?
++   Considers various VG_U_LD* entries from pub_tool_redir.h. */
++Bool VG_(is_soname_ld_so) (const HChar *soname)
++{
++#  if defined(VGO_linux)
++   if (VG_STREQ(soname, VG_U_LD_LINUX_SO_3))         return True;
++   if (VG_STREQ(soname, VG_U_LD_LINUX_SO_2))         return True;
++   if (VG_STREQ(soname, VG_U_LD_LINUX_X86_64_SO_2))  return True;
++   if (VG_STREQ(soname, VG_U_LD64_SO_1))             return True;
++   if (VG_STREQ(soname, VG_U_LD64_SO_2))             return True;
++   if (VG_STREQ(soname, VG_U_LD_SO_1))               return True;
++   if (VG_STREQ(soname, VG_U_LD_LINUX_AARCH64_SO_1)) return True;
++   if (VG_STREQ(soname, VG_U_LD_LINUX_ARMHF_SO_3))   return True;
++#  elif defined(VGO_darwin)
++   if (VG_STREQ(soname, VG_U_DYLD)) return True;
++#  elif defined(VGO_solaris)
++   if (VG_STREQ(soname, VG_U_LD_SO_1)) return True;
++#  else
++#    error "Unsupported OS"
++#  endif
++
++   return False;
++}
+ 
+ /*------------------------------------------------------------*/
+ /*--- INITIALISATION                                       ---*/
+diff --git a/docs/xml/manual-core.xml b/docs/xml/manual-core.xml
+index c80aab0..758e2f4 100644
+--- a/docs/xml/manual-core.xml
++++ b/docs/xml/manual-core.xml
+@@ -2322,7 +2322,7 @@ need to use them.</para>
+       own versions.  Such replacements are normally done only in shared
+       libraries whose soname matches a predefined soname pattern (e.g.
+       <varname>libc.so*</varname> on linux).  By default, no
+-      replacement is done for a statically linked library or for
++      replacement is done for a statically linked binary or for
+       alternative libraries, except for the allocation functions
+       (malloc, free, calloc, memalign, realloc, operator new, operator
+       delete, etc.) Such allocation functions are intercepted by
+@@ -2392,6 +2392,13 @@ need to use them.</para>
+ 	  </para>
+ 	</listitem>
+ 
++      <listitem>
++         <para>Shared library of the dynamic (runtime) linker is excluded from
++         searching for global public symbols, such as those for the malloc
++         related functions (identified by <varname>somalloc</varname> synonym).
++         </para>
++      </listitem>
++
+       </itemizedlist>
+    </listitem>
+   </varlistentry>
+diff --git a/helgrind/hg_main.c b/helgrind/hg_main.c
+index ae6eec0..9aed05a 100644
+--- a/helgrind/hg_main.c
++++ b/helgrind/hg_main.c
+@@ -4589,7 +4589,6 @@ static Bool is_in_dynamic_linker_shared_object( Addr ga )
+ {
+    DebugInfo* dinfo;
+    const HChar* soname;
+-   if (0) return False;
+ 
+    dinfo = VG_(find_DebugInfo)( ga );
+    if (!dinfo) return False;
+@@ -4598,23 +4597,7 @@ static Bool is_in_dynamic_linker_shared_object( Addr ga )
+    tl_assert(soname);
+    if (0) VG_(printf)("%s\n", soname);
+ 
+-#  if defined(VGO_linux)
+-   if (VG_STREQ(soname, VG_U_LD_LINUX_SO_3))        return True;
+-   if (VG_STREQ(soname, VG_U_LD_LINUX_SO_2))        return True;
+-   if (VG_STREQ(soname, VG_U_LD_LINUX_X86_64_SO_2)) return True;
+-   if (VG_STREQ(soname, VG_U_LD64_SO_1))            return True;
+-   if (VG_STREQ(soname, VG_U_LD64_SO_2))            return True;
+-   if (VG_STREQ(soname, VG_U_LD_SO_1))              return True;
+-   if (VG_STREQ(soname, VG_U_LD_LINUX_AARCH64_SO_1)) return True;
+-   if (VG_STREQ(soname, VG_U_LD_LINUX_ARMHF_SO_3))  return True;
+-#  elif defined(VGO_darwin)
+-   if (VG_STREQ(soname, VG_U_DYLD)) return True;
+-#  elif defined(VGO_solaris)
+-   if (VG_STREQ(soname, VG_U_LD_SO_1)) return True;
+-#  else
+-#    error "Unsupported OS"
+-#  endif
+-   return False;
++   return VG_(is_soname_ld_so)(soname);
+ }
+ 
+ static
+diff --git a/include/pub_tool_redir.h b/include/pub_tool_redir.h
+index 21d186b..aa879d6 100644
+--- a/include/pub_tool_redir.h
++++ b/include/pub_tool_redir.h
+@@ -351,6 +351,8 @@
+ #define SO_SYN_MALLOC VG_SO_SYN(somalloc)
+ #define SO_SYN_MALLOC_NAME "VgSoSynsomalloc"
+ 
++Bool VG_(is_soname_ld_so) (const HChar *soname);
++
+ #endif   // __PUB_TOOL_REDIR_H
+ 
+ /*--------------------------------------------------------------------*/
