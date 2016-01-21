@@ -92,6 +92,9 @@ Patch14: valgrind-3.11.0-pthread_spin_destroy.patch
 # KDE#358030 Support direct socket calls on x86 32bit (new in linux 4.3)
 Patch15: valgrind-3.11.0-socketcall-x86-linux.patch
 
+# KDE#356044 Dwarf line info reader misinterprets is_stmt register
+Patch16: valgrind-3.11.0-is_stmt.patch
+
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -211,6 +214,7 @@ Valgrind User Manual for details.
 %patch13 -p1
 %patch14 -p1
 %patch15 -p1
+%patch16 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -410,6 +414,7 @@ echo ===============END TESTING===============
 - Add valgrind-3.11.0-socketcall-x86-linux.patch
 - Don't strip debuginfo from vgpreload libaries.
   Enable dwz for everything else again.
+- Add valgrind-3.11.0-is_stmt.patch
 
 * Tue Jan 19 2016 Mark Wielaard <mjw@redhat.com> - 3.11.0-7
 - Add valgrind-3.11.0-pthread_barrier.patch
