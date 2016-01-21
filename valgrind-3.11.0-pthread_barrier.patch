@@ -1,38 +1,41 @@
-From b6a0f7b1c175a0159909ede7b41fae09c247784e Mon Sep 17 00:00:00 2001
-From: Mark Wielaard <mjw@redhat.com>
-Date: Tue, 19 Jan 2016 15:13:47 +0100
-Subject: [PATCH] pthread_barrier vs newer glibc implementation
+commit f4d91a5df8b749c6cdfec25e38a44c02c90ad4be
+Author: Mark Wielaard <mjw@redhat.com>
+Date:   Tue Jan 19 15:13:47 2016 +0100
 
-glibc 2.23 will have a new pthread_barrier implementation.
-This implementation reacts differently on bad usage of barriers.
-Because of this the bar_bad testcase will hang indefinitely.
-In particular pthread_barrier_destroy will hang when there are
-still other threads waiting on a barrier. To solve this we add
-extra threads to will "unblock" the hanging destroy by sleeping
-for a while and then also waiting on the barrier, which will unblock
-the destroy operation. Or if this is the last test, just exit
-the whole program since we are done anyway. Also newer glibc is
-more picky about destroying uninitialized barriers, we would crash
-when zero filling, so we now one fill. Which doesn't crash, but
-depending on glibc version might return an error or hang. Since
-depending on version we now get slightly different error reports
-there are now alternative exp files.
+    Bug #358213 helgrind/drd pthread_barrier tests vs new glibc implementation
+    
+    glibc 2.23 will have a new pthread_barrier implementation.
+    This implementation reacts differently on bad usage of barriers.
+    Because of this the bar_bad testcase will hang indefinitely.
+    In particular pthread_barrier_destroy will hang when there are
+    still other threads waiting on a barrier. To solve this we add
+    extra threads to will "unblock" the hanging destroy by sleeping
+    for a while and then also waiting on the barrier, which will unblock
+    the destroy operation. Or if this is the last test, just exit
+    the whole program since we are done anyway. Also newer glibc is
+    more picky about destroying uninitialized barriers, we would crash
+    when zero filling, so we now one fill. Which doesn't crash, but
+    depending on glibc version might return an error or hang. Since
+    depending on version we now get slightly different error reports
+    there are now alternative exp files.
+    
+    Tested against glibc 2.17, glibc 2.22 and glibc 2.23-prerelease.
 
-Tested against glibc 2.17, glibc 2.22 and glibc 2.23-prerelease.
----
- drd/tests/bar_bad.stderr.exp                       | 13 +---
- ...ar_bad.stderr.exp => bar_bad.stderr.exp-nohang} |  9 +--
- drd/tests/bar_bad_xml.stderr.exp                   | 80 ----------------------
- ...ml.stderr.exp => bar_bad_xml.stderr.exp-nohang} | 51 --------------
- helgrind/tests/Makefile.am                         |  1 +
- helgrind/tests/bar_bad.c                           | 51 +++++++++-----
- helgrind/tests/bar_bad.stderr.exp                  | 16 ++---
- ....stderr.exp => bar_bad.stderr.exp-destroy-hang} | 30 +++++---
- 8 files changed, 64 insertions(+), 187 deletions(-)
- copy drd/tests/{bar_bad.stderr.exp => bar_bad.stderr.exp-nohang} (79%)
- copy drd/tests/{bar_bad_xml.stderr.exp => bar_bad_xml.stderr.exp-nohang} (82%)
- copy helgrind/tests/{bar_bad.stderr.exp => bar_bad.stderr.exp-destroy-hang} (72%)
-
+diff --git a/drd/tests/Makefile.am b/drd/tests/Makefile.am
+index 2885391..cfd74d0 100644
+--- a/drd/tests/Makefile.am
++++ b/drd/tests/Makefile.am
+@@ -81,8 +81,10 @@ EXTRA_DIST =                                        \
+ 	atomic_var.stderr.exp			    \
+ 	atomic_var.vgtest			    \
+ 	bar_bad.stderr.exp			    \
++	bar_bad.stderr.exp-nohang		    \
+ 	bar_bad.vgtest				    \
+ 	bar_bad_xml.stderr.exp			    \
++	bar_bad_xml.stderr.exp-nohang		    \
+ 	bar_bad_xml.vgtest			    \
+ 	bar_trivial.stderr.exp			    \
+ 	bar_trivial.stdout.exp			    \
 diff --git a/drd/tests/bar_bad.stderr.exp b/drd/tests/bar_bad.stderr.exp
 index 75f121f..3581b08 100644
 --- a/drd/tests/bar_bad.stderr.exp
@@ -508,6 +511,3 @@ index 74af4fa..ddf5624 100644
 -   by 0x........: main (bar_bad.c:80)
 +   by 0x........: main (bar_bad.c:96)
  
--- 
-1.8.3.1
-
