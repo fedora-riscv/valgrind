@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.11.0
-Release: 1%{?dist}
+Release: 8%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -38,10 +38,11 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 %global build_openmpi 0
 %endif
 
-# Don't run dwz or generate minisymtab, valgrind doesn't handle compressed
-# DWARF very well and it might read its own vgpreload libraries. Generating
-# minisymtabs doesn't really work for the staticly linked tools.
-%define _find_debuginfo_dwz_opts %{nil}
+# Generating minisymtabs doesn't really work for the staticly linked
+# tools. Note (below) that we don't strip the vgpreload libraries at all
+# because valgrind might read and need the debuginfo in those (client)
+# libraries for better error reporting and sometimes correctly unwinding.
+# So those will already have their full symbol table.
 %undefine _include_minidebuginfo
 
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
@@ -60,6 +61,42 @@ Patch4: valgrind-3.11.0-arm64-xattr.patch
 
 # KDE#353084 arm64 doesn't support sigpending system call.
 Patch5: valgrind-3.11.0-arm64-sigpending.patch
+
+# KDE#353370 don't advertise RDRAND in cpuid for Core-i7-4910-like avx2
+Patch6: valgrind-3.11.0-no-rdrand.patch
+
+# KDE#278744 cvtps2pd with redundant RexW
+Patch7: valgrind-3.11.0-rexw-cvtps2pd.patch
+
+# KDE#353680 Crash with certain glibc versions due to non-implemented TBEGIN
+Patch8: valgrind-3.11.0-s390-hwcap.patch
+
+# KDE#355188 valgrind should intercept all malloc related global functions
+Patch9: valgrind-3.11.0-wrapmalloc.patch
+
+# RHBZ#1283774 - Valgrind: FATAL: aspacem assertion failed
+Patch10: valgrind-3.11.0-aspacemgr.patch
+
+# KDE#358213 - helgrind bar_bad testcase hangs with new glibc pthread barrier
+Patch11: valgrind-3.11.0-pthread_barrier.patch
+
+# KDE#357833 - Valgrind is broken on recent linux kernel (RLIMIT_DATA)
+Patch12: valgrind-3.11.0-rlimit_data.patch
+
+# KDE#357887 VG_(fclose) ought to close the file, you silly.
+Patch13: valgrind-3.11.0-fclose.patch
+
+# KDE#357871 Fix helgrind wrapper of pthread_spin_destroy
+Patch14: valgrind-3.11.0-pthread_spin_destroy.patch
+
+# KDE#358030 Support direct socket calls on x86 32bit (new in linux 4.3)
+Patch15: valgrind-3.11.0-socketcall-x86-linux.patch
+
+# KDE#356044 Dwarf line info reader misinterprets is_stmt register
+Patch16: valgrind-3.11.0-is_stmt.patch
+
+# Fix incorrect (or infinite loop) unwind on RHEL7 x86 32 bits. (svn r15729)
+Patch17: valgrind-3.11.0-x86_unwind.patch
 
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -170,6 +207,18 @@ Valgrind User Manual for details.
 %patch3 -p1
 %patch4 -p1
 %patch5 -p1
+%patch6 -p1
+%patch7 -p1
+%patch8 -p1
+%patch9 -p1
+%patch10 -p1
+%patch11 -p1
+%patch12 -p1
+%patch13 -p1
+%patch14 -p1
+%patch15 -p1
+%patch16 -p1
+%patch17 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -272,6 +321,11 @@ for i in HAVE_PTHREAD_CREATE_GLIBC_2_0 HAVE_PTRACE_GETREGS \
 done
 %endif
 
+# We don't want debuginfo generated for the vgpreload libraries.
+# Turn off execute bit so they aren't included in the debuginfo.list.
+# We'll turn the execute bit on again in %%files.
+chmod 644 $RPM_BUILD_ROOT%{_libdir}/valgrind/vgpreload*-%{valarch}-*so
+
 %check
 # Make sure some info about the system is in the build.log
 uname -a
@@ -325,8 +379,20 @@ echo ===============END TESTING===============
 %doc docs/installed/html docs/installed/*.pdf
 %{_bindir}/*
 %dir %{_libdir}/valgrind
+# Install everything in the libdir except the .so and .a files.
+# The vgpreload so files might file mode adjustment (see below).
+# The libmpiwrap so files go in the valgrind-openmpi package.
+# The .a archives go into the valgrind-devel package.
 %{_libdir}/valgrind/*[^ao]
-%{_libdir}/valgrind/[^l]*o
+# Turn on executable bit again for vgpreload libraries.
+# Was disabled in %%install to prevent debuginfo stripping.
+%attr(0755,root,root) %{_libdir}/valgrind/vgpreload*-%{valarch}-*so
+# And install the symlinks to the secarch files if the exist.
+# These are separate from the above because %%attr doesn't work
+# on symlinks.
+%if "%{valsecarch}" != ""
+%{_libdir}/valgrind/vgpreload*-%{valsecarch}-*so
+%endif
 %{_mandir}/man1/*
 
 %files devel
@@ -345,6 +411,35 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Thu Jan 21 2016 Mark Wielaard <mjw@redhat.com> - 3.11.0-8
+- Add valgrind-3.11.0-rlimit_data.patch
+- Add valgrind-3.11.0-fclose.patch
+- Add valgrind-3.11.0-pthread_spin_destroy.patch
+- Add valgrind-3.11.0-socketcall-x86-linux.patch
+- Don't strip debuginfo from vgpreload libaries.
+  Enable dwz for everything else again.
+- Add valgrind-3.11.0-is_stmt.patch
+- Add valgrind-3.11.0-x86_unwind.patch
+
+* Tue Jan 19 2016 Mark Wielaard <mjw@redhat.com> - 3.11.0-7
+- Add valgrind-3.11.0-pthread_barrier.patch
+
+* Sat Jan 16 2016 Mark Wielaard <mjw@redhat.com> - 3.11.0-6
+- Add valgrind-3.11.0-aspacemgr.patch (#1283774)
+
+* Sun Nov 15 2015 Mark Wielaard <mjw@redhat.com> - 3.11.0-5
+- Add valgrind-3.11.0-wrapmalloc.patch
+
+* Mon Oct 12 2015 Mark Wielaard <mjw@redhat.com> - 3.11.0-4
+- Fix parenthesis in valgrind-3.11.0-rexw-cvtps2pd.patch.
+- Add valgrind-3.11.0-s390-hwcap.patch
+
+* Mon Oct 12 2015 Mark Wielaard <mjw@redhat.com> - 3.11.0-3
+- Add valgrind-3.11.0-rexw-cvtps2pd.patch.
+
+* Thu Oct 01 2015 Mark Wielaard <mjw@redhat.com> - 3.11.0-2
+- Add valgrind-3.11.0-no-rdrand.patch
+
 * Wed Sep 23 2015 Mark Wielaard <mjw@redhat.com> - 3.11.0-1
 - Upgrade to valgrind 3.11.0 final
 - Drop patches included upstream
