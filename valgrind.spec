@@ -38,10 +38,11 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 %global build_openmpi 0
 %endif
 
-# Don't run dwz or generate minisymtab, valgrind doesn't handle compressed
-# DWARF very well and it might read its own vgpreload libraries. Generating
-# minisymtabs doesn't really work for the staticly linked tools.
-%define _find_debuginfo_dwz_opts %{nil}
+# Generating minisymtabs doesn't really work for the staticly linked
+# tools. Note (below) that we don't strip the vgpreload libraries at all
+# because valgrind might read and need the debuginfo in those (client)
+# libraries for better error reporting and sometimes correctly unwinding.
+# So those will already have their full symbol table.
 %undefine _include_minidebuginfo
 
 Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
@@ -312,6 +313,11 @@ for i in HAVE_PTHREAD_CREATE_GLIBC_2_0 HAVE_PTRACE_GETREGS \
 done
 %endif
 
+# We don't want debuginfo generated for the vgpreload libraries.
+# Turn off execute bit so they aren't included in the debuginfo.list.
+# We'll turn the execute bit on again in %%files.
+chmod 644 $RPM_BUILD_ROOT%{_libdir}/valgrind/vgpreload*-%{valarch}-*so
+
 %check
 # Make sure some info about the system is in the build.log
 uname -a
@@ -365,8 +371,20 @@ echo ===============END TESTING===============
 %doc docs/installed/html docs/installed/*.pdf
 %{_bindir}/*
 %dir %{_libdir}/valgrind
+# Install everything in the libdir except the .so and .a files.
+# The vgpreload so files might file mode adjustment (see below).
+# The libmpiwrap so files go in the valgrind-openmpi package.
+# The .a archives go into the valgrind-devel package.
 %{_libdir}/valgrind/*[^ao]
-%{_libdir}/valgrind/[^l]*o
+# Turn on executable bit again for vgpreload libraries.
+# Was disabled in %%install to prevent debuginfo stripping.
+%attr(0755,root,root) %{_libdir}/valgrind/vgpreload*-%{valarch}-*so
+# And install the symlinks to the secarch files if the exist.
+# These are separate from the above because %%attr doesn't work
+# on symlinks.
+%if "%{valsecarch}" != ""
+%{_libdir}/valgrind/vgpreload*-%{valsecarch}-*so
+%endif
 %{_mandir}/man1/*
 
 %files devel
@@ -385,11 +403,13 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
-* Wed Jan 20 2016 Mark Wielaard <mjw@redhat.com>
+* Thu Jan 21 2016 Mark Wielaard <mjw@redhat.com>
 - Add valgrind-3.11.0-rlimit_data.patch
 - Add valgrind-3.11.0-fclose.patch
 - Add valgrind-3.11.0-pthread_spin_destroy.patch
 - Add valgrind-3.11.0-socketcall-x86-linux.patch
+- Don't strip debuginfo from vgpreload libaries.
+  Enable dwz for everything else again.
 
 * Tue Jan 19 2016 Mark Wielaard <mjw@redhat.com> - 3.11.0-7
 - Add valgrind-3.11.0-pthread_barrier.patch
