@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.11.0
-Release: 7%{?dist}
+Release: 8%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -411,7 +411,7 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
-* Thu Jan 21 2016 Mark Wielaard <mjw@redhat.com>
+* Thu Jan 21 2016 Mark Wielaard <mjw@redhat.com> - 3.11.0-8
 - Add valgrind-3.11.0-rlimit_data.patch
 - Add valgrind-3.11.0-fclose.patch
 - Add valgrind-3.11.0-pthread_spin_destroy.patch
