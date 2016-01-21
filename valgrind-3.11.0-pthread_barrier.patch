@@ -1,4 +1,4 @@
-From 3a30870111f1ce95d5715e66387d60548927c703 Mon Sep 17 00:00:00 2001
+From b6a0f7b1c175a0159909ede7b41fae09c247784e Mon Sep 17 00:00:00 2001
 From: Mark Wielaard <mjw@redhat.com>
 Date: Tue, 19 Jan 2016 15:13:47 +0100
 Subject: [PATCH] pthread_barrier vs newer glibc implementation
@@ -20,13 +20,232 @@ there are now alternative exp files.
 
 Tested against glibc 2.17, glibc 2.22 and glibc 2.23-prerelease.
 ---
+ drd/tests/bar_bad.stderr.exp                       | 13 +---
+ ...ar_bad.stderr.exp => bar_bad.stderr.exp-nohang} |  9 +--
+ drd/tests/bar_bad_xml.stderr.exp                   | 80 ----------------------
+ ...ml.stderr.exp => bar_bad_xml.stderr.exp-nohang} | 51 --------------
  helgrind/tests/Makefile.am                         |  1 +
- helgrind/tests/bar_bad.c                           | 51 ++++++++++++++--------
- helgrind/tests/bar_bad.stderr.exp                  | 16 +++----
- ....stderr.exp => bar_bad.stderr.exp-destroy-hang} | 30 ++++++++-----
- 4 files changed, 62 insertions(+), 36 deletions(-)
+ helgrind/tests/bar_bad.c                           | 51 +++++++++-----
+ helgrind/tests/bar_bad.stderr.exp                  | 16 ++---
+ ....stderr.exp => bar_bad.stderr.exp-destroy-hang} | 30 +++++---
+ 8 files changed, 64 insertions(+), 187 deletions(-)
+ copy drd/tests/{bar_bad.stderr.exp => bar_bad.stderr.exp-nohang} (79%)
+ copy drd/tests/{bar_bad_xml.stderr.exp => bar_bad_xml.stderr.exp-nohang} (82%)
  copy helgrind/tests/{bar_bad.stderr.exp => bar_bad.stderr.exp-destroy-hang} (72%)
 
+diff --git a/drd/tests/bar_bad.stderr.exp b/drd/tests/bar_bad.stderr.exp
+index 75f121f..3581b08 100644
+--- a/drd/tests/bar_bad.stderr.exp
++++ b/drd/tests/bar_bad.stderr.exp
+@@ -34,16 +34,5 @@ barrier 0x........ was first observed at:
+ 
+ 
+ destroy a barrier that was never initialised
+-Not a barrier
+-   at 0x........: pthread_barrier_destroy (drd_pthread_intercepts.c:?)
+-   by 0x........: main (bar_bad.c:?)
+-
+-Destruction of barrier that is being waited upon: barrier 0x........
+-   at 0x........: free (vg_replace_malloc.c:...)
+-   by 0x........: main (bar_bad.c:?)
+-barrier 0x........ was first observed at:
+-   at 0x........: pthread_barrier_init (drd_pthread_intercepts.c:?)
+-   by 0x........: main (bar_bad.c:?)
+-
+ 
+-ERROR SUMMARY: 7 errors from 6 contexts (suppressed: 0 from 0)
++ERROR SUMMARY: 5 errors from 4 contexts (suppressed: 0 from 0)
+diff --git a/drd/tests/bar_bad.stderr.exp b/drd/tests/bar_bad.stderr.exp-nohang
+similarity index 79%
+copy from drd/tests/bar_bad.stderr.exp
+copy to drd/tests/bar_bad.stderr.exp-nohang
+index 75f121f..44f9651 100644
+--- a/drd/tests/bar_bad.stderr.exp
++++ b/drd/tests/bar_bad.stderr.exp-nohang
+@@ -38,12 +38,5 @@ Not a barrier
+    at 0x........: pthread_barrier_destroy (drd_pthread_intercepts.c:?)
+    by 0x........: main (bar_bad.c:?)
+ 
+-Destruction of barrier that is being waited upon: barrier 0x........
+-   at 0x........: free (vg_replace_malloc.c:...)
+-   by 0x........: main (bar_bad.c:?)
+-barrier 0x........ was first observed at:
+-   at 0x........: pthread_barrier_init (drd_pthread_intercepts.c:?)
+-   by 0x........: main (bar_bad.c:?)
+-
+ 
+-ERROR SUMMARY: 7 errors from 6 contexts (suppressed: 0 from 0)
++ERROR SUMMARY: 6 errors from 5 contexts (suppressed: 0 from 0)
+diff --git a/drd/tests/bar_bad_xml.stderr.exp b/drd/tests/bar_bad_xml.stderr.exp
+index acb9656..8539f75 100644
+--- a/drd/tests/bar_bad_xml.stderr.exp
++++ b/drd/tests/bar_bad_xml.stderr.exp
+@@ -204,78 +204,6 @@ destroy a barrier that has waiting threads
+ 
+ 
+ destroy a barrier that was never initialised
+-<error>
+-  <unique>0x........</unique>
+-  <tid>...</tid>
+-  <kind>GenericErr</kind>
+-  <what>Not a barrier</what>
+-  <stack>
+-    <frame>
+-      <ip>0x........</ip>
+-      <obj>...</obj>
+-      <fn>pthread_barrier_destroy</fn>
+-      <dir>...</dir>
+-      <file>drd_pthread_intercepts.c</file>
+-      <line>...</line>
+-    </frame>
+-    <frame>
+-      <ip>0x........</ip>
+-      <obj>...</obj>
+-      <fn>main</fn>
+-      <dir>...</dir>
+-      <file>bar_bad.c</file>
+-      <line>...</line>
+-    </frame>
+-  </stack>
+-</error>
+-
+-<error>
+-  <unique>0x........</unique>
+-  <tid>...</tid>
+-  <kind>BarrierErr</kind>
+-  <what>Destruction of barrier that is being waited upon: barrier 0x........</what>
+-  <stack>
+-    <frame>
+-      <ip>0x........</ip>
+-      <obj>...</obj>
+-      <fn>free</fn>
+-      <dir>...</dir>
+-      <file>vg_replace_malloc.c</file>
+-      <line>...</line>
+-    </frame>
+-    <frame>
+-      <ip>0x........</ip>
+-      <obj>...</obj>
+-      <fn>main</fn>
+-      <dir>...</dir>
+-      <file>bar_bad.c</file>
+-      <line>...</line>
+-    </frame>
+-  </stack>
+-  <first_observed_at>
+-    <what>barrier</what>
+-    <address>0x........</address>
+-  <stack>
+-    <frame>
+-      <ip>0x........</ip>
+-      <obj>...</obj>
+-      <fn>pthread_barrier_init</fn>
+-      <dir>...</dir>
+-      <file>drd_pthread_intercepts.c</file>
+-      <line>...</line>
+-    </frame>
+-    <frame>
+-      <ip>0x........</ip>
+-      <obj>...</obj>
+-      <fn>main</fn>
+-      <dir>...</dir>
+-      <file>bar_bad.c</file>
+-      <line>...</line>
+-    </frame>
+-  </stack>
+-  </first_observed_at>
+-</error>
+-
+ 
+ <status>
+   <state>FINISHED</state>
+@@ -299,14 +227,6 @@ destroy a barrier that was never initialised
+     <count>...</count>
+     <unique>0x........</unique>
+   </pair>
+-  <pair>
+-    <count>...</count>
+-    <unique>0x........</unique>
+-  </pair>
+-  <pair>
+-    <count>...</count>
+-    <unique>0x........</unique>
+-  </pair>
+ </errorcounts>
+ 
+ <suppcounts>...</suppcounts>
+diff --git a/drd/tests/bar_bad_xml.stderr.exp b/drd/tests/bar_bad_xml.stderr.exp-nohang
+similarity index 82%
+copy from drd/tests/bar_bad_xml.stderr.exp
+copy to drd/tests/bar_bad_xml.stderr.exp-nohang
+index acb9656..a47cd60 100644
+--- a/drd/tests/bar_bad_xml.stderr.exp
++++ b/drd/tests/bar_bad_xml.stderr.exp-nohang
+@@ -229,53 +229,6 @@ destroy a barrier that was never initialised
+   </stack>
+ </error>
+ 
+-<error>
+-  <unique>0x........</unique>
+-  <tid>...</tid>
+-  <kind>BarrierErr</kind>
+-  <what>Destruction of barrier that is being waited upon: barrier 0x........</what>
+-  <stack>
+-    <frame>
+-      <ip>0x........</ip>
+-      <obj>...</obj>
+-      <fn>free</fn>
+-      <dir>...</dir>
+-      <file>vg_replace_malloc.c</file>
+-      <line>...</line>
+-    </frame>
+-    <frame>
+-      <ip>0x........</ip>
+-      <obj>...</obj>
+-      <fn>main</fn>
+-      <dir>...</dir>
+-      <file>bar_bad.c</file>
+-      <line>...</line>
+-    </frame>
+-  </stack>
+-  <first_observed_at>
+-    <what>barrier</what>
+-    <address>0x........</address>
+-  <stack>
+-    <frame>
+-      <ip>0x........</ip>
+-      <obj>...</obj>
+-      <fn>pthread_barrier_init</fn>
+-      <dir>...</dir>
+-      <file>drd_pthread_intercepts.c</file>
+-      <line>...</line>
+-    </frame>
+-    <frame>
+-      <ip>0x........</ip>
+-      <obj>...</obj>
+-      <fn>main</fn>
+-      <dir>...</dir>
+-      <file>bar_bad.c</file>
+-      <line>...</line>
+-    </frame>
+-  </stack>
+-  </first_observed_at>
+-</error>
+-
+ 
+ <status>
+   <state>FINISHED</state>
+@@ -303,10 +256,6 @@ destroy a barrier that was never initialised
+     <count>...</count>
+     <unique>0x........</unique>
+   </pair>
+-  <pair>
+-    <count>...</count>
+-    <unique>0x........</unique>
+-  </pair>
+ </errorcounts>
+ 
+ <suppcounts>...</suppcounts>
 diff --git a/helgrind/tests/Makefile.am b/helgrind/tests/Makefile.am
 index 8a0d6e6..df82169 100644
 --- a/helgrind/tests/Makefile.am
