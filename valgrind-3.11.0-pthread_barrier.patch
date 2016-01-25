@@ -730,3 +730,28 @@ index 0000000..ddf5624
 +   at 0x........: pthread_barrier_destroy (hg_intercepts.c:...)
 +   by 0x........: main (bar_bad.c:96)
 +
+diff -ur valgrind-3.11.0.orig/drd/tests/Makefile.in valgrind-3.11.0/drd/tests/Makefile.in
+--- valgrind-3.11.0.orig/drd/tests/Makefile.in	2016-01-25 21:16:13.095563405 +0100
++++ valgrind-3.11.0/drd/tests/Makefile.in	2016-01-25 21:17:33.386330569 +0100
+@@ -1084,8 +1084,10 @@
+ 	atomic_var.stderr.exp			    \
+ 	atomic_var.vgtest			    \
+ 	bar_bad.stderr.exp			    \
++	bar_bad.stderr.exp-nohang		    \
+ 	bar_bad.vgtest				    \
+ 	bar_bad_xml.stderr.exp			    \
++	bar_bad_xml.stderr.exp-nohang		    \
+ 	bar_bad_xml.vgtest			    \
+ 	bar_trivial.stderr.exp			    \
+ 	bar_trivial.stdout.exp			    \
+diff -ur valgrind-3.11.0.orig/helgrind/tests/Makefile.in valgrind-3.11.0/helgrind/tests/Makefile.in
+--- valgrind-3.11.0.orig/helgrind/tests/Makefile.in	2016-01-25 21:16:12.883564020 +0100
++++ valgrind-3.11.0/helgrind/tests/Makefile.in	2016-01-25 21:17:34.266328017 +0100
+@@ -835,6 +835,7 @@
+ 	cond_timedwait_test.vgtest cond_timedwait_test.stdout.exp \
+ 		cond_timedwait_test.stderr.exp \
+ 	bar_bad.vgtest bar_bad.stdout.exp bar_bad.stderr.exp \
++		bar_bad.stderr.exp-destroy-hang \
+ 	bar_trivial.vgtest bar_trivial.stdout.exp bar_trivial.stderr.exp \
+ 	free_is_write.vgtest free_is_write.stdout.exp \
+ 		free_is_write.stderr.exp \
