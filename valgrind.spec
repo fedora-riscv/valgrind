@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.11.0
-Release: 9%{?dist}
+Release: 10%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -97,6 +97,9 @@ Patch16: valgrind-3.11.0-is_stmt.patch
 
 # Fix incorrect (or infinite loop) unwind on RHEL7 x86 32 bits. (svn r15729)
 Patch17: valgrind-3.11.0-x86_unwind.patch
+
+# KDE#358478 drd/tests/std_thread.cpp doesn't build with GCC6
+Patch18: valgrind-3.11.0-drd_std_thread.patch
 
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -219,6 +222,7 @@ Valgrind User Manual for details.
 %patch15 -p1
 %patch16 -p1
 %patch17 -p1
+%patch18 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -411,7 +415,10 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
-* Fri Jan 21 2016 Mark Wielaard <mjw@redhat.com> - 3.11.0-9
+* Mon Jan 25 2016 Mark Wielaard <mjw@redhat.com> - 3.11.0-10
+- Add valgrind-3.11.0-drd_std_thread.patch GCC6 build fix.
+
+* Fri Jan 22 2016 Mark Wielaard <mjw@redhat.com> - 3.11.0-9
 - Fix valgrind-3.11.0-pthread_barrier.patch to apply with older patch.
 - Fix multilib issue in config.h with HAVE_AS_AMD64_FXSAVE64.
 
