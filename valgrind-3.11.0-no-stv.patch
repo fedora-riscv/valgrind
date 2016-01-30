@@ -1,0 +1,22 @@
+--- valgrind-3.11.0.orig/configure	2015-11-15 18:08:05.399929722 +0100
++++ valgrind-3.11.0/configure	2016-01-30 19:33:09.616564942 +0100
+@@ -8630,7 +8630,7 @@
+ _ACEOF
+ if ac_fn_c_try_compile "$LINENO"; then :
+ 
+-PREFERRED_STACK_BOUNDARY_2="-mpreferred-stack-boundary=2"
++PREFERRED_STACK_BOUNDARY_2="-mpreferred-stack-boundary=2 -mno-stv"
+ { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+ $as_echo "yes" >&6; }
+ 
+--- valgrind-3.11.0.orig/configure.ac	2015-11-15 18:08:05.497930840 +0100
++++ valgrind-3.11.0/configure.ac	2016-01-30 19:32:54.833417794 +0100
+@@ -1836,7 +1836,7 @@
+ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[]], [[
+   return 0;
+ ]])], [
+-PREFERRED_STACK_BOUNDARY_2="-mpreferred-stack-boundary=2"
++PREFERRED_STACK_BOUNDARY_2="-mpreferred-stack-boundary=2 -mno-stv"
+ AC_MSG_RESULT([yes])
+ ], [
+ PREFERRED_STACK_BOUNDARY_2=""

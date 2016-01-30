@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.11.0
-Release: 10%{?dist}
+Release: 11%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -100,6 +100,9 @@ Patch17: valgrind-3.11.0-x86_unwind.patch
 
 # KDE#358478 drd/tests/std_thread.cpp doesn't build with GCC6
 Patch18: valgrind-3.11.0-drd_std_thread.patch
+
+# GCC#69454 Workaround for ix86_expand_prologue internal compiler error
+Patch19: valgrind-3.11.0-no-stv.patch
 
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -223,6 +226,7 @@ Valgrind User Manual for details.
 %patch16 -p1
 %patch17 -p1
 %patch18 -p1
+%patch19 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -415,6 +419,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Sat Jan 30 2016 Mark Wielaard <mjw@redhat.com> - 3.11.0-11
+- Add valgrind-3.11.0-no-stv.patch (GCC6 workaround).
+
 * Mon Jan 25 2016 Mark Wielaard <mjw@redhat.com> - 3.11.0-10
 - Add valgrind-3.11.0-drd_std_thread.patch GCC6 build fix.
 
