@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.11.0
-Release: 11%{?dist}
+Release: 12%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -419,6 +419,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Fri Feb 05 2016 Fedora Release Engineering <releng@fedoraproject.org> - 1:3.11.0-12
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_24_Mass_Rebuild
+
 * Sat Jan 30 2016 Mark Wielaard <mjw@redhat.com> - 3.11.0-11
 - Add valgrind-3.11.0-no-stv.patch (GCC6 workaround).
 
