@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.11.0
-Release: 12%{?dist}
+Release: 13%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -103,6 +103,9 @@ Patch18: valgrind-3.11.0-drd_std_thread.patch
 
 # KDE#359201 futex syscall skips argument 5 if op is FUTEX_WAIT_BITSET
 Patch19: valgrind-3.11.0-futex.patch
+
+# KDE#359289 s390: Implement popcnt insn.
+Patch20: valgrind-3.11.0-s390x-popcnt.patch
 
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -227,6 +230,7 @@ Valgrind User Manual for details.
 %patch17 -p1
 %patch18 -p1
 %patch19 -p1
+%patch20 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -419,9 +423,10 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
-* Wed Feb 17 2016 Mark Wielaard <mjw@redhat.com>
+* Wed Feb 17 2016 Mark Wielaard <mjw@redhat.com> - 3.11.0-13
 - Remove valgrind-3.11.0-no-stv.patch (gcc6 has been fixed).
 - Add valgrind-3.11.0-futex.patch
+- Add valgrind-3.11.0-s390x-popcnt.patch
 
 * Fri Feb 05 2016 Fedora Release Engineering <releng@fedoraproject.org> - 1:3.11.0-12
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_24_Mass_Rebuild
