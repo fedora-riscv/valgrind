@@ -1,0 +1,33 @@
+commit 9a447c6472947bce97e8b90b7f3f97bd7cd9f3ed
+Author: mjw <mjw@a5019735-40e9-0310-863c-91ae7b9d1cf9>
+Date:   Wed Feb 17 20:53:34 2016 +0000
+
+    Bug 359201 futex syscall skips argument 5 if op is FUTEX_WAIT_BITSET
+    
+    git-svn-id: svn://svn.valgrind.org/valgrind/trunk@15793 a5019735-40e9-0310-863c-91ae7b9d1cf9
+
+diff --git a/coregrind/m_syswrap/syswrap-linux.c b/coregrind/m_syswrap/syswrap-linux.c
+index f796969..b57436c 100644
+--- a/coregrind/m_syswrap/syswrap-linux.c
++++ b/coregrind/m_syswrap/syswrap-linux.c
+@@ -1154,13 +1154,16 @@ PRE(sys_futex)
+             return;
+       }
+       if (*(vki_u32 *)ARG1 != ARG3) {
+-         PRE_REG_READ5(long, "futex",
++         PRE_REG_READ4(long, "futex",
+                        vki_u32 *, futex, int, op, int, val,
+-                       struct timespec *, utime, int, dummy);
++                       struct timespec *, utime);
+       } else {
+-         PRE_REG_READ6(long, "futex",
++        /* Note argument 5 is unused, but argument 6 is used.
++           So we cannot just PRE_REG_READ6. Read argument 6 separately.  */
++         PRE_REG_READ4(long, "futex",
+                        vki_u32 *, futex, int, op, int, val,
+-                       struct timespec *, utime, int, dummy, int, val3);
++                       struct timespec *, utime);
++         PRA6("futex",int,val3);
+       }
+       break;
+    case VKI_FUTEX_WAKE_BITSET:
