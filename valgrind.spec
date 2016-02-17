@@ -101,9 +101,6 @@ Patch17: valgrind-3.11.0-x86_unwind.patch
 # KDE#358478 drd/tests/std_thread.cpp doesn't build with GCC6
 Patch18: valgrind-3.11.0-drd_std_thread.patch
 
-# GCC#69454 Workaround for ix86_expand_prologue internal compiler error
-Patch19: valgrind-3.11.0-no-stv.patch
-
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -226,7 +223,6 @@ Valgrind User Manual for details.
 %patch16 -p1
 %patch17 -p1
 %patch18 -p1
-%patch19 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -419,6 +415,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Wed Feb 17 2016 Mark Wielaard <mjw@redhat.com>
+- Remove valgrind-3.11.0-no-stv.patch (gcc6 has been fixed).
+
 * Fri Feb 05 2016 Fedora Release Engineering <releng@fedoraproject.org> - 1:3.11.0-12
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_24_Mass_Rebuild
 
