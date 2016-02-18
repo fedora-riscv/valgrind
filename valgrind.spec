@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.11.0
-Release: 13%{?dist}
+Release: 14%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -96,6 +96,7 @@ Patch15: valgrind-3.11.0-socketcall-x86-linux.patch
 Patch16: valgrind-3.11.0-is_stmt.patch
 
 # Fix incorrect (or infinite loop) unwind on RHEL7 x86 32 bits. (svn r15729)
+# Fix incorrect (or infinite loop) unwind on RHEL7 amd64 64 bits. (svn r15794)
 Patch17: valgrind-3.11.0-x86_unwind.patch
 
 # KDE#358478 drd/tests/std_thread.cpp doesn't build with GCC6
@@ -423,8 +424,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
-* Thu Feb 18 2016 Mark Wielaard <mjw@redhat.com>
-- Update valgrind-3.11.0-futex.patch.
+* Thu Feb 18 2016 Mark Wielaard <mjw@redhat.com> - 3.11.0-14
+- Update valgrind-3.11.0-futex.patch (fix helgrind/drd regression).
+- Update valgrind-3.11.0-x86_unwind.patch (include amd64 fix).
 
 * Wed Feb 17 2016 Mark Wielaard <mjw@redhat.com> - 3.11.0-13
 - Remove valgrind-3.11.0-no-stv.patch (gcc6 has been fixed).
