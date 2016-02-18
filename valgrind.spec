@@ -423,6 +423,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Thu Feb 18 2016 Mark Wielaard <mjw@redhat.com>
+- Update valgrind-3.11.0-futex.patch.
+
 * Wed Feb 17 2016 Mark Wielaard <mjw@redhat.com> - 3.11.0-13
 - Remove valgrind-3.11.0-no-stv.patch (gcc6 has been fixed).
 - Add valgrind-3.11.0-futex.patch
