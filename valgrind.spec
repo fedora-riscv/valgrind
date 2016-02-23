@@ -108,6 +108,9 @@ Patch19: valgrind-3.11.0-futex.patch
 # KDE#359289 s390: Implement popcnt insn.
 Patch20: valgrind-3.11.0-s390x-popcnt.patch
 
+# KDE#359703 s390: wire up separate socketcalls system calls
+Patch21: valgrind-3.11.0-s390-separate-socketcalls.patch
+
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -232,6 +235,7 @@ Valgrind User Manual for details.
 %patch18 -p1
 %patch19 -p1
 %patch20 -p1
+%patch21 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -424,6 +428,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Tue Feb 23 2016 Mark Wielaard <mjw@redhat.com>
+- Add valgrind-3.11.0-s390-separate-socketcalls.patch
+
 * Thu Feb 18 2016 Mark Wielaard <mjw@redhat.com> - 3.11.0-14
 - Update valgrind-3.11.0-futex.patch (fix helgrind/drd regression).
 - Update valgrind-3.11.0-x86_unwind.patch (include amd64 fix).
