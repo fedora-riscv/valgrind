@@ -114,6 +114,9 @@ Patch21: valgrind-3.11.0-s390-separate-socketcalls.patch
 # KDE#359733 amd64 implement ld.so strchr/index override like x86
 Patch22: valgrind-3.11.0-amd64-ld-index.patch
 
+# KDE#359871 Incorrect mask handling in ppoll
+Patch23: valgrind-3.11.0-ppoll-mask.patch
+
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -240,6 +243,7 @@ Valgrind User Manual for details.
 %patch20 -p1
 %patch21 -p1
 %patch22 -p1
+%patch23 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -432,6 +436,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Wed Mar 09 2016 Mark Wielaard <mjw@redhat.com>
+- Add valgrind-3.11.0-ppoll-mask.patch
+
 * Wed Feb 24 2016 Mark Wielaard <mjw@redhat.com> - 3.11.0-15
 - Add valgrind-3.11.0-s390-separate-socketcalls.patch
 - Add valgrind-3.11.0-amd64-ld-index.patch
