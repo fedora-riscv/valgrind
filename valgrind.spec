@@ -120,6 +120,9 @@ Patch23: valgrind-3.11.0-ppoll-mask.patch
 # KDE#359503 - Add missing syscalls for aarch64 (arm64)
 Patch24: valgrind-3.11.0-arm64-more-syscalls.patch
 
+# Workaround for KDE#345307 - still reachable memory in libstdc++ from gcc 5
+Patch25: valgrind-3.11.0-libstdc++-supp.patch
+
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -251,6 +254,8 @@ Valgrind User Manual for details.
 
 # New filter (from patch24) needs to be executable.
 chmod 755 memcheck/tests/arm64-linux/filter_stderr
+
+%patch25 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -443,8 +448,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
-* Thu Mar 10 2016 Mark Wielaard <mjw@redhat.com>
+* Thu Mar 10 2016 Mark Wielaard <mjw@redhat.com> - 3.11.0-17
 - Update valgrind-3.11.0-arm64-more-syscalls.patch
+- Add valgrind-3.11.0-libstdc++-supp.patch (#1312647)
 
 * Wed Mar 09 2016 Mark Wielaard <mjw@redhat.com> - 3.11.0-16
 - Add valgrind-3.11.0-ppoll-mask.patch
