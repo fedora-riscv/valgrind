@@ -443,6 +443,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Thu Mar 10 2016 Mark Wielaard <mjw@redhat.com>
+- Update valgrind-3.11.0-arm64-more-syscalls.patch
+
 * Wed Mar 09 2016 Mark Wielaard <mjw@redhat.com> - 3.11.0-16
 - Add valgrind-3.11.0-ppoll-mask.patch
 - Add valgrind-3.11.0-arm64-more-syscalls.patch

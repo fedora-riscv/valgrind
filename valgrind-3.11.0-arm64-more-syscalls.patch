@@ -5798,3 +5798,26 @@ diff -rNu valgrind-3.11.0.orig/memcheck/tests/Makefile.in valgrind-3.11.0/memche
  @VGCONF_OS_IS_SOLARIS_TRUE@sendmsg_LDADD = -lsocket -lnsl
  str_tester_CFLAGS = $(AM_CFLAGS) -Wno-shadow \
  			  @FLAG_W_NO_MEMSET_TRANSPOSED_ARGS@
+commit 366319c50f4d80b33c286f37b0228b3c0e626ffa
+Author: mjw <mjw@a5019735-40e9-0310-863c-91ae7b9d1cf9>
+Date:   Thu Mar 10 07:59:33 2016 +0000
+
+    Add arm64-linux to tests/platform_test.
+    
+    Prevent executing arm64-linux specific tests on other arches.
+    
+    git-svn-id: svn://svn.valgrind.org/valgrind/trunk@15827 a5019735-40e9-0310-863c-91ae7b9d1cf9
+
+diff --git a/tests/platform_test b/tests/platform_test
+index 9653921..376f62e 100644
+--- a/tests/platform_test
++++ b/tests/platform_test
+@@ -12,7 +12,7 @@
+ 
+ all_platforms=
+ all_platforms="$all_platforms x86-linux amd64-linux ppc32-linux ppc64-linux"
+-all_platforms="$all_platforms arm-linux"
++all_platforms="$all_platforms arm-linux arm64-linux"
+ all_platforms="$all_platforms s390x-linux mips32-linux mips64-linux"
+ all_platforms="$all_platforms x86-darwin amd64-darwin"
+ all_platforms="$all_platforms x86-solaris amd64-solaris"
