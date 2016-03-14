@@ -123,6 +123,9 @@ Patch24: valgrind-3.11.0-arm64-more-syscalls.patch
 # Workaround for KDE#345307 - still reachable memory in libstdc++ from gcc 5
 Patch25: valgrind-3.11.0-libstdc++-supp.patch
 
+# KDE#360519 - none/tests/arm64/memory.vgtest might fail with newer gcc
+Patch26: valgrind-3.11.0-arm64-ldr-literal-test.patch
+
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -256,6 +259,7 @@ Valgrind User Manual for details.
 chmod 755 memcheck/tests/arm64-linux/filter_stderr
 
 %patch25 -p1
+%patch26 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -450,6 +454,7 @@ echo ===============END TESTING===============
 %changelog
 * Mon Mar 14 2016 Mark Wielaard <mjw@redhat.com>
 - Update valgrind-3.11.0-libstdc++-supp.patch.
+- Add valgrind-3.11.0-arm64-ldr-literal-test.patch.
 
 * Thu Mar 10 2016 Mark Wielaard <mjw@redhat.com> - 3.11.0-17
 - Update valgrind-3.11.0-arm64-more-syscalls.patch
