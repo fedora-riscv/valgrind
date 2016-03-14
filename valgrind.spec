@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.11.0
-Release: 16%{?dist}
+Release: 18%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -125,6 +125,9 @@ Patch25: valgrind-3.11.0-libstdc++-supp.patch
 
 # KDE#360519 - none/tests/arm64/memory.vgtest might fail with newer gcc
 Patch26: valgrind-3.11.0-arm64-ldr-literal-test.patch
+
+# KDE#360425 - arm64 unsupported instruction ldpsw
+Patch27: valgrind-3.11.0-arm64-ldpsw.patch
 
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -260,6 +263,7 @@ chmod 755 memcheck/tests/arm64-linux/filter_stderr
 
 %patch25 -p1
 %patch26 -p1
+%patch27 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -452,9 +456,10 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
-* Mon Mar 14 2016 Mark Wielaard <mjw@redhat.com>
+* Mon Mar 14 2016 Mark Wielaard <mjw@redhat.com> - 3.11.0-18
 - Update valgrind-3.11.0-libstdc++-supp.patch.
 - Add valgrind-3.11.0-arm64-ldr-literal-test.patch.
+- Add valgrind-3.11.0-arm64-ldpsw.patch
 
 * Thu Mar 10 2016 Mark Wielaard <mjw@redhat.com> - 3.11.0-17
 - Update valgrind-3.11.0-arm64-more-syscalls.patch
