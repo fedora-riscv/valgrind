@@ -448,6 +448,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Mon Mar 14 2016 Mark Wielaard <mjw@redhat.com>
+- Update valgrind-3.11.0-libstdc++-supp.patch.
+
 * Thu Mar 10 2016 Mark Wielaard <mjw@redhat.com> - 3.11.0-17
 - Update valgrind-3.11.0-arm64-more-syscalls.patch
 - Add valgrind-3.11.0-libstdc++-supp.patch (#1312647)

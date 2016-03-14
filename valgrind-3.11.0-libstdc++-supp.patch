@@ -75,7 +75,7 @@ index 0000000..f04f90d
 +   Memcheck:Leak
 +   match-leak-kinds: reachable
 +   fun:malloc
-+   obj:/usr/*lib*/libstdc++.so*
++   obj:*/*lib*/libstdc++.so*
 +   fun:call_init.part.0
 +   fun:call_init
 +   fun:_dl_init
