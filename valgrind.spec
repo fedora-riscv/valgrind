@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.11.0
-Release: 8%{?dist}
+Release: 18%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -96,7 +96,38 @@ Patch15: valgrind-3.11.0-socketcall-x86-linux.patch
 Patch16: valgrind-3.11.0-is_stmt.patch
 
 # Fix incorrect (or infinite loop) unwind on RHEL7 x86 32 bits. (svn r15729)
+# Fix incorrect (or infinite loop) unwind on RHEL7 amd64 64 bits. (svn r15794)
 Patch17: valgrind-3.11.0-x86_unwind.patch
+
+# KDE#358478 drd/tests/std_thread.cpp doesn't build with GCC6
+Patch18: valgrind-3.11.0-drd_std_thread.patch
+
+# KDE#359201 futex syscall skips argument 5 if op is FUTEX_WAIT_BITSET
+Patch19: valgrind-3.11.0-futex.patch
+
+# KDE#359289 s390: Implement popcnt insn.
+Patch20: valgrind-3.11.0-s390x-popcnt.patch
+
+# KDE#359703 s390: wire up separate socketcalls system calls
+Patch21: valgrind-3.11.0-s390-separate-socketcalls.patch
+
+# KDE#359733 amd64 implement ld.so strchr/index override like x86
+Patch22: valgrind-3.11.0-amd64-ld-index.patch
+
+# KDE#359871 Incorrect mask handling in ppoll
+Patch23: valgrind-3.11.0-ppoll-mask.patch
+
+# KDE#359503 - Add missing syscalls for aarch64 (arm64)
+Patch24: valgrind-3.11.0-arm64-more-syscalls.patch
+
+# Workaround for KDE#345307 - still reachable memory in libstdc++ from gcc 5
+Patch25: valgrind-3.11.0-libstdc++-supp.patch
+
+# KDE#360519 - none/tests/arm64/memory.vgtest might fail with newer gcc
+Patch26: valgrind-3.11.0-arm64-ldr-literal-test.patch
+
+# KDE#360425 - arm64 unsupported instruction ldpsw
+Patch27: valgrind-3.11.0-arm64-ldpsw.patch
 
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -219,6 +250,20 @@ Valgrind User Manual for details.
 %patch15 -p1
 %patch16 -p1
 %patch17 -p1
+%patch18 -p1
+%patch19 -p1
+%patch20 -p1
+%patch21 -p1
+%patch22 -p1
+%patch23 -p1
+%patch24 -p1
+
+# New filter (from patch24) needs to be executable.
+chmod 755 memcheck/tests/arm64-linux/filter_stderr
+
+%patch25 -p1
+%patch26 -p1
+%patch27 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -311,7 +356,7 @@ rm -f $RPM_BUILD_ROOT%{_libdir}/valgrind/*.supp.in
 %ifarch %{ix86} x86_64
 # To avoid multilib clashes in between i?86 and x86_64,
 # tweak installed <valgrind/config.h> a little bit.
-for i in HAVE_PTHREAD_CREATE_GLIBC_2_0 HAVE_PTRACE_GETREGS \
+for i in HAVE_PTHREAD_CREATE_GLIBC_2_0 HAVE_PTRACE_GETREGS HAVE_AS_AMD64_FXSAVE64 \
 %if 0%{?rhel} == 5
          HAVE_BUILTIN_ATOMIC HAVE_BUILTIN_ATOMIC_CXX \
 %endif
@@ -411,6 +456,45 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Mon Mar 14 2016 Mark Wielaard <mjw@redhat.com> - 3.11.0-18
+- Update valgrind-3.11.0-libstdc++-supp.patch.
+- Add valgrind-3.11.0-arm64-ldr-literal-test.patch.
+- Add valgrind-3.11.0-arm64-ldpsw.patch
+
+* Thu Mar 10 2016 Mark Wielaard <mjw@redhat.com> - 3.11.0-17
+- Update valgrind-3.11.0-arm64-more-syscalls.patch
+- Add valgrind-3.11.0-libstdc++-supp.patch (#1312647)
+
+* Wed Mar 09 2016 Mark Wielaard <mjw@redhat.com> - 3.11.0-16
+- Add valgrind-3.11.0-ppoll-mask.patch
+- Add valgrind-3.11.0-arm64-more-syscalls.patch
+
+* Wed Feb 24 2016 Mark Wielaard <mjw@redhat.com> - 3.11.0-15
+- Add valgrind-3.11.0-s390-separate-socketcalls.patch
+- Add valgrind-3.11.0-amd64-ld-index.patch
+
+* Thu Feb 18 2016 Mark Wielaard <mjw@redhat.com> - 3.11.0-14
+- Update valgrind-3.11.0-futex.patch (fix helgrind/drd regression).
+- Update valgrind-3.11.0-x86_unwind.patch (include amd64 fix).
+
+* Wed Feb 17 2016 Mark Wielaard <mjw@redhat.com> - 3.11.0-13
+- Remove valgrind-3.11.0-no-stv.patch (gcc6 has been fixed).
+- Add valgrind-3.11.0-futex.patch
+- Add valgrind-3.11.0-s390x-popcnt.patch
+
+* Fri Feb 05 2016 Fedora Release Engineering <releng@fedoraproject.org> - 1:3.11.0-12
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_24_Mass_Rebuild
+
+* Sat Jan 30 2016 Mark Wielaard <mjw@redhat.com> - 3.11.0-11
+- Add valgrind-3.11.0-no-stv.patch (GCC6 workaround).
+
+* Mon Jan 25 2016 Mark Wielaard <mjw@redhat.com> - 3.11.0-10
+- Add valgrind-3.11.0-drd_std_thread.patch GCC6 build fix.
+
+* Fri Jan 22 2016 Mark Wielaard <mjw@redhat.com> - 3.11.0-9
+- Fix valgrind-3.11.0-pthread_barrier.patch to apply with older patch.
+- Fix multilib issue in config.h with HAVE_AS_AMD64_FXSAVE64.
+
 * Thu Jan 21 2016 Mark Wielaard <mjw@redhat.com> - 3.11.0-8
 - Add valgrind-3.11.0-rlimit_data.patch
 - Add valgrind-3.11.0-fclose.patch
