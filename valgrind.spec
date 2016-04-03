@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.11.0
-Release: 18%{?dist}
+Release: 19%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -485,7 +485,7 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
-* Sun Apr 03 2016 Mark Wielaard <mjw@redhat.com>
+* Sun Apr 03 2016 Mark Wielaard <mjw@redhat.com> - 3.11.0-19
 - Add valgrind-3.11.0-cxx-freeres.patch (#1312647)
 - Add valgrind-3.11.0-ppc64-separate-socketcalls.patch
 - Add valgrind-3.11.0-isZeroU.patch
