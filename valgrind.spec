@@ -148,6 +148,9 @@ Patch32: valgrind-3.11.0-amd64-fcom.patch
 # s390: Recognise machine model z13s (2965)
 Patch33: valgrind-3.11.0-z13s.patch
 
+# Update gdbserver_tests filter for newer GDB version.
+Patch34: valgrind-3.11.0-gdb-test-filters.patch
+
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -289,6 +292,7 @@ chmod 755 memcheck/tests/arm64-linux/filter_stderr
 %patch31 -p1
 %patch32 -p1
 %patch33 -p1
+%patch34 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -489,6 +493,7 @@ echo ===============END TESTING===============
 - Add valgrind-3.11.0-ppc64-128bit-mod-carry.patch
 - Add valgrind-3.11.0-amd64-fcom.patch
 - Add valgrind-3.11.0-z13s.patch
+- Add valgrind-3.11.0-gdb-test-filters.patch
 
 * Mon Mar 14 2016 Mark Wielaard <mjw@redhat.com> - 3.11.0-18
 - Update valgrind-3.11.0-libstdc++-supp.patch.
