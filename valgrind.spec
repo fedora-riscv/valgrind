@@ -136,6 +136,9 @@ Patch28: valgrind-3.11.0-cxx-freeres.patch
 # KDE#361354 - ppc64[le]: wire up separate socketcalls system calls
 Patch29: valgrind-3.11.0-ppc64-separate-socketcalls.patch
 
+# KDE#356393 - valgrind (vex) crashes because isZeroU happened
+Patch30: valgrind-3.11.0-isZeroU.patch
+
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -273,6 +276,7 @@ chmod 755 memcheck/tests/arm64-linux/filter_stderr
 %patch27 -p1
 %patch28 -p1
 %patch29 -p1
+%patch30 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -468,6 +472,7 @@ echo ===============END TESTING===============
 * Sun Apr 03 2016 Mark Wielaard <mjw@redhat.com>
 - Add valgrind-3.11.0-cxx-freeres.patch (#1312647)
 - Add valgrind-3.11.0-ppc64-separate-socketcalls.patch
+- Add valgrind-3.11.0-isZeroU.patch
 
 * Mon Mar 14 2016 Mark Wielaard <mjw@redhat.com> - 3.11.0-18
 - Update valgrind-3.11.0-libstdc++-supp.patch.
