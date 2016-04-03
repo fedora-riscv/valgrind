@@ -473,6 +473,7 @@ echo ===============END TESTING===============
 - Add valgrind-3.11.0-cxx-freeres.patch (#1312647)
 - Add valgrind-3.11.0-ppc64-separate-socketcalls.patch
 - Add valgrind-3.11.0-isZeroU.patch
+- Replace valgrind-3.11.0-arm64-ldpsw.patch with upstream version
 
 * Mon Mar 14 2016 Mark Wielaard <mjw@redhat.com> - 3.11.0-18
 - Update valgrind-3.11.0-libstdc++-supp.patch.
