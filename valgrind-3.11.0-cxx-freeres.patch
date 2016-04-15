@@ -612,3 +612,28 @@ index 580fa19..b124f20 100644
      --sim-hints=hint1,hint2,...  activate unusual sim behaviours [none] 
           where hint is one of:
             lax-ioctls lax-doors fuse-compatible enable-outer
+commit 315cb2823de2e3006ec454b278a9f9e474520f57
+Author: iraisr <iraisr@a5019735-40e9-0310-863c-91ae7b9d1cf9>
+Date:   Fri Apr 8 21:29:15 2016 +0000
+
+    Follow up to bug 345307.
+    Passing parameter on x86 architecture was wrong in final_tidyup().
+    
+    
+    git-svn-id: svn://svn.valgrind.org/valgrind/trunk@15854 a5019735-40e9-0310-863c-91ae7b9d1cf9
+
+diff --git a/coregrind/m_main.c b/coregrind/m_main.c
+index 8cfaf82..80f347e 100644
+--- a/coregrind/m_main.c
++++ b/coregrind/m_main.c
+@@ -2819,9 +2819,9 @@ static void final_tidyup(ThreadId tid)
+    /* Pass a parameter to freeres_wrapper(). */
+ #  if defined(VGA_x86)
+    Addr sp = VG_(threads)[tid].arch.vex.guest_ESP;
+-   sp = sp - sizeof(UWord);
+    *((UWord *) sp) = to_run;
+    VG_TRACK(post_mem_write, Vg_CoreClientReq, tid, sp, sizeof(UWord));
++   sp = sp - sizeof(UWord);
+    VG_(threads)[tid].arch.vex.guest_ESP = sp;
+    VG_TRACK(post_reg_write, Vg_CoreClientReq, tid,
+             offsetof(VexGuestX86State, guest_ESP),
