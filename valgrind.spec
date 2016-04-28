@@ -154,6 +154,9 @@ Patch34: valgrind-3.11.0-gdb-test-filters.patch
 # KDE#361226 s390x: risbgn (EC59) not implemented
 Patch35: valgrind-3.11.0-s390x-risbgn.patch
 
+# KDE#359133 m_deduppoolalloc.c:258 (vgPlain_allocEltDedupPA): Assertion failed 
+Patch36: valgrind-3.11.0-deduppoolalloc.patch
+
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -297,6 +300,7 @@ chmod 755 memcheck/tests/arm64-linux/filter_stderr
 %patch33 -p1
 %patch34 -p1
 %patch35 -p1
+%patch36 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -489,6 +493,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Thu Apr 28 2016 Mark Wielaard <mjw@redhat.com>
+- Add valgrind-3.11.0-deduppoolalloc.patch
+
 * Fri Apr 15 2016 Mark Wielaard <mjw@redhat.com> - 3.11.0-20
 - Update valgrind-3.11.0-cxx-freeres.patch (x86 final_tidyup fix)
 - Add valgrind-3.11.0-s390x-risbgn.patch
