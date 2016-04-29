@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.11.0
-Release: 20%{?dist}
+Release: 21%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -501,7 +501,7 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
-* Thu Apr 28 2016 Mark Wielaard <mjw@redhat.com>
+* Fri Apr 29 2016 Mark Wielaard <mjw@redhat.com> - 3.11.0-21
 - Add valgrind-3.11.0-deduppoolalloc.patch
 - Add valgrind-3.11.0-ppc-bcd-addsub.patch
 - Add valgrind-3.11.0-ppc64-vgdb-vr-regs.patch
