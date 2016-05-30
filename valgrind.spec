@@ -166,6 +166,9 @@ Patch38: valgrind-3.11.0-ppc64-vgdb-vr-regs.patch
 # KDE#363705 arm64 missing syscall name_to_handle_at and open_by_handle_at
 Patch39: valgrind-3.11.0-arm64-handle_at.patch
 
+# KDE#363714 ppc64 missing syscalls sync, waitid and name_to/open_by_handle_at
+Patch40: valgrind-3.11.0-ppc64-syscalls.patch
+
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -313,6 +316,7 @@ chmod 755 memcheck/tests/arm64-linux/filter_stderr
 %patch37 -p1
 %patch38 -p1
 %patch39 -p1
+%patch40 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -507,6 +511,7 @@ echo ===============END TESTING===============
 %changelog
 * Mon May 30 2016 Mark Wielaard <mjw@redhat.com>
 - Add valgrind-3.11.0-arm64-handle_at.patch
+- Add valgrind-3.11.0-ppc64-syscalls.patch
 
 * Fri Apr 29 2016 Mark Wielaard <mjw@redhat.com> - 3.11.0-21
 - Add valgrind-3.11.0-deduppoolalloc.patch
