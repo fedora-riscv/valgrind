@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.11.0
-Release: 22%{?dist}
+Release: 23%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -509,6 +509,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Tue Jun 21 2016 Mark Wielaard <mjw@redhat.com> - 3.11.0-23
+- Update valgrind-3.11.0-ppoll-mask.patch (#1344082)
+
 * Mon May 30 2016 Mark Wielaard <mjw@redhat.com> - 3.11.0-22
 - Add valgrind-3.11.0-arm64-handle_at.patch
 - Add valgrind-3.11.0-ppc64-syscalls.patch

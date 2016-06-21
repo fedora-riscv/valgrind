@@ -699,3 +699,252 @@ diff -ru valgrind-3.11.0.orig/none/tests/Makefile.in valgrind-3.11.0/none/tests/
  @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pth_atfork1.Po@am__quote@
  @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pth_blockedsig.Po@am__quote@
  @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pth_cancel1-pth_cancel1.Po@am__quote@
+commit 8c67aa7a7fb1a125e75937ad438d5f9a8fd20c5d
+Author: mjw <mjw@a5019735-40e9-0310-863c-91ae7b9d1cf9>
+Date:   Tue Jun 21 19:58:21 2016 +0000
+
+    Bug 364413 pselect sycallwrapper mishandles NULL sigmask.
+    
+    Don't check or try to copy sigmask if it is NULL. The sigmask might be
+    given in a struct, where the length is non-zero, but the signal set
+    pointer is NULL.
+    
+    Testcase provided by Paul Eggert <eggert@cs.ucla.edu>.
+    
+    git-svn-id: svn://svn.valgrind.org/valgrind/trunk@15893 a5019735-40e9-0310-863c-91ae7b9d1cf9
+
+diff --git a/coregrind/m_syswrap/syswrap-linux.c b/coregrind/m_syswrap/syswrap-linux.c
+index 24a5ae9..9ace4fd 100644
+--- a/coregrind/m_syswrap/syswrap-linux.c
++++ b/coregrind/m_syswrap/syswrap-linux.c
+@@ -1316,11 +1316,15 @@ PRE(sys_pselect6)
+          pas->ss.ss = (void *)1;
+          pas->ss.ss_len = pss->ss_len;
+          if (pss->ss_len == sizeof(*pss->ss)) {
+-            PRE_MEM_READ("pselect6(sig->ss)", (Addr)pss->ss, pss->ss_len);
+-            if (ML_(safe_to_deref)(pss->ss, sizeof(*pss->ss))) {
+-               pas->adjusted_ss = *pss->ss;
+-               pas->ss.ss = &pas->adjusted_ss;
+-               VG_(sanitize_client_sigmask)(&pas->adjusted_ss);
++            if (pss->ss == NULL) {
++               pas->ss.ss = NULL;
++            } else {
++               PRE_MEM_READ("pselect6(sig->ss)", (Addr)pss->ss, pss->ss_len);
++               if (ML_(safe_to_deref)(pss->ss, sizeof(*pss->ss))) {
++                  pas->adjusted_ss = *pss->ss;
++                  pas->ss.ss = &pas->adjusted_ss;
++                  VG_(sanitize_client_sigmask)(&pas->adjusted_ss);
++               }
+             }
+          }
+       }
+diff --git a/none/tests/Makefile.am b/none/tests/Makefile.am
+index 0e11492..684c1af 100644
+--- a/none/tests/Makefile.am
++++ b/none/tests/Makefile.am
+@@ -150,6 +150,8 @@ EXTRA_DIST = \
+ 	procfs-non-linux.stderr.exp-with-readlinkat \
+ 	procfs-non-linux.stderr.exp-without-readlinkat \
+ 	pselect_alarm.stdout.exp pselect_alarm.stderr.exp pselect_alarm.vgtest \
++	pselect_signask_null.vgtest \
++	pselect_sigmask_null.stdout.exp pselect_sigmask_null.stderr.exp \
+ 	pth_atfork1.stderr.exp pth_atfork1.stdout.exp pth_atfork1.vgtest \
+ 	pth_blockedsig.stderr.exp \
+ 	pth_blockedsig.stdout.exp pth_blockedsig.vgtest \
+@@ -222,6 +222,7 @@
+ 	ppoll_alarm \
+ 	procfs-cmdline-exe \
+ 	pselect_alarm \
++	pselect_sigmask_null \
+ 	pth_atfork1 pth_blockedsig pth_cancel1 pth_cancel2 pth_cvsimple \
+ 	pth_empty pth_exit pth_exit2 pth_mutexspeed pth_once pth_rwlock \
+ 	pth_stackalign \
+diff --git a/none/tests/pselect_sigmask_null.c b/none/tests/pselect_sigmask_null.c
+new file mode 100644
+index 0000000..34bd584
+--- /dev/null
++++ b/none/tests/pselect_sigmask_null.c
+@@ -0,0 +1,26 @@
++/* Make sure handling of NULL sigmask is correct.
++   https://bugs.kde.org/show_bug.cgi?id=XXX
++   We might try to make a copy and adjust the mask.
++   Testcase provided by Paul Eggert <eggert@cs.ucla.edu> */
++
++#include <stdio.h>
++#include <stdlib.h>
++#include <sys/select.h>
++
++int
++main (void)
++{
++  struct timespec timeout;
++  timeout.tv_sec = 1;
++  timeout.tv_nsec = 0;
++  switch (pselect (0, 0, 0, 0, &timeout, 0))
++    {
++    default:
++      abort ();
++    case -1:
++      perror ("pselect");
++      return 1;
++    case 0:
++      return 0;
++    }
++}
+diff --git a/none/tests/pselect_sigmask_null.stderr.exp b/none/tests/pselect_sigmask_null.stderr.exp
+new file mode 100644
+index 0000000..e69de29
+diff --git a/none/tests/pselect_sigmask_null.stdout.exp b/none/tests/pselect_sigmask_null.stdout.exp
+new file mode 100644
+index 0000000..e69de29
+diff --git a/none/tests/pselect_sigmask_null.vgtest b/none/tests/pselect_sigmask_null.vgtest
+new file mode 100644
+index 0000000..e59688c
+--- /dev/null
++++ b/none/tests/pselect_sigmask_null.vgtest
+@@ -0,0 +1,2 @@
++prog: pselect_sigmask_null
++vgopts: -q
+
+commit d41bebeb1e561ddfac17d9be65b29aa5bb3ebaf8
+Author: mjw <mjw@a5019735-40e9-0310-863c-91ae7b9d1cf9>
+Date:   Tue Jun 21 21:06:27 2016 +0000
+
+    Bug 364413 followup - fix signask -> sigmask typo in EXTRA_DIST
+    
+    git-svn-id: svn://svn.valgrind.org/valgrind/trunk@15894 a5019735-40e9-0310-863c-91ae7b9d1cf9
+
+diff --git a/none/tests/Makefile.am b/none/tests/Makefile.am
+index 684c1af..7059e67 100644
+--- a/none/tests/Makefile.am
++++ b/none/tests/Makefile.am
+@@ -150,7 +150,7 @@ EXTRA_DIST = \
+ 	procfs-non-linux.stderr.exp-with-readlinkat \
+ 	procfs-non-linux.stderr.exp-without-readlinkat \
+ 	pselect_alarm.stdout.exp pselect_alarm.stderr.exp pselect_alarm.vgtest \
+-	pselect_signask_null.vgtest \
++	pselect_sigmask_null.vgtest \
+ 	pselect_sigmask_null.stdout.exp pselect_sigmask_null.stderr.exp \
+ 	pth_atfork1.stderr.exp pth_atfork1.stdout.exp pth_atfork1.vgtest \
+ 	pth_blockedsig.stderr.exp \
+Only in valgrind-3.11.0: autom4te.cache
+diff -ur valgrind-3.11.0.orig/none/tests/Makefile.in valgrind-3.11.0/none/tests/Makefile.in
+--- valgrind-3.11.0.orig/none/tests/Makefile.in	2016-06-22 01:12:05.241643238 +0200
++++ valgrind-3.11.0/none/tests/Makefile.in	2016-06-22 01:16:22.545150491 +0200
+@@ -153,12 +153,12 @@
+ 	map_unaligned$(EXEEXT) map_unmap$(EXEEXT) mq$(EXEEXT) \
+ 	pending$(EXEEXT) ppoll_alarm$(EXEEXT) \
+ 	procfs-cmdline-exe$(EXEEXT) pselect_alarm$(EXEEXT) \
+-	pth_atfork1$(EXEEXT) pth_blockedsig$(EXEEXT) \
+-	pth_cancel1$(EXEEXT) pth_cancel2$(EXEEXT) \
+-	pth_cvsimple$(EXEEXT) pth_empty$(EXEEXT) pth_exit$(EXEEXT) \
+-	pth_exit2$(EXEEXT) pth_mutexspeed$(EXEEXT) pth_once$(EXEEXT) \
+-	pth_rwlock$(EXEEXT) pth_stackalign$(EXEEXT) rcrl$(EXEEXT) \
+-	readline1$(EXEEXT) require-text-symbol$(EXEEXT) \
++	pselect_sigmask_null$(EXEEXT) pth_atfork1$(EXEEXT) \
++	pth_blockedsig$(EXEEXT) pth_cancel1$(EXEEXT) \
++	pth_cancel2$(EXEEXT) pth_cvsimple$(EXEEXT) pth_empty$(EXEEXT) \
++	pth_exit$(EXEEXT) pth_exit2$(EXEEXT) pth_mutexspeed$(EXEEXT) \
++	pth_once$(EXEEXT) pth_rwlock$(EXEEXT) pth_stackalign$(EXEEXT) \
++	rcrl$(EXEEXT) readline1$(EXEEXT) require-text-symbol$(EXEEXT) \
+ 	res_search$(EXEEXT) resolv$(EXEEXT) rlimit_nofile$(EXEEXT) \
+ 	selfrun$(EXEEXT) sem$(EXEEXT) semlimit$(EXEEXT) \
+ 	sha1_test$(EXEEXT) shortpush$(EXEEXT) shorts$(EXEEXT) \
+@@ -342,6 +342,9 @@
+ pselect_alarm_SOURCES = pselect_alarm.c
+ pselect_alarm_OBJECTS = pselect_alarm.$(OBJEXT)
+ pselect_alarm_DEPENDENCIES =
++pselect_sigmask_null_SOURCES = pselect_sigmask_null.c
++pselect_sigmask_null_OBJECTS = pselect_sigmask_null.$(OBJEXT)
++pselect_sigmask_null_LDADD = $(LDADD)
+ pth_atfork1_SOURCES = pth_atfork1.c
+ pth_atfork1_OBJECTS = pth_atfork1.$(OBJEXT)
+ pth_atfork1_DEPENDENCIES =
+@@ -535,17 +538,18 @@
+ 	$(libvexmultiarch_test_SOURCES) manythreads.c map_unaligned.c \
+ 	map_unmap.c mmap_fcntl_bug.c mq.c munmap_exe.c nestedfns.c \
+ 	pending.c ppoll_alarm.c process_vm_readv_writev.c \
+-	procfs-cmdline-exe.c pselect_alarm.c pth_atfork1.c \
+-	pth_blockedsig.c pth_cancel1.c pth_cancel2.c pth_cvsimple.c \
+-	pth_empty.c pth_exit.c pth_exit2.c pth_mutexspeed.c pth_once.c \
+-	pth_rwlock.c pth_stackalign.c rcrl.c readline1.c \
+-	require-text-symbol.c res_search.c resolv.c rlimit64_nofile.c \
+-	rlimit_nofile.c selfrun.c sem.c semlimit.c sha1_test.c \
+-	shortpush.c shorts.c sigstackgrowth.c stackgrowth.c \
+-	syscall-restart1.c syscall-restart2.c syslog.c system.c \
+-	thread-exits.c threaded-fork.c threadederrno.c timestamp.c \
+-	$(tls_SOURCES) $(tls_so_SOURCES) $(tls2_so_SOURCES) \
+-	unit_debuglog.c $(valgrind_cpp_test_SOURCES) vgprintf.c
++	procfs-cmdline-exe.c pselect_alarm.c pselect_sigmask_null.c \
++	pth_atfork1.c pth_blockedsig.c pth_cancel1.c pth_cancel2.c \
++	pth_cvsimple.c pth_empty.c pth_exit.c pth_exit2.c \
++	pth_mutexspeed.c pth_once.c pth_rwlock.c pth_stackalign.c \
++	rcrl.c readline1.c require-text-symbol.c res_search.c resolv.c \
++	rlimit64_nofile.c rlimit_nofile.c selfrun.c sem.c semlimit.c \
++	sha1_test.c shortpush.c shorts.c sigstackgrowth.c \
++	stackgrowth.c syscall-restart1.c syscall-restart2.c syslog.c \
++	system.c thread-exits.c threaded-fork.c threadederrno.c \
++	timestamp.c $(tls_SOURCES) $(tls_so_SOURCES) \
++	$(tls2_so_SOURCES) unit_debuglog.c \
++	$(valgrind_cpp_test_SOURCES) vgprintf.c
+ DIST_SOURCES = ansi.c args.c async-sigs.c bitfield1.c bug129866.c \
+ 	bug234814.c closeall.c $(coolo_sigaction_SOURCES) \
+ 	coolo_strlen.c discard.c exec-sigmask.c execve.c faultstatus.c \
+@@ -556,17 +560,18 @@
+ 	$(libvexmultiarch_test_SOURCES) manythreads.c map_unaligned.c \
+ 	map_unmap.c mmap_fcntl_bug.c mq.c munmap_exe.c nestedfns.c \
+ 	pending.c ppoll_alarm.c process_vm_readv_writev.c \
+-	procfs-cmdline-exe.c pselect_alarm.c pth_atfork1.c \
+-	pth_blockedsig.c pth_cancel1.c pth_cancel2.c pth_cvsimple.c \
+-	pth_empty.c pth_exit.c pth_exit2.c pth_mutexspeed.c pth_once.c \
+-	pth_rwlock.c pth_stackalign.c rcrl.c readline1.c \
+-	require-text-symbol.c res_search.c resolv.c rlimit64_nofile.c \
+-	rlimit_nofile.c selfrun.c sem.c semlimit.c sha1_test.c \
+-	shortpush.c shorts.c sigstackgrowth.c stackgrowth.c \
+-	syscall-restart1.c syscall-restart2.c syslog.c system.c \
+-	thread-exits.c threaded-fork.c threadederrno.c timestamp.c \
+-	$(tls_SOURCES) $(tls_so_SOURCES) $(tls2_so_SOURCES) \
+-	unit_debuglog.c $(valgrind_cpp_test_SOURCES) vgprintf.c
++	procfs-cmdline-exe.c pselect_alarm.c pselect_sigmask_null.c \
++	pth_atfork1.c pth_blockedsig.c pth_cancel1.c pth_cancel2.c \
++	pth_cvsimple.c pth_empty.c pth_exit.c pth_exit2.c \
++	pth_mutexspeed.c pth_once.c pth_rwlock.c pth_stackalign.c \
++	rcrl.c readline1.c require-text-symbol.c res_search.c resolv.c \
++	rlimit64_nofile.c rlimit_nofile.c selfrun.c sem.c semlimit.c \
++	sha1_test.c shortpush.c shorts.c sigstackgrowth.c \
++	stackgrowth.c syscall-restart1.c syscall-restart2.c syslog.c \
++	system.c thread-exits.c threaded-fork.c threadederrno.c \
++	timestamp.c $(tls_SOURCES) $(tls_so_SOURCES) \
++	$(tls2_so_SOURCES) unit_debuglog.c \
++	$(valgrind_cpp_test_SOURCES) vgprintf.c
+ RECURSIVE_TARGETS = all-recursive check-recursive cscopelist-recursive \
+ 	ctags-recursive dvi-recursive html-recursive info-recursive \
+ 	install-data-recursive install-dvi-recursive \
+@@ -1087,6 +1092,8 @@
+ 	procfs-non-linux.stderr.exp-with-readlinkat \
+ 	procfs-non-linux.stderr.exp-without-readlinkat \
+ 	pselect_alarm.stdout.exp pselect_alarm.stderr.exp pselect_alarm.vgtest \
++	pselect_sigmask_null.vgtest \
++	pselect_sigmask_null.stdout.exp pselect_sigmask_null.stderr.exp \
+ 	pth_atfork1.stderr.exp pth_atfork1.stdout.exp pth_atfork1.vgtest \
+ 	pth_blockedsig.stderr.exp \
+ 	pth_blockedsig.stdout.exp pth_blockedsig.vgtest \
+@@ -1417,6 +1424,10 @@
+ 	@rm -f pselect_alarm$(EXEEXT)
+ 	$(AM_V_CCLD)$(LINK) $(pselect_alarm_OBJECTS) $(pselect_alarm_LDADD) $(LIBS)
+ 
++pselect_sigmask_null$(EXEEXT): $(pselect_sigmask_null_OBJECTS) $(pselect_sigmask_null_DEPENDENCIES) $(EXTRA_pselect_sigmask_null_DEPENDENCIES) 
++	@rm -f pselect_sigmask_null$(EXEEXT)
++	$(AM_V_CCLD)$(LINK) $(pselect_sigmask_null_OBJECTS) $(pselect_sigmask_null_LDADD) $(LIBS)
++
+ pth_atfork1$(EXEEXT): $(pth_atfork1_OBJECTS) $(pth_atfork1_DEPENDENCIES) $(EXTRA_pth_atfork1_DEPENDENCIES) 
+ 	@rm -f pth_atfork1$(EXEEXT)
+ 	$(AM_V_CCLD)$(LINK) $(pth_atfork1_OBJECTS) $(pth_atfork1_LDADD) $(LIBS)
+@@ -1630,6 +1641,7 @@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/process_vm_readv_writev.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/procfs-cmdline-exe.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pselect_alarm.Po@am__quote@
++@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pselect_sigmask_null.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pth_atfork1.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pth_blockedsig.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pth_cancel1-pth_cancel1.Po@am__quote@
