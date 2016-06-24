@@ -200,6 +200,7 @@ BuildRequires: procps
 BuildRequires: gcc-c++
 
 # check_headers_and_includes uses Getopt::Long
+BuildRequires: perl-generators
 BuildRequires: perl(Getopt::Long)
 
 %{?scl:Requires:%scl_runtime}
