@@ -1174,3 +1174,102 @@ index 21d186b..aa879d6 100644
  #endif   // __PUB_TOOL_REDIR_H
  
  /*--------------------------------------------------------------------*/
+commit a80c98bab0835b51a2193aec19ce55ad607b7ec0
+Author: philippe <philippe@a5019735-40e9-0310-863c-91ae7b9d1cf9>
+Date:   Sat Jul 2 18:46:23 2016 +0000
+
+    Fix leak in m_redir.c
+    See below discussion for more details.
+    
+    On Sat, 2016-07-02 at 14:20 +0200, Philippe Waroquiers wrote:
+    > I am testing a patch (provided by Julian) that solves a false positive
+    > memcheck found at my work.
+    >
+    > Testing this, I decided to run valgrind under valgrind (not done since
+    > a long time).
+    >
+    > This shows a leak in many tests, the stack trace being such as:
+    > ==26246== 336 bytes in 21 blocks are definitely lost in loss record 72 of 141
+    > ==26246==    at 0x2801C01D: vgPlain_arena_malloc (m_mallocfree.c:1855)
+    > ==26246==    by 0x2801D616: vgPlain_arena_strdup (m_mallocfree.c:2528)
+    > ==26246==    by 0x2801D616: vgPlain_strdup (m_mallocfree.c:2600)
+    > ==26246==    by 0x2801F5AD: vgPlain_redir_notify_new_DebugInfo (m_redir.c:619)
+    > ==26246==    by 0x2803B650: di_notify_ACHIEVE_ACCEPT_STATE (debuginfo.c:771)
+    > ==26246==    by 0x2803B650: vgPlain_di_notify_mmap (debuginfo.c:1067)
+    > ==26246==    by 0x2806589C: vgModuleLocal_generic_PRE_sys_mmap (syswrap-generic.c:2368)
+    > ==26246==    by 0x2809932A: vgSysWrap_amd64_linux_sys_mmap_before (syswrap-amd64-linux.c:637)
+    > ==26246==    by 0x28061E11: vgPlain_client_syscall (syswrap-main.c:1906)
+    > ==26246==    by 0x2805E9D2: handle_syscall (scheduler.c:1118)
+    > ==26246==    by 0x280604A6: vgPlain_scheduler (scheduler.c:1435)
+    > ==26246==    by 0x2806FF87: thread_wrapper (syswrap-linux.c:103)
+    > ==26246==    by 0x2806FF87: run_a_thread_NORETURN (syswrap-linux.c:156)
+    >
+    >
+    > The strdup call in m_redir.c:619 was introduced by r15726.
+    >
+    > However, I am not sure this is a bug that is introduced by this change,
+    > or if it just reveals a leak that was already there.
+    > The "very original" replacement logic did not do memory allocation for
+    > the replacement: see m_redir.c in valgrind 3.10.1 : it was just copying
+    > some chars from VG_(clo_soname_synonyms) to demangled_sopatt
+    
+    Yes, it should do exactly the same as the other code paths. If
+    replaced_sopatt != NULL then it is an allocated string that has been
+    assigned to demangled_sopatt. I had assumed that would take care of the
+    life-time issues of the allocated string. But now that I read the code
+    it is indeed not so clear.
+    
+    > Then in 3.11, the fixed size demangled_sopatt was changed to be
+    > a dynamically allocated buffer.
+    > The revision log 14664 that introduced this explains that the ownership of
+    > returned buffer is not easy. It tells at the end:
+    > "So the rule of thunb here is: if in doubt strdup the string."
+    >
+    > but now we have to see when to free what, it seems ???
+    >
+    > Any thoughts ?
+    
+    So if replaced_sopatt != NULL, then demangled_sopatt contains the
+    allocated string, and it is then immediately copied and assigned to
+    spec->from_sopatt. After that it is used under check_ppcTOCs. But there
+    it will first be reassigned a new value through maybe_Z_demangle
+    (overwriting any existing string being pointed to). So for this
+    particular leak it seem fine to free it right after the spec[List] has
+    been initialized (line 642).
+    
+    Cheers,
+    
+    Mark
+    
+    
+    
+    git-svn-id: svn://svn.valgrind.org/valgrind/trunk@15898 a5019735-40e9-0310-863c-91ae7b9d1cf9
+
+diff --git a/coregrind/m_redir.c b/coregrind/m_redir.c
+index 62cb45a..c9e8726 100644
+--- a/coregrind/m_redir.c
++++ b/coregrind/m_redir.c
+@@ -616,7 +616,7 @@ void VG_(redir_notify_new_DebugInfo)( const DebugInfo* newdi )
+ 	    if (replaced_sopatt == NULL
+ 		&& VG_(strcmp) ( demangled_sopatt, SO_SYN_MALLOC_NAME ) == 0)
+ 	      {
+-		replaced_sopatt = VG_(strdup)("m_redir.rnnD.1", "*");
++		replaced_sopatt = dinfo_strdup("m_redir.rnnD.1", "*");
+ 		demangled_sopatt = replaced_sopatt;
+ 		isGlobal = True;
+ 	      }
+@@ -640,6 +640,14 @@ void VG_(redir_notify_new_DebugInfo)( const DebugInfo* newdi )
+          spec->mark = False; /* not significant */
+          spec->done = False; /* not significant */
+          specList = spec;
++         /* The demangler is the owner of the demangled_sopatt memory,
++            unless it was replaced. In this case, we have to free the
++            replace_sopatt(==demangled_sopatt).  We can free it,
++            because it was dinfo_strup-ed into spec->from_sopatt. */
++         if (replaced_sopatt != NULL) {
++            vg_assert(demangled_sopatt == replaced_sopatt);
++            dinfo_free(replaced_sopatt);
++         }
+       }
+       free_symname_array(names_init, &twoslots[0]);
+    }

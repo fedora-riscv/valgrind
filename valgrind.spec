@@ -522,6 +522,7 @@ echo ===============END TESTING===============
 - Mandatory Perl build-requires added
 - Add valgrind-3.11.0-shr.patch
 - Add valgrind-3.11.0-pcmpxstrx-0x70-0x19.patch
+- Update valgrind-3.11.0-wrapmalloc.patch
 
 * Tue Jun 21 2016 Mark Wielaard <mjw@redhat.com> - 3.11.0-23
 - Update valgrind-3.11.0-ppoll-mask.patch (#1344082)
