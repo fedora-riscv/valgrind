@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.11.0
-Release: 23%{?dist}
+Release: 24%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -522,7 +522,7 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
-* Thu Jul 21 2016 Mark Wielaard <mjw@redhat.com>
+* Thu Jul 21 2016 Mark Wielaard <mjw@redhat.com> - 3.11.0-24
 - Mandatory Perl build-requires added
 - Add valgrind-3.11.0-shr.patch
 - Add valgrind-3.11.0-pcmpxstrx-0x70-0x19.patch
