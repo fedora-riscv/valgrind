@@ -172,6 +172,9 @@ Patch40: valgrind-3.11.0-ppc64-syscalls.patch
 # valgrind svn r3223 - memcheck false positive with shr %edx
 Patch41: valgrind-3.11.0-shr.patch
 
+# KDE#359952 - Enable PCMPxSTRx cases 0x70 and 0x19.
+Patch42: valgrind-3.11.0-pcmpxstrx-0x70-0x19.patch
+
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -322,6 +325,7 @@ chmod 755 memcheck/tests/arm64-linux/filter_stderr
 %patch39 -p1
 %patch40 -p1
 %patch41 -p1
+%patch42 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -517,6 +521,7 @@ echo ===============END TESTING===============
 * Thu Jul 21 2016 Mark Wielaard <mjw@redhat.com>
 - Mandatory Perl build-requires added
 - Add valgrind-3.11.0-shr.patch
+- Add valgrind-3.11.0-pcmpxstrx-0x70-0x19.patch
 
 * Tue Jun 21 2016 Mark Wielaard <mjw@redhat.com> - 3.11.0-23
 - Update valgrind-3.11.0-ppoll-mask.patch (#1344082)
