@@ -12,6 +12,10 @@ Group: Development/Debuggers
 # Only necessary for RHEL, will be ignored on Fedora
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
+# Are we building for a Software Collection?
+%{?scl:%global is_scl 1}
+%{!?scl:%global is_scl 0}
+
 # Only arches that are supported upstream as multilib and that the distro
 # has multilib builds for should set build_multilib 1. In practice that
 # is only x86_64 and ppc64 (but not in fedora 21 and later, and never
@@ -23,7 +27,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 %endif
 
 %ifarch ppc64
-  %if 0%{?scl}
+  %if %{is_scl}
     %global build_multilib 0
   %else
     %if 0%{?rhel}
@@ -37,7 +41,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
 # Note s390x doesn't have an openmpi port available.
 # We never want the openmpi subpackage when building a software collecton
-%if 0%{?scl}
+%if %{is_scl}
   %global build_openmpi 0
 %else
   %ifarch %{ix86} x86_64 ppc ppc64 ppc64le %{arm} aarch64
