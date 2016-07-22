@@ -15,7 +15,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 # Only arches that are supported upstream as multilib and that the distro
 # has multilib builds for should set build_multilib 1. In practice that
 # is only x86_64 and ppc64 (but not in fedora 21 and later, and never
-# for ppc64le).
+# for ppc64le or when building for scl).
 %global build_multilib 0
 
 %ifarch x86_64
@@ -23,11 +23,15 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 %endif
 
 %ifarch ppc64
-  %if 0%{?rhel}
-    %global build_multilib 1
-  %endif
-  %if 0%{?fedora}
-    %global build_multilib (%fedora < 21)
+  %if 0%{?scl}
+    %global build_multilib 0
+  %else
+    %if 0%{?rhel}
+      %global build_multilib 1
+    %endif
+    %if 0%{?fedora}
+      %global build_multilib (%fedora < 21)
+    %endif
   %endif
 %endif
 
@@ -313,6 +317,13 @@ Valgrind User Manual for details.
 %patch21 -p1
 %patch22 -p1
 %patch23 -p1
+
+# Older patch might not have created these (expected) empty files (patch23)
+touch none/tests/ppoll_alarm.stderr.exp
+touch none/tests/ppoll_alarm.stdout.exp
+touch none/tests/pselect_alarm.stderr.exp
+touch none/tests/pselect_alarm.stdout.exp
+
 %patch24 -p1
 
 # New filter (from patch24) needs to be executable.
@@ -533,6 +544,8 @@ echo ===============END TESTING===============
 %changelog
 * Fri Jul 22 2016 Mark Wielaard <mjw@redhat.com> - 3.11.0-25
 - Only build valgrind-openmpi when not creating a software collection.
+- No support for multilib on secondary arches when creating scl.
+- Touch up empty .exp files.
 
 * Thu Jul 21 2016 Mark Wielaard <mjw@redhat.com> - 3.11.0-24
 - Mandatory Perl build-requires added
