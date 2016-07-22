@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.11.0
-Release: 24%{?dist}
+Release: 25%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -32,10 +32,15 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 %endif
 
 # Note s390x doesn't have an openmpi port available.
-%ifarch %{ix86} x86_64 ppc ppc64 ppc64le %{arm} aarch64
-%global build_openmpi 1
+# We never want the openmpi subpackage when building a software collecton
+%if 0%{?scl}
+  %global build_openmpi 0
 %else
-%global build_openmpi 0
+  %ifarch %{ix86} x86_64 ppc ppc64 ppc64le %{arm} aarch64
+    %global build_openmpi 1
+  %else
+    %global build_openmpi 0
+  %endif
 %endif
 
 # Generating minisymtabs doesn't really work for the staticly linked
@@ -270,6 +275,7 @@ Provides: %{name}-static = %{epoch}:%{version}-%{release}
 Header files and libraries for development of valgrind aware programs
 or valgrind plugins.
 
+%if %{build_openmpi}
 %package openmpi
 Summary: OpenMPI support for valgrind
 Group: Development/Debuggers
@@ -279,6 +285,7 @@ Requires: %{?scl_prefix}valgrind = %{epoch}:%{version}-%{release}
 A wrapper library for debugging OpenMPI parallel programs with valgrind.
 See the section on Debugging MPI Parallel Programs with Valgrind in the
 Valgrind User Manual for details.
+%endif
 
 %prep
 %setup -q -n %{?scl:%{pkg_name}}%{!?scl:%{name}}-%{version}
@@ -347,10 +354,12 @@ CC="gcc -B `pwd`/shared/libgcc/"
 %endif
 
 # Old openmpi-devel has version depended paths for mpicc.
+%if %{build_openmpi}
 %if 0%{?fedora} >= 13 || 0%{?rhel} >= 6
 %define mpiccpath %{!?scl:%{_libdir}}%{?scl:%{_root_libdir}}/openmpi/bin/mpicc
 %else
 %define mpiccpath %{!?scl:%{_libdir}}%{?scl:%{_root_libdir}}/openmpi/*/bin/mpicc
+%endif
 %endif
 
 # Filter out some flags that cause lots of valgrind test failures.
@@ -522,6 +531,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Fri Jul 22 2016 Mark Wielaard <mjw@redhat.com> - 3.11.0-25
+- Only build valgrind-openmpi when not creating a software collection.
+
 * Thu Jul 21 2016 Mark Wielaard <mjw@redhat.com> - 3.11.0-24
 - Mandatory Perl build-requires added
 - Add valgrind-3.11.0-shr.patch
