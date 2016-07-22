@@ -481,11 +481,16 @@ make %{?_smp_mflags} CFLAGS="" check || :
 
 echo ===============TESTING===================
 # On arm the gdb integration tests hang for unknown reasons.
+# When building a scl we might pick a bad gdb.
 # Only run the main tools tests.
 %ifarch %{arm}
 ./close_fds make nonexp-regtest || :
 %else
-./close_fds make regtest || :
+  %if %{is_scl}
+    ./close_fds make nonexp-regtest || :
+  %else
+    ./close_fds make regtest || :
+  %endif
 %endif
 
 # Make sure test failures show up in build.log
