@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.12.0
-Release: 0.1.BETA1%{?dist}
+Release: 0.2.BETA1%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -69,6 +69,10 @@ Patch2: valgrind-3.9.0-helgrind-race-supp.patch
 
 # Make ld.so supressions slightly less specific.
 Patch3: valgrind-3.9.0-ldso-supp.patch
+
+# KDE#369175 jm_vec_isa_2_07 test crashes on ppc64
+# KDE#369169 ppc64 fails jm_int_isa_2_07 test
+Patch4: valgrind-3.12-beta1-ppc64be.patch
 
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -182,6 +186,7 @@ Valgrind User Manual for details.
 %patch1 -p1
 %patch2 -p1
 %patch3 -p1
+%patch4 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -382,6 +387,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Thu Sep 29 2016 Mark Wielaard <mjw@redhat.com> - 3.12.0-0.2-BETA1
+- Add valgrind-3.12-beta1-ppc64be.patch.
+
 * Tue Sep 20 2016 Mark Wielaard <mjw@redhat.com> - 3.12.0-0.1-BETA1
 - Update to valgrind 3.12.0 pre-release.
   - Drop upstreamed patches.
