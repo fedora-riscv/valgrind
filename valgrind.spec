@@ -314,18 +314,11 @@ make %{?_smp_mflags} CFLAGS="" check || :
 
 echo ===============TESTING===================
 # On arm the gdb integration tests hang for unknown reasons.
-# When building a scl we might pick a bad gdb.
-# Only run the main tools tests.
-# Recent GDB crashes on the gdb_server tests. Disable everywhere for now.
-#%ifarch %{arm}
+%ifarch %{arm}
 ./close_fds make nonexp-regtest || :
-#%else
-#  %if %{is_scl}
-#    ./close_fds make nonexp-regtest || :
-#  %else
-#    ./close_fds make regtest || :
-#  %endif
-#%endif
+%else
+./close_fds make regtest || :
+%endif
 
 # Make sure test failures show up in build.log
 # Gather up the diffs (at most the first 20 lines for each one)
@@ -389,6 +382,7 @@ echo ===============END TESTING===============
 %changelog
 * Thu Sep 29 2016 Mark Wielaard <mjw@redhat.com> - 3.12.0-0.2-BETA1
 - Add valgrind-3.12-beta1-ppc64be.patch.
+- Enable gdb_server tests again.
 
 * Tue Sep 20 2016 Mark Wielaard <mjw@redhat.com> - 3.12.0-0.1-BETA1
 - Update to valgrind 3.12.0 pre-release.
