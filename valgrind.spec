@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.12.0
-Release: 0.3.BETA1%{?dist}
+Release: 0.4.RC2%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -59,7 +59,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 %undefine _include_minidebuginfo
 
 #Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
-Source0: valgrind-3.12.0.BETA1.tar.bz2
+Source0: valgrind-3.12.0.RC2.tar.bz2
 
 # Needs investigation and pushing upstream
 Patch1: valgrind-3.9.0-cachegrind-improvements.patch
@@ -70,12 +70,8 @@ Patch2: valgrind-3.9.0-helgrind-race-supp.patch
 # Make ld.so supressions slightly less specific.
 Patch3: valgrind-3.9.0-ldso-supp.patch
 
-# KDE#369175 jm_vec_isa_2_07 test crashes on ppc64
-# KDE#369169 ppc64 fails jm_int_isa_2_07 test
-Patch4: valgrind-3.12-beta1-ppc64be.patch
-
-# valgrind svn r15988
-Patch5: valgrind-3.12-beta1-ldflags.patch
+# KDE#371396 - workaround helgrind and drd pth_cond_destroy_busy testcase hangs
+Patch4: valgrind-3.12.0-skip-cond-var.patch
 
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -184,13 +180,12 @@ Valgrind User Manual for details.
 %endif
 
 %prep
-%setup -q -n %{?scl:%{pkg_name}}%{!?scl:%{name}}-%{version}.BETA1
+%setup -q -n %{?scl:%{pkg_name}}%{!?scl:%{name}}-%{version}.RC2
 
 %patch1 -p1
 %patch2 -p1
 %patch3 -p1
 %patch4 -p1
-%patch5 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -384,6 +379,10 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Thu Oct 20 2016 Mark Wielaard <mjw@redhat.com> - 3.12.0-0.4-RC2
+- Update to 3.12.0-RC1. Drop integrated patches.
+- Add valgrind-3.12.0-skip-cond-var.patch
+
 * Fri Sep 30 2016 Mark Wielaard <mjw@redhat.com> - 3.12.0-0.3-BETA1
 - Clear CFLAGS, CXXFLAGS and LDFLAGS during make check.
 
