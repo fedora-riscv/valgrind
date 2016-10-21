@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.12.0
-Release: 1%{?dist}
+Release: 2%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -378,6 +378,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Fri Oct 21 2016 Orion Poplawski <orion@cora.nwra.com> - 1:3.12.0-2
+- Rebuild for openmpi 2.0
+
 * Fri Oct 21 2016 Mark Wielaard <mjw@redhat.com> - 3.12.0-1
 - Update to valgrind 3.12.0 release.
 
