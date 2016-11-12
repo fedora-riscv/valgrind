@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.12.0
-Release: 2%{?dist}
+Release: 3%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -71,6 +71,10 @@ Patch3: valgrind-3.9.0-ldso-supp.patch
 
 # KDE#371396 - workaround helgrind and drd pth_cond_destroy_busy testcase hangs
 Patch4: valgrind-3.12.0-skip-cond-var.patch
+
+# RHBZ#1390282 upstream svn r16134
+# Cleanup none/tests/nocwd.vgtest tmp dirs.
+Patch5: valgrind-3.12.0-nocwd-cleanup.patch
 
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -185,6 +189,7 @@ Valgrind User Manual for details.
 %patch2 -p1
 %patch3 -p1
 %patch4 -p1
+%patch5 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -378,6 +383,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Sat Nov 12 2016 Mark Wielaard <mjw@redhat.com> - 3.12.0-3
+- Add valgrind-3.12.0-nocwd-cleanup.patch (#1390282)
+
 * Fri Oct 21 2016 Orion Poplawski <orion@cora.nwra.com> - 1:3.12.0-2
 - Rebuild for openmpi 2.0
 
