@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.12.0
-Release: 3%{?dist}
+Release: 4%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -383,6 +383,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Sat Feb 11 2017 Fedora Release Engineering <releng@fedoraproject.org> - 1:3.12.0-4
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_26_Mass_Rebuild
+
 * Sat Nov 12 2016 Mark Wielaard <mjw@redhat.com> - 3.12.0-3
 - Add valgrind-3.12.0-nocwd-cleanup.patch (#1390282)
 
