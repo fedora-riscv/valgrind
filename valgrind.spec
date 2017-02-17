@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.12.0
-Release: 4%{?dist}
+Release: 5%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -75,6 +75,11 @@ Patch4: valgrind-3.12.0-skip-cond-var.patch
 # RHBZ#1390282 upstream svn r16134
 # Cleanup none/tests/nocwd.vgtest tmp dirs.
 Patch5: valgrind-3.12.0-nocwd-cleanup.patch
+
+# RHBZ#1424367
+# GCC7 now diagnoses inline assembly that clobbers register r2.
+# This has always been invalid code, and is no longer quietly tolerated.
+Patch6: valgrind-3.12.0-ppc64-r2.patch
 
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -190,6 +195,7 @@ Valgrind User Manual for details.
 %patch3 -p1
 %patch4 -p1
 %patch5 -p1
+%patch6 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -383,6 +389,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Fri Feb 17 2017 Mark Wielaard <mjw@redhat.com> - 3.12.0-5
+- Add valgrind-3.12.0-ppc64-r2.patch (#1424367)
+
 * Sat Feb 11 2017 Fedora Release Engineering <releng@fedoraproject.org> - 1:3.12.0-4
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_26_Mass_Rebuild
 
