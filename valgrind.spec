@@ -84,6 +84,9 @@ Patch6: valgrind-3.12.0-ppc64-r2.patch
 # KDE#376611 ppc64 and arm64 don't know about prlimit64 syscall
 Patch7: valgrind-3.12.0-arm64-ppc64-prlimit64.patch
 
+# KDE#376279 Handle unknown HINT instructions on aarch64 by ignoring them.
+Patch8: valgrind-3.12.0-arm64-hint.patch
+
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -200,6 +203,7 @@ Valgrind User Manual for details.
 %patch5 -p1
 %patch6 -p1
 %patch7 -p1
+%patch8 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -395,6 +399,7 @@ echo ===============END TESTING===============
 %changelog
 * Sat Feb 18 2017 Mark Wielaard <mjw@redhat.com>
 - Add valgrind-3.12.0-arm64-ppc64-prlimit64.patch
+- Add valgrind-3.12.0-arm64-hint.patch
 
 * Fri Feb 17 2017 Mark Wielaard <mjw@redhat.com> - 3.12.0-5
 - Add valgrind-3.12.0-ppc64-r2.patch (#1424367)
