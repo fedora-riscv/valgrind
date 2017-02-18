@@ -81,6 +81,9 @@ Patch5: valgrind-3.12.0-nocwd-cleanup.patch
 # This has always been invalid code, and is no longer quietly tolerated.
 Patch6: valgrind-3.12.0-ppc64-r2.patch
 
+# KDE#376611 ppc64 and arm64 don't know about prlimit64 syscall
+Patch7: valgrind-3.12.0-arm64-ppc64-prlimit64.patch
+
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -196,6 +199,7 @@ Valgrind User Manual for details.
 %patch4 -p1
 %patch5 -p1
 %patch6 -p1
+%patch7 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -389,6 +393,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Sat Feb 18 2017 Mark Wielaard <mjw@redhat.com>
+- Add valgrind-3.12.0-arm64-ppc64-prlimit64.patch
+
 * Fri Feb 17 2017 Mark Wielaard <mjw@redhat.com> - 3.12.0-5
 - Add valgrind-3.12.0-ppc64-r2.patch (#1424367)
 
