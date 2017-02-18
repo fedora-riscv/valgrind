@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.12.0
-Release: 6%{?dist}
+Release: 7%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -118,6 +118,13 @@ Patch16: valgrind-3.12.0-helgrind-dl_allocate_tls-supp.patch
 
 # KDE#372195 Power PC, xxsel instruction is not always recognized.
 Patch17: valgrind-3.12.0-ppc-xxsel.patch
+
+# Combined valgrind svn r16229:r16248 patches.
+# Enables pivot_root, sync_file_range, unshare, get_robust_list,
+# delete_module, sched_rr_get_interval, tkill, request_key, move_pages,
+# rt_tgsigqueueinfo, fanotify_init, fanotify_mark, clock_adjtime, kcmp,
+# getcpu and sethostname syscalls on arm64.
+Patch18: valgrind-3.12.0-aarch64-syscalls.patch
 
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -245,6 +252,7 @@ Valgrind User Manual for details.
 %patch15 -p1
 %patch16 -p1
 %patch17 -p1
+%patch18 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -438,6 +446,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Sat Feb 18 2017 Mark Wielaard <mjw@redhat.com> - 3.12.0-7
+- Add valgrind-3.12.0-aarch64-syscalls.patch
+
 * Sat Feb 18 2017 Mark Wielaard <mjw@redhat.com> - 3.12.0-6
 - Add valgrind-3.12.0-arm64-ppc64-prlimit64.patch
 - Add valgrind-3.12.0-arm64-hint.patch
