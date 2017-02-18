@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.12.0
-Release: 5%{?dist}
+Release: 6%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -438,7 +438,7 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
-* Sat Feb 18 2017 Mark Wielaard <mjw@redhat.com>
+* Sat Feb 18 2017 Mark Wielaard <mjw@redhat.com> - 3.12.0-6
 - Add valgrind-3.12.0-arm64-ppc64-prlimit64.patch
 - Add valgrind-3.12.0-arm64-hint.patch
 - Add valgrind-3.12.0-clone-spawn.patch
