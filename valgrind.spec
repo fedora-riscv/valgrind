@@ -110,6 +110,9 @@ Patch13: valgrind-3.12.0-x86-gdt-and-ss.patch
 # KDE#348616 - Wine/valgrind: noted but unhandled ioctl 0x5390 (DVD_READ_STRUCT)
 Patch14: valgrind-3.12.0-cd-dvd-ioctl.patch
 
+# KDE#373069 force old implementation of std::string for leak_cpp_interior test
+Patch15: valgrind-3.12.0-tests-cxx11_abi_0.patch
+
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -233,6 +236,7 @@ Valgrind User Manual for details.
 %patch12 -p1
 %patch13 -p1
 %patch14 -p1
+%patch15 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -435,6 +439,7 @@ echo ===============END TESTING===============
 - Add valgrind-3.12.0-deregister-stack.patch
 - Add valgrind-3.12.0-x86-gdt-and-ss.patch
 - Add valgrind-3.12.0-cd-dvd-ioctl.patch
+- Add valgrind-3.12.0-tests-cxx11_abi_0.patch
 
 * Fri Feb 17 2017 Mark Wielaard <mjw@redhat.com> - 3.12.0-5
 - Add valgrind-3.12.0-ppc64-r2.patch (#1424367)
