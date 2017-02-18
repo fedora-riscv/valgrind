@@ -101,6 +101,11 @@ Patch11: valgrind-3.12.0-exit_group.patch
 # KDE#373046 Stacks registered by core are never deregistered
 Patch12: valgrind-3.12.0-deregister-stack.patch
 
+# KDE#344139
+# Initialize x86 system GDT on first use.
+# VEX: Recognize the SS segment prefix on x86.
+Patch13: valgrind-3.12.0-x86-gdt-and-ss.patch
+
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -222,6 +227,7 @@ Valgrind User Manual for details.
 %patch10 -p1
 %patch11 -p1
 %patch12 -p1
+%patch13 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -422,6 +428,7 @@ echo ===============END TESTING===============
 - Add valgrind-3.12.0-quick-fatal-sigs.patch
 - Add valgrind-3.12.0-exit_group.patch
 - Add valgrind-3.12.0-deregister-stack.patch
+- Add valgrind-3.12.0-x86-gdt-and-ss.patch
 
 * Fri Feb 17 2017 Mark Wielaard <mjw@redhat.com> - 3.12.0-5
 - Add valgrind-3.12.0-ppc64-r2.patch (#1424367)
