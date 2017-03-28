@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.12.0
-Release: 7%{?dist}
+Release: 8%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -129,6 +129,9 @@ Patch18: valgrind-3.12.0-aarch64-syscalls.patch
 # KDE#377427 Fix incorrect register pair check for lxv, stxv, stxsd,
 #            stxssp, lxsd, lxssp instructions
 Patch19: valgrind-3.12.0-powerpc-register-pair.patch
+
+# KDE#377478 PPC64: ISA 3.0 setup fixes
+Patch20: valgrind-3.12.0-ppc64-isa-3_00.patch
 
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -258,6 +261,7 @@ Valgrind User Manual for details.
 %patch17 -p1
 %patch18 -p1
 %patch19 -p1
+%patch20 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -451,8 +455,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
-* Tue Mar 28 2017 Mark Wielaard <mjw@redhat.com>
+* Tue Mar 28 2017 Mark Wielaard <mjw@redhat.com> - 3.12.0-8
 - Add valgrind-3.12.0-powerpc-register-pair.patch
+- Add valgrind-3.12.0-ppc64-isa-3_00.patch
 
 * Sat Feb 18 2017 Mark Wielaard <mjw@redhat.com> - 3.12.0-7
 - Add valgrind-3.12.0-aarch64-syscalls.patch
