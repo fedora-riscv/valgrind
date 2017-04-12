@@ -210,12 +210,15 @@ ExclusiveArch: %{ix86} x86_64 ppc ppc64 ppc64le s390x armv7hl aarch64
 %endif
 
 %description
-Valgrind is a tool to help you find memory-management problems in your
-programs. When a program is run under Valgrind's supervision, all
-reads and writes of memory are checked, and calls to
-malloc/new/free/delete are intercepted. As a result, Valgrind can
-detect a lot of problems that are otherwise very hard to
-find/diagnose.
+Valgrind is an instrumentation framework for building dynamic analysis
+tools. There are Valgrind tools that can automatically detect many
+memory management and threading bugs, and profile your programs in
+detail. You can also use Valgrind to build new tools. The Valgrind
+distribution currently includes six production-quality tools: a memory
+error detector (memcheck, the default tool), two thread error
+detectors (helgrind and drd), a cache and branch-prediction profiler
+(cachegrind), a call-graph generating cache and branch-prediction
+profiler (callgrind), and a heap profiler (massif).
 
 %package devel
 Summary: Development files for valgrind
@@ -455,6 +458,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Wed Apr 12 2017 Mark Wielaard <mjw@redhat.com>
+- Update description as suggested by Ivo Raisr.
+
 * Tue Mar 28 2017 Mark Wielaard <mjw@redhat.com> - 3.12.0-8
 - Add valgrind-3.12.0-powerpc-register-pair.patch
 - Add valgrind-3.12.0-ppc64-isa-3_00.patch
