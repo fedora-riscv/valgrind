@@ -2,8 +2,8 @@
 
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
-Version: 3.12.0
-Release: 8%{?dist}
+Version: 3.13.0
+Release: 0.1.RC1%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -58,7 +58,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 # So those will already have their full symbol table.
 %undefine _include_minidebuginfo
 
-Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
+Source0: ftp://sourceware.org/pub/valgrind/valgrind-%{version}.RC1.tar.bz2
 
 # Needs investigation and pushing upstream
 Patch1: valgrind-3.9.0-cachegrind-improvements.patch
@@ -68,70 +68,6 @@ Patch2: valgrind-3.9.0-helgrind-race-supp.patch
 
 # Make ld.so supressions slightly less specific.
 Patch3: valgrind-3.9.0-ldso-supp.patch
-
-# KDE#371396 - workaround helgrind and drd pth_cond_destroy_busy testcase hangs
-Patch4: valgrind-3.12.0-skip-cond-var.patch
-
-# RHBZ#1390282 upstream svn r16134
-# Cleanup none/tests/nocwd.vgtest tmp dirs.
-Patch5: valgrind-3.12.0-nocwd-cleanup.patch
-
-# RHBZ#1424367
-# GCC7 now diagnoses inline assembly that clobbers register r2.
-# This has always been invalid code, and is no longer quietly tolerated.
-Patch6: valgrind-3.12.0-ppc64-r2.patch
-
-# KDE#376611 ppc64 and arm64 don't know about prlimit64 syscall
-Patch7: valgrind-3.12.0-arm64-ppc64-prlimit64.patch
-
-# KDE#376279 Handle unknown HINT instructions on aarch64 by ignoring them.
-Patch8: valgrind-3.12.0-arm64-hint.patch
-
-# KDE#342040 Valgrind mishandles clone with CLONE_VFORK | CLONE_VM
-#            that clones to a different stack
-# KDE#373192 Calling posix_spawn in glibc 2.24 completely broken
-Patch9: valgrind-3.12.0-clone-spawn.patch
-
-# KDE#372600 process loops forever when fatal signals are arriving quickly
-Patch10: valgrind-3.12.0-quick-fatal-sigs.patch
-
-# KDE#372504 Hanging on exit_group
-Patch11: valgrind-3.12.0-exit_group.patch
-
-# KDE#373046 Stacks registered by core are never deregistered
-Patch12: valgrind-3.12.0-deregister-stack.patch
-
-# KDE#344139
-# Initialize x86 system GDT on first use.
-# VEX: Recognize the SS segment prefix on x86.
-Patch13: valgrind-3.12.0-x86-gdt-and-ss.patch
-
-# KDE#352767 - Wine/valgrind: noted but unhandled ioctl 0x5307 (CDROMSTOP)
-# KDE#348616 - Wine/valgrind: noted but unhandled ioctl 0x5390 (DVD_READ_STRUCT)
-Patch14: valgrind-3.12.0-cd-dvd-ioctl.patch
-
-# KDE#373069 force old implementation of std::string for leak_cpp_interior test
-Patch15: valgrind-3.12.0-tests-cxx11_abi_0.patch
-
-# KDE#375806 add suppression for helgrind/tests/tc22_exit_w_lock
-Patch16: valgrind-3.12.0-helgrind-dl_allocate_tls-supp.patch
-
-# KDE#372195 Power PC, xxsel instruction is not always recognized.
-Patch17: valgrind-3.12.0-ppc-xxsel.patch
-
-# Combined valgrind svn r16229:r16248 patches.
-# Enables pivot_root, sync_file_range, unshare, get_robust_list,
-# delete_module, sched_rr_get_interval, tkill, request_key, move_pages,
-# rt_tgsigqueueinfo, fanotify_init, fanotify_mark, clock_adjtime, kcmp,
-# getcpu and sethostname syscalls on arm64.
-Patch18: valgrind-3.12.0-aarch64-syscalls.patch
-
-# KDE#377427 Fix incorrect register pair check for lxv, stxv, stxsd,
-#            stxssp, lxsd, lxssp instructions
-Patch19: valgrind-3.12.0-powerpc-register-pair.patch
-
-# KDE#377478 PPC64: ISA 3.0 setup fixes
-Patch20: valgrind-3.12.0-ppc64-isa-3_00.patch
 
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -243,28 +179,11 @@ Valgrind User Manual for details.
 %endif
 
 %prep
-%setup -q -n %{?scl:%{pkg_name}}%{!?scl:%{name}}-%{version}
+%setup -q -n %{?scl:%{pkg_name}}%{!?scl:%{name}}-%{version}.RC1
 
 %patch1 -p1
 %patch2 -p1
 %patch3 -p1
-%patch4 -p1
-%patch5 -p1
-%patch6 -p1
-%patch7 -p1
-%patch8 -p1
-%patch9 -p1
-%patch10 -p1
-%patch11 -p1
-%patch12 -p1
-%patch13 -p1
-%patch14 -p1
-%patch15 -p1
-%patch16 -p1
-%patch17 -p1
-%patch18 -p1
-%patch19 -p1
-%patch20 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -390,6 +309,10 @@ cat /proc/cpuinfo
 # the testsuite sets all flags necessary. See also configure above.
 make %{?_smp_mflags} CFLAGS="" CXXFLAGS="" LDFLAGS="" check
 
+# Workaround https://bugzilla.redhat.com/show_bug.cgi?id=1434601
+# for gdbserver tests.
+export PYTHONCOERCECLOCALE=0
+
 echo ===============TESTING===================
 # On arm the gdb integration tests hang for unknown reasons.
 %ifarch %{arm}
@@ -458,8 +381,11 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
-* Wed Apr 12 2017 Mark Wielaard <mjw@redhat.com>
+* Fri Jun  2 2017 Mark Wielaard <mjw@fedoraproject.org> - 3.13.0-0.1.RC1
 - Update description as suggested by Ivo Raisr.
+- Workaround gdb/python bug in testsuite (#1434601)
+- Update to upstream 3.13.0-RC1.
+- Drop all upstreamed patches.
 
 * Tue Mar 28 2017 Mark Wielaard <mjw@redhat.com> - 3.12.0-8
 - Add valgrind-3.12.0-powerpc-register-pair.patch
