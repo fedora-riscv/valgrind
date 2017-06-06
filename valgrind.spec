@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.13.0
-Release: 0.1.RC1%{?dist}
+Release: 0.2.RC1%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -68,6 +68,18 @@ Patch2: valgrind-3.9.0-helgrind-race-supp.patch
 
 # Make ld.so supressions slightly less specific.
 Patch3: valgrind-3.9.0-ldso-supp.patch
+
+# KDE#380397 s390x: __GI_strcspn() replacemenet needed
+Patch4: valgrind-3.13.0-s390x-GI-strcspn.patch
+
+# valgrind svn 16437 Fix pub_tool_basics.h build issue with g++ 4.4.7.
+Patch5: valgrind-3.13.0-g++-4.4.patch
+
+# KDE#380200 xtree generated callgrind files refer to files without directory
+Patch6: valgrind-3.13.0-xtree-callgrind.patch
+
+# KDE#380202 Assertion failure for cache line size on aarch64
+Patch7: valgrind-3.13.0-arm-dcache.patch
 
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -184,6 +196,10 @@ Valgrind User Manual for details.
 %patch1 -p1
 %patch2 -p1
 %patch3 -p1
+%patch4 -p1
+%patch5 -p1
+%patch6 -p1
+%patch7 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -381,6 +397,12 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Tue Jun  6 2017 Mark Wielaard <mjw@fedoraproject.org> - 3.13.0-0.2.RC1
+- Add valgrind-3.13.0-arm-dcache.patch
+- Add valgrind-3.13.0-g++-4.4.patch
+- Add valgrind-3.13.0-s390x-GI-strcspn.patch
+- Add valgrind-3.13.0-xtree-callgrind.patch
+
 * Fri Jun  2 2017 Mark Wielaard <mjw@fedoraproject.org> - 3.13.0-0.1.RC1
 - Update description as suggested by Ivo Raisr.
 - Workaround gdb/python bug in testsuite (#1434601)
