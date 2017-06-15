@@ -113,7 +113,9 @@ BuildRequires: openmpi-devel >= 1.3.3
 
 # For %%build and %%check.
 # In case of a software collection, pick the matching gdb and binutils.
+%if %{run_full_regtest}
 BuildRequires: %{?scl_prefix}gdb
+%endif
 BuildRequires: %{?scl_prefix}binutils
 
 # gdbserver_tests/filter_make_empty uses ps in test
@@ -319,7 +321,11 @@ chmod 644 $RPM_BUILD_ROOT%{_libdir}/valgrind/vgpreload*-%{valarch}-*so
 %check
 # Make sure some info about the system is in the build.log
 uname -a
-rpm -q glibc gcc %{?scl_prefix}binutils %{?scl_prefix}gdb
+rpm -q glibc gcc %{?scl_prefix}binutils
+%if %{run_full_regtest}
+rpm -q %{?scl_prefix}gdb
+%endif
+
 LD_SHOW_AUXV=1 /bin/true
 cat /proc/cpuinfo
 
