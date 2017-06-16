@@ -85,3 +85,77 @@ index 8c74c09..5ebc1a5 100644
  #ifndef __powerpc64__
  typedef uint32_t HWord_t;
  #else
+
+diff --git a/none/tests/ppc64/test_isa_2_06_part1.c b/none/tests/ppc64/test_isa_2_06_part1.c
+index 7cd4930..7a14c6d 100644
+--- a/none/tests/ppc64/test_isa_2_06_part1.c
++++ b/none/tests/ppc64/test_isa_2_06_part1.c
+@@ -20,13 +20,14 @@
+  The GNU General Public License is contained in the file COPYING.
+  */
+ 
+-#ifdef HAS_VSX
+-
+ #include <stdio.h>
+ #include <stdint.h>
+ #include <stdlib.h>
+ #include <string.h>
+ #include <malloc.h>
++
++#ifdef HAS_VSX
++
+ #include <altivec.h>
+ 
+ #ifndef __powerpc64__
+diff --git a/none/tests/ppc64/test_isa_2_06_part2.c b/none/tests/ppc64/test_isa_2_06_part2.c
+index c7bf4fe..2ee7b53 100644
+--- a/none/tests/ppc64/test_isa_2_06_part2.c
++++ b/none/tests/ppc64/test_isa_2_06_part2.c
+@@ -20,17 +20,18 @@
+  The GNU General Public License is contained in the file COPYING.
+  */
+ 
+-#ifdef HAS_VSX
+-
+ #include <stdio.h>
+ #include <stdint.h>
+ #include <stdlib.h>
+ #include <string.h>
+ #include <malloc.h>
+-#include <altivec.h>
+ #include <math.h>
+ #include <unistd.h>    // getopt
+ 
++#ifdef HAS_VSX
++
++#include <altivec.h>
++
+ #ifndef __powerpc64__
+ typedef uint32_t HWord_t;
+ #else
+diff --git a/none/tests/ppc64/test_isa_2_06_part3.c b/none/tests/ppc64/test_isa_2_06_part3.c
+index 8c74c09..5ebc1a5 100644
+--- a/none/tests/ppc64/test_isa_2_06_part3.c
++++ b/none/tests/ppc64/test_isa_2_06_part3.c
+@@ -20,17 +20,18 @@
+  The GNU General Public License is contained in the file COPYING.
+  */
+ 
+-#ifdef HAS_VSX
+-
+ #include <stdio.h>
+ #include <stdint.h>
+ #include <stdlib.h>
+ #include <string.h>
+ #include <malloc.h>
+-#include <altivec.h>
+ #include <math.h>
+ #include <unistd.h>    // getopt
+ 
++#ifdef HAS_VSX
++
++#include <altivec.h>
++
+ #ifndef __powerpc64__
+ typedef uint32_t HWord_t;
+ #else
