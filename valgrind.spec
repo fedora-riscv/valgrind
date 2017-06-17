@@ -95,6 +95,9 @@ Patch3: valgrind-3.9.0-ldso-supp.patch
 # KDE#381272  ppc64 doesn't compile test_isa_2_06_partx.c without VSX support
 Patch4: valgrind-3.13.0-ppc64-check-no-vsx.patch
 
+# KDE#381289 epoll_pwait can have a NULL sigmask.
+Patch5: valgrind-3.13.0-epoll_pwait.patch
+
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -213,6 +216,7 @@ Valgrind User Manual for details.
 %patch2 -p1
 %patch3 -p1
 %patch4 -p1
+%patch5 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -415,10 +419,13 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Sat Jun 17 2017 Mark Wielaard <mjw@fedoraproject.org>
+- Add valgrind-3.13.0-ppc64-check-no-vsx.patch
+- Add valgrind-3.13.0-epoll_pwait.patch (#1462258)
+
 * Thu Jun 15 2017 Mark Wielaard <mjw@fedoraproject.org> - 3.13.0-1
 - valgrind 3.13.0 final.
 - Drop all upstreamed patches.
-- Add valgrind-3.13.0-ppc64-check-no-vsx.patch
 
 * Tue Jun  6 2017 Mark Wielaard <mjw@fedoraproject.org> - 3.13.0-0.2.RC1
 - Add valgrind-3.13.0-arm-dcache.patch
