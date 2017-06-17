@@ -320,10 +320,12 @@ chmod 644 $RPM_BUILD_ROOT%{_libdir}/valgrind/vgpreload*-%{valarch}-*so
 
 %check
 # Make sure some info about the system is in the build.log
+# Add || true because rpm on copr EPEL6 acts weirdly and we don't want
+# to break the build.
 uname -a
-rpm -q glibc gcc %{?scl_prefix}binutils
+rpm -q glibc gcc %{?scl_prefix}binutils || true
 %if %{run_full_regtest}
-rpm -q %{?scl_prefix}gdb
+rpm -q %{?scl_prefix}gdb || true
 %endif
 
 LD_SHOW_AUXV=1 /bin/true
