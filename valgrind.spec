@@ -51,6 +51,29 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
   %endif
 %endif
 
+# Whether to run the full regtest or only a limited set
+# The full regtest includes gdb_server integration tests.
+# On arm the gdb integration tests hang for unknown reasons.
+# On rhel6 the gdb_server tests hang.
+# On rhel7 they hang on ppc64 and ppc64le.
+%ifarch %{arm}
+  %global run_full_regtest 0
+%else
+  %if 0%{?rhel} == 6
+    %global run_full_regtest 0
+  %else
+    %if 0%{?rhel} == 7
+      %ifarch ppc64 ppc64le
+        %global run_full_regtest 0
+      %else
+        %global run_full_regtest 1
+      %endif
+    %else
+      %global run_full_regtest 1
+    %endif
+  %endif
+%endif
+
 # Generating minisymtabs doesn't really work for the staticly linked
 # tools. Note (below) that we don't strip the vgpreload libraries at all
 # because valgrind might read and need the debuginfo in those (client)
@@ -314,11 +337,10 @@ make %{?_smp_mflags} CFLAGS="" CXXFLAGS="" LDFLAGS="" check
 export PYTHONCOERCECLOCALE=0
 
 echo ===============TESTING===================
-# On arm the gdb integration tests hang for unknown reasons.
-%ifarch %{arm}
-./close_fds make nonexp-regtest || :
+%if %{run_full_regtest}
+  ./close_fds make regtest || :
 %else
-./close_fds make regtest || :
+  ./close_fds make nonexp-regtest || :
 %endif
 
 # Make sure test failures show up in build.log
