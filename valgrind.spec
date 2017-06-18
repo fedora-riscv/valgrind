@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.13.0
-Release: 1%{?dist}
+Release: 2%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -423,7 +423,7 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
-* Sat Jun 17 2017 Mark Wielaard <mjw@fedoraproject.org>
+* Sat Jun 17 2017 Mark Wielaard <mjw@fedoraproject.org> 3.13.0-2
 - Add valgrind-3.13.0-ppc64-check-no-vsx.patch
 - Add valgrind-3.13.0-epoll_pwait.patch (#1462258)
 - Add valgrind-3.13.0-ppc64-diag.patch
