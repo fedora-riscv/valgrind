@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.13.0
-Release: 2%{?dist}
+Release: 3%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -100,6 +100,10 @@ Patch5: valgrind-3.13.0-epoll_pwait.patch
 
 # KDE#381274 powerpc too chatty even with --sigill-diagnostics=no
 Patch6: valgrind-3.13.0-ppc64-diag.patch
+
+# KDE#381556 arm64: Handle feature registers access on 4.11 Linux kernel
+# Workaround that masks CPUID support in HWCAP on aarch64 (#1464211)
+Patch7: valgrind-3.13.0-arm64-hwcap.patch
 
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -221,6 +225,7 @@ Valgrind User Manual for details.
 %patch4 -p1
 %patch5 -p1
 %patch6 -p1
+%patch7 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -423,6 +428,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Fri Jun 23 2017 Mark Wielaard <mjw@fedoraproject.org> 3.13.0-3
+- Add valgrind-3.13.0-arm64-hwcap.patch (#1464211)
+
 * Sat Jun 17 2017 Mark Wielaard <mjw@fedoraproject.org> 3.13.0-2
 - Add valgrind-3.13.0-ppc64-check-no-vsx.patch
 - Add valgrind-3.13.0-epoll_pwait.patch (#1462258)
