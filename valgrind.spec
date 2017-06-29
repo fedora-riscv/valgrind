@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.13.0
-Release: 3%{?dist}
+Release: 4%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -104,6 +104,19 @@ Patch6: valgrind-3.13.0-ppc64-diag.patch
 # KDE#381556 arm64: Handle feature registers access on 4.11 Linux kernel
 # Workaround that masks CPUID support in HWCAP on aarch64 (#1464211)
 Patch7: valgrind-3.13.0-arm64-hwcap.patch
+
+# RHBZ#1466017 ARM ld.so index warnings.
+# KDE#381805 arm32 needs ld.so index hardwire for new glibc security fixes
+Patch8: valgrind-3.13.0-arm-index-hardwire.patch
+
+# KDE#381769 Use ucontext_t instead of struct ucontext
+Patch9: valgrind-3.13.0-ucontext_t.patch
+
+# valgrind svn r16453 Fix some tests failure with GDB 8.0
+Patch10: valgrind-3.13.0-gdb-8-testfix.patch
+
+# valgrind svn r16454. disable vgdb poll in the child after fork
+Patch11: valgrind-3.13.0-disable-vgdb-child.patch
 
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -226,6 +239,10 @@ Valgrind User Manual for details.
 %patch5 -p1
 %patch6 -p1
 %patch7 -p1
+%patch8 -p1
+%patch9 -p1
+%patch10 -p1
+%patch11 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -428,6 +445,12 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Thu Jun 29 2017 Mark Wielaard <mjw@fedoraproject.org> 3.13.0-4
+- Add valgrind-3.13.0-arm-index-hardwire.patch (#1466017)
+- Add valgrind-3.13.0-ucontext_t.patch
+- Add valgrind-3.13.0-gdb-8-testfix.patch
+- Add valgrind-3.13.0-disable-vgdb-child.patch
+
 * Fri Jun 23 2017 Mark Wielaard <mjw@fedoraproject.org> 3.13.0-3
 - Add valgrind-3.13.0-arm64-hwcap.patch (#1464211)
 
