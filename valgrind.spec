@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.11.0
-Release: 26%{?dist}
+Release: 27%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -191,6 +191,10 @@ Patch42: valgrind-3.11.0-pcmpxstrx-0x70-0x19.patch
 # KDE#365273 - Invalid write to stack location reported after signal handler
 Patch43: valgrind-3.11.0-sighandler-stack.patch
 
+# RHBZ#1466017 ARM ld.so index warnings.
+# KDE#381805 arm32 needs ld.so index hardwire for new glibc security fixes
+Patch44: valgrind-3.11.0-arm-index-hardwire.patch
+
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -356,6 +360,7 @@ chmod 755 memcheck/tests/arm64-linux/filter_stderr
 %patch41 -p1
 %patch42 -p1
 %patch43 -p1
+%patch44 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -555,6 +560,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Wed Jul 05 2017 Mark Wielaard <mjw@fedoraproject.org> - 3.12.0-27
+- Add valgrind-3.12.0-arm-index-hardwire.patch (#1466017)
+
 * Fri Jul 22 2016 Mark Wielaard <mjw@redhat.com> - 3.11.0-26
 - Only build valgrind-openmpi when not creating a software collection.
 - No support for multilib on secondary arches when creating scl.
