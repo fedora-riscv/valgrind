@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.12.0
-Release: 8%{?dist}
+Release: 9%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -132,6 +132,10 @@ Patch19: valgrind-3.12.0-powerpc-register-pair.patch
 
 # KDE#377478 PPC64: ISA 3.0 setup fixes
 Patch20: valgrind-3.12.0-ppc64-isa-3_00.patch
+
+# RHBZ#1466017 ARM ld.so index warnings.
+# KDE#381805 arm32 needs ld.so index hardwire for new glibc security fixes
+Patch21: valgrind-3.12.0-arm-index-hardwire.patch
 
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -265,6 +269,7 @@ Valgrind User Manual for details.
 %patch18 -p1
 %patch19 -p1
 %patch20 -p1
+%patch21 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -458,6 +463,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Wed Jul 05 2017 Mark Wielaard <mjw@fedoraproject.org> - 3.12.0-9
+- Add valgrind-3.12.0-arm-index-hardwire.patch (#1466017)
+
 * Wed Apr 12 2017 Mark Wielaard <mjw@redhat.com>
 - Update description as suggested by Ivo Raisr.
 
