@@ -365,8 +365,8 @@ rpm -q %{?scl_prefix}gdb || true
 LD_SHOW_AUXV=1 /bin/true
 cat /proc/cpuinfo
 
-# Make sure a basic binary runs.
-./vg-in-place /bin/true
+# Make sure a basic binary runs. There should be no errors.
+./vg-in-place --error-exitcode=1 /bin/true
 
 # Build the test files with the software collection compiler if available.
 %{?scl:PATH=%{_bindir}${PATH:+:${PATH}}}
@@ -445,6 +445,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Fri Jul  7 2017 Mark Wielaard <mjw@fedoraproject.org>
+- Add --error-exitcode=1 to /bin/true check.
+
 * Thu Jun 29 2017 Mark Wielaard <mjw@fedoraproject.org> 3.13.0-4
 - Add valgrind-3.13.0-arm-index-hardwire.patch (#1466017)
 - Add valgrind-3.13.0-ucontext_t.patch
