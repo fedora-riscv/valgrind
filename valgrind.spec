@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.13.0
-Release: 6%{?dist}
+Release: 7%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -117,6 +117,9 @@ Patch10: valgrind-3.13.0-gdb-8-testfix.patch
 
 # valgrind svn r16454. disable vgdb poll in the child after fork
 Patch11: valgrind-3.13.0-disable-vgdb-child.patch
+
+# KDE#382998 xml-socket doesn't work
+Patch12: valgrind-3.13.0-xml-socket.patch
 
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -243,6 +246,7 @@ Valgrind User Manual for details.
 %patch9 -p1
 %patch10 -p1
 %patch11 -p1
+%patch12 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -445,6 +449,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Thu Aug 17 2017 Mark Wielaard <mjw@fedoraproject.org> - 3.13.0-7
+- Add valgrind-3.13.0-xml-socket.patch
+
 * Thu Aug 03 2017 Fedora Release Engineering <releng@fedoraproject.org> - 1:3.13.0-6
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_27_Binutils_Mass_Rebuild
 
