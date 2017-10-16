@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.13.0
-Release: 7%{?dist}
+Release: 8%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -120,6 +120,20 @@ Patch11: valgrind-3.13.0-disable-vgdb-child.patch
 
 # KDE#382998 xml-socket doesn't work
 Patch12: valgrind-3.13.0-xml-socket.patch
+
+# KDE#385334
+# PPC64, vpermr, xxperm, xxpermr fix Iop_Perm8x16 selector field
+# PPC64, revert the change to vperm instruction.
+# KDE#385183
+# PPC64, Add support for xscmpeqdp, xscmpgtdp, xscmpgedp, xsmincdp instructions
+# PPC64, Fix bug in vperm instruction.
+# KDE#385210
+# PPC64, Re-implement the vpermr instruction using the Iop_Perm8x16.
+# KDE#385208
+# PPC64, Use the vperm code to implement the xxperm inst.
+# PPC64, Replace body of generate_store_FPRF with C helper function.
+# PPC64, Add support for the Data Stream Control Register (DSCR)
+Patch13: valgrind-3.13.0-ppc64-vex-fixes.patch
 
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -247,6 +261,7 @@ Valgrind User Manual for details.
 %patch10 -p1
 %patch11 -p1
 %patch12 -p1
+%patch13 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -449,6 +464,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Mon Oct 16 2017 Mark Wielaard <mjw@fedoraproject.org> - 3.13.0-8
+- Add valgrind-3.13.0-ppc64-vex-fixes.patch
+
 * Thu Aug 17 2017 Mark Wielaard <mjw@fedoraproject.org> - 3.13.0-7
 - Add valgrind-3.13.0-xml-socket.patch
 
