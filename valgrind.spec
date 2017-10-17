@@ -135,6 +135,9 @@ Patch12: valgrind-3.13.0-xml-socket.patch
 # PPC64, Add support for the Data Stream Control Register (DSCR)
 Patch13: valgrind-3.13.0-ppc64-vex-fixes.patch
 
+# Fix eflags handling in amd64 instruction tests
+Patch14: valgrind-3.13.0-amd64-eflags-tests.patch
+
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -262,6 +265,7 @@ Valgrind User Manual for details.
 %patch11 -p1
 %patch12 -p1
 %patch13 -p1
+%patch14 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -464,6 +468,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Tue Oct 17 2017 Mark Wielaard <mjw@fedoraproject.org>
+- Add valgrind-3.13.0-amd64-eflags-tests.patch
+
 * Mon Oct 16 2017 Mark Wielaard <mjw@fedoraproject.org> - 3.13.0-8
 - Add valgrind-3.13.0-ppc64-vex-fixes.patch
 
