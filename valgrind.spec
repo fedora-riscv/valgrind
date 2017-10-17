@@ -138,6 +138,12 @@ Patch13: valgrind-3.13.0-ppc64-vex-fixes.patch
 # Fix eflags handling in amd64 instruction tests
 Patch14: valgrind-3.13.0-amd64-eflags-tests.patch
 
+# KDE#385868 ld.so _dl_runtime_resolve_avx_slow conditional jump warning
+Patch15: valgrind-3.13.0-suppress-dl-trampoline-sse-avx.patch
+
+# Implement static TLS code for more platforms
+Patch16: valgrind-3.13.0-static-tls.patch
+
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -266,6 +272,8 @@ Valgrind User Manual for details.
 %patch12 -p1
 %patch13 -p1
 %patch14 -p1
+%patch15 -p1
+%patch16 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -470,6 +478,8 @@ echo ===============END TESTING===============
 %changelog
 * Tue Oct 17 2017 Mark Wielaard <mjw@fedoraproject.org>
 - Add valgrind-3.13.0-amd64-eflags-tests.patch
+- Add valgrind-3.13.0-suppress-dl-trampoline-sse-avx.patch
+- Add valgrind-3.13.0-static-tls.patch
 
 * Mon Oct 16 2017 Mark Wielaard <mjw@fedoraproject.org> - 3.13.0-8
 - Add valgrind-3.13.0-ppc64-vex-fixes.patch
