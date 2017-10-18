@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.13.0
-Release: 8%{?dist}
+Release: 9%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -476,7 +476,7 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
-* Tue Oct 17 2017 Mark Wielaard <mjw@fedoraproject.org>
+* Tue Oct 17 2017 Mark Wielaard <mjw@fedoraproject.org> - 3.13.0-9
 - Add valgrind-3.13.0-amd64-eflags-tests.patch
 - Add valgrind-3.13.0-suppress-dl-trampoline-sse-avx.patch
 - Add valgrind-3.13.0-static-tls.patch
