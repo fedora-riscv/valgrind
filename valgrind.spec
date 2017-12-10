@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.13.0
-Release: 10%{?dist}
+Release: 11%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -147,6 +147,9 @@ Patch16: valgrind-3.13.0-static-tls.patch
 # KDE#386397 PPC64 valgrind truncates powerpc timebase to 32-bits.
 Patch17: valgrind-3.13.0-ppc64-timebase.patch
 
+# KDE#387773 - Files in .gnu_debugaltlink should be resolved relative to .debug
+Patch18: valgrind-3.13.0-debug-alt-file.patch
+
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -278,6 +281,7 @@ Valgrind User Manual for details.
 %patch15 -p1
 %patch16 -p1
 %patch17 -p1
+%patch18 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -480,6 +484,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Sun Dec 10 2017 Mark Wielaard <mjw@fedoraproject.org> - 3.13.0-11
+- Add valgrind-3.13.0-debug-alt-file.patch.
+
 * Thu Nov  2 2017 Mark Wielaard <mjw@fedoraproject.org> - 3.13.0-10
 - Add valgrind-3.13.0-ppc64-timebase.patch.
 
