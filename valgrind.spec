@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.13.0
-Release: 11%{?dist}
+Release: 12%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -488,8 +488,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
-* Tue Dec 12 2017 Mark Wielaard <mjw@fedoraproject.org>
+* Tue Dec 12 2017 Mark Wielaard <mjw@fedoraproject.org> - 3.13.0-12
 - Add valgrind-3.13.0-s390-cgijnl.patch.
+- Use upstream version of valgrind-3.13.0-debug-alt-file.patch.
 
 * Sun Dec 10 2017 Mark Wielaard <mjw@fedoraproject.org> - 3.13.0-11
 - Add valgrind-3.13.0-debug-alt-file.patch.
