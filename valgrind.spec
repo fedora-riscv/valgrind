@@ -150,6 +150,9 @@ Patch17: valgrind-3.13.0-ppc64-timebase.patch
 # KDE#387773 - Files in .gnu_debugaltlink should be resolved relative to .debug
 Patch18: valgrind-3.13.0-debug-alt-file.patch
 
+# KDE#387712 s390x cgijnl reports Conditional jump depends on uninit value
+Patch19: valgrind-3.13.0-s390-cgijnl.patch
+
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -282,6 +285,7 @@ Valgrind User Manual for details.
 %patch16 -p1
 %patch17 -p1
 %patch18 -p1
+%patch19 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -484,6 +488,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Tue Dec 12 2017 Mark Wielaard <mjw@fedoraproject.org>
+- Add valgrind-3.13.0-s390-cgijnl.patch.
+
 * Sun Dec 10 2017 Mark Wielaard <mjw@fedoraproject.org> - 3.13.0-11
 - Add valgrind-3.13.0-debug-alt-file.patch.
 
