@@ -127,3 +127,34 @@ index e612250..c19ff21 100644
           if (altfile_str_m)
              ML_(dinfo_free)(altfile_str_m);
           ML_(dinfo_free)(altbuildid);
+
+diff --git a/coregrind/m_debuginfo/readelf.c b/coregrind/m_debuginfo/readelf.c
+index c19ff212b..70c28e629 100644
+--- a/coregrind/m_debuginfo/readelf.c
++++ b/coregrind/m_debuginfo/readelf.c
+@@ -1582,6 +1582,24 @@ static HChar* readlink_path (const HChar *path)
+       return NULL;
+    }
+ 
++  if (buf[0] == '/')
++    return buf;
++
++  /* Relative path, add link dir.  */
++  HChar *linkdirptr;
++  SizeT linkdir_len = VG_(strlen)(path);
++  if ((linkdirptr = VG_(strrchr)(path, '/')) != NULL)
++    linkdir_len -= VG_(strlen)(linkdirptr + 1);
++
++  SizeT buflen = VG_(strlen)(buf);
++  SizeT needed = linkdir_len + buflen + 1;
++  if (bufsiz < needed)
++    buf = ML_(dinfo_realloc)("readlink_path.linkdir", buf, needed);
++
++  VG_(memmove)(buf + linkdir_len, buf, buflen);
++  VG_(memcpy)(buf, path, linkdir_len);
++  buf[needed - 1] = '\0';
++
+   return buf;
+ }
+ 
+
