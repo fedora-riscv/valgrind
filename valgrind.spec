@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.13.0
-Release: 13%{?dist}
+Release: 14%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -316,8 +316,11 @@ CC="gcc -B `pwd`/shared/libgcc/"
 # not for tests which should be -O0, as they aren't meant to be
 # compiled with -O2 unless explicitely requested. Same for any -mcpu flag.
 # Ideally we will change this to only be done for the non-primary build
-# and the test suite.
+# and the test suite. Also disable strict symbol checks because the
+# vg_preload library will use hidden/undefined symbols from glibc
+# like __libc_freeres.
 %undefine _hardened_build
+%undefine _strict_symbol_defs_build
 OPTFLAGS="`echo " %{optflags} " | sed 's/ -m\(64\|3[21]\) / /g;s/ -fexceptions / /g;s/ -fstack-protector\([-a-z]*\) / / g;s/ -Wp,-D_FORTIFY_SOURCE=2 / /g;s/ -O2 / /g;s/ -mcpu=\([a-z0-9]\+\) / /g;s/^ //;s/ $//'`"
 %configure CC="$CC" CFLAGS="$OPTFLAGS" CXXFLAGS="$OPTFLAGS" \
 %if %{build_openmpi}
@@ -488,6 +491,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Mon Jan 22 2018 Mark Wielaard <mjw@fedoraproject.org> - 3.13.0-14
+- undefine _strict_symbol_defs_build.
+
 * Tue Jan  2 2018 Mark Wielaard <mjw@fedoraproject.org> - 3.13.0-13
 - Add additional fix to valgrind-3.13.0-debug-alt-file.patch.
 
