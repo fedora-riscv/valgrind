@@ -51,6 +51,18 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
   %endif
 %endif
 
+# We only want to build the valgrind-tools-devel package for Fedora proper
+# as convenience. But not for DTS or RHEL.
+%if %{is_scl}
+  %global build_tools_devel 0
+%else
+  %if 0%{?rhel}
+    %global build_tools_devel 0
+  %else
+    %global build_tools_devel 1
+  %endif
+%endif
+
 # Whether to run the full regtest or only a limited set
 # The full regtest includes gdb_server integration tests.
 # On arm the gdb integration tests hang for unknown reasons.
@@ -243,14 +255,23 @@ detectors (helgrind and drd), a cache and branch-prediction profiler
 profiler (callgrind), and a heap profiler (massif).
 
 %package devel
-Summary: Development files for valgrind
+Summary: Development files for valgrind aware programs
 Group: Development/Debuggers
 Requires: %{?scl_prefix}valgrind = %{epoch}:%{version}-%{release}
-Provides: %{name}-static = %{epoch}:%{version}-%{release}
 
 %description devel
-Header files and libraries for development of valgrind aware programs
-or valgrind plugins.
+Header files and libraries for development of valgrind aware programs.
+
+%if %{build_tools_devel}
+%package tools-devel
+Summary: Development files for valgrind aware programs
+Group: Development/Debuggers
+Requires: %{?scl_prefix}valgrind-devel = %{epoch}:%{version}-%{release}
+Provides: %{name}-static = %{epoch}:%{version}-%{release}
+
+%description tools-devel
+Header files and libraries for development of valgrind tools.
+%endif
 
 %if %{build_openmpi}
 %package openmpi
@@ -380,6 +401,7 @@ popd
 
 rm -f $RPM_BUILD_ROOT%{_libdir}/valgrind/*.supp.in
 
+%if %{build_tools_devel}
 %ifarch %{ix86} x86_64
 # To avoid multilib clashes in between i?86 and x86_64,
 # tweak installed <valgrind/config.h> a little bit.
@@ -391,6 +413,15 @@ for i in HAVE_PTHREAD_CREATE_GLIBC_2_0 HAVE_PTRACE_GETREGS HAVE_AS_AMD64_FXSAVE6
   sed -i -e 's,^\(#define '$i' 1\|/\* #undef '$i' \*/\)$,#ifdef __x86_64__\n# define '$i' 1\n#endif,' \
     $RPM_BUILD_ROOT%{_includedir}/valgrind/config.h
 done
+%endif
+%else
+# Remove files we aren't going to package.
+# See tools-devel files.
+rm $RPM_BUILD_ROOT%{_includedir}/valgrind/config.h
+rm $RPM_BUILD_ROOT%{_includedir}/valgrind/libvex*h
+rm $RPM_BUILD_ROOT%{_includedir}/valgrind/pub_tool_*h
+rm -rf $RPM_BUILD_ROOT%{_includedir}/valgrind/vki
+rm $RPM_BUILD_ROOT%{_libdir}/valgrind/*.a
 %endif
 
 # We don't want debuginfo generated for the vgpreload libraries.
@@ -477,10 +508,23 @@ echo ===============END TESTING===============
 
 %files devel
 %defattr(-,root,root)
-%{_includedir}/valgrind
+%dir %{_includedir}/valgrind
+%{_includedir}/valgrind/valgrind.h
+%{_includedir}/valgrind/callgrind.h
+%{_includedir}/valgrind/drd.h
+%{_includedir}/valgrind/helgrind.h
+%{_includedir}/valgrind/memcheck.h
+%{_libdir}/pkgconfig/valgrind.pc
+
+%if %{build_tools_devel}
+%files tools-devel
+%{_includedir}/valgrind/config.h
+%{_includedir}/valgrind/libvex*h
+%{_includedir}/valgrind/pub_tool_*h
+%{_includedir}/valgrind/vki
 %dir %{_libdir}/valgrind
 %{_libdir}/valgrind/*.a
-%{_libdir}/pkgconfig/*
+%endif
 
 %if %{build_openmpi}
 %files openmpi
@@ -491,6 +535,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Tue Jan 23 2018 Mark Wielaard <mjw@fedoraproject.org>
+- Split valgrind-tools-devel from valgrind-devel.
+
 * Mon Jan 22 2018 Mark Wielaard <mjw@fedoraproject.org> - 3.13.0-14
 - undefine _strict_symbol_defs_build.
 
