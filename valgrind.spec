@@ -39,15 +39,17 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
   %endif
 %endif
 
-# Note s390x doesn't have an openmpi port available.
-# We never want the openmpi subpackage when building a software collecton
+# We never want the openmpi subpackage when building a software collecton.
+# We always want it for fedora.
+# We only want it for older rhel.
 %if %{is_scl}
   %global build_openmpi 0
 %else
-  %ifarch %{ix86} x86_64 ppc ppc64 ppc64le %{arm} aarch64
+  %if 0%{?fedora}
     %global build_openmpi 1
-  %else
-    %global build_openmpi 0
+  %endif
+  %if 0%{?rhel}
+    %global build_openmpi (%rhel < 8)
   %endif
 %endif
 
@@ -330,6 +332,10 @@ CC="gcc -B `pwd`/shared/libgcc/"
 %else
 %define mpiccpath %{!?scl:%{_libdir}}%{?scl:%{_root_libdir}}/openmpi/*/bin/mpicc
 %endif
+%else
+# We explicitly don't want the libmpi wrapper. So make sure that configure
+# doesn't pick some random mpi compiler that happens to be installed.
+%define mpiccpath /bin/false
 %endif
 
 # Filter out some flags that cause lots of valgrind test failures.
@@ -344,9 +350,7 @@ CC="gcc -B `pwd`/shared/libgcc/"
 %undefine _strict_symbol_defs_build
 OPTFLAGS="`echo " %{optflags} " | sed 's/ -m\(64\|3[21]\) / /g;s/ -fexceptions / /g;s/ -fstack-protector\([-a-z]*\) / / g;s/ -Wp,-D_FORTIFY_SOURCE=2 / /g;s/ -O2 / /g;s/ -mcpu=\([a-z0-9]\+\) / /g;s/^ //;s/ $//'`"
 %configure CC="$CC" CFLAGS="$OPTFLAGS" CXXFLAGS="$OPTFLAGS" \
-%if %{build_openmpi}
   --with-mpicc=%{mpiccpath} \
-%endif
   GDB=%{_bindir}/gdb
 
 make %{?_smp_mflags}
@@ -537,6 +541,7 @@ echo ===============END TESTING===============
 %changelog
 * Tue Jan 23 2018 Mark Wielaard <mjw@fedoraproject.org>
 - Split valgrind-tools-devel from valgrind-devel.
+- Make building of libmpi wrapper explicit.
 
 * Mon Jan 22 2018 Mark Wielaard <mjw@fedoraproject.org> - 3.13.0-14
 - undefine _strict_symbol_defs_build.
