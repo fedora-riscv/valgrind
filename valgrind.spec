@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.13.0
-Release: 14%{?dist}
+Release: 15%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -539,7 +539,7 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
-* Tue Jan 23 2018 Mark Wielaard <mjw@fedoraproject.org>
+* Tue Jan 23 2018 Mark Wielaard <mjw@fedoraproject.org> - 3.13.0-15
 - Split valgrind-tools-devel from valgrind-devel.
 - Make building of libmpi wrapper explicit.
 
