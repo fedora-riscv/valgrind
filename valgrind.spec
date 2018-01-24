@@ -266,7 +266,7 @@ Header files and libraries for development of valgrind aware programs.
 
 %if %{build_tools_devel}
 %package tools-devel
-Summary: Development files for valgrind aware programs
+Summary: Development files for building valgrind tools.
 Group: Development/Debuggers
 Requires: %{?scl_prefix}valgrind-devel = %{epoch}:%{version}-%{release}
 Provides: %{name}-static = %{epoch}:%{version}-%{release}
