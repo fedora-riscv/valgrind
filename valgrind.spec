@@ -10,7 +10,6 @@ URL: http://www.valgrind.org/
 Group: Development/Debuggers
 
 # Only necessary for RHEL, will be ignored on Fedora
-BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
 # Are we building for a Software Collection?
 %{?scl:%global is_scl 1}
