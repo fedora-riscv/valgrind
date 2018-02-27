@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.13.0
-Release: 16%{?dist}
+Release: 17%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -166,6 +166,9 @@ Patch18: valgrind-3.13.0-debug-alt-file.patch
 # KDE#387712 s390x cgijnl reports Conditional jump depends on uninit value
 Patch19: valgrind-3.13.0-s390-cgijnl.patch
 
+# KDE#391164 constraint bug in tests/ppc64/test_isa_2_07_part1.c for mtfprwa
+Patch20: valgrind-3.13.0-ppc64-mtfprwa-constraint.patch
+
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -308,6 +311,7 @@ Valgrind User Manual for details.
 %patch17 -p1
 %patch18 -p1
 %patch19 -p1
+%patch20 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -538,6 +542,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Tue Feb 27 2018 Mark Wielaard <mjw@fedoraproject.org> - 3.13.0-17
+- Add valgrind-3.13.0-ppc64-mtfprwa-constraint.patch.
+
 * Fri Feb 09 2018 Fedora Release Engineering <releng@fedoraproject.org> - 1:3.13.0-16
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_28_Mass_Rebuild
 
