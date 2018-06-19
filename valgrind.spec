@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.13.0
-Release: 18%{?dist}
+Release: 19%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -546,6 +546,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Thu Apr 12 2018 Mark Wielaard <mjw@fedoraproject.org> - 3.13.0-19
+- Improved valgrind-3.13.0-arm64-hwcap.patch
+
 * Thu Apr 12 2018 Mark Wielaard <mjw@fedoraproject.org> - 3.13.0-18
 - Add valgrind-3.13.0-build-id-phdrs.patch (#1566639)
 
