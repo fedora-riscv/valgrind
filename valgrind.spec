@@ -172,6 +172,9 @@ Patch20: valgrind-3.13.0-ppc64-mtfprwa-constraint.patch
 # KDE#393062 Reading build-id ELF note "debuginfo reader: ensure_valid failed"
 Patch21: valgrind-3.13.0-build-id-phdrs.patch
 
+# KDE#368913 WARNING: unhandled arm64-linux syscall: 117 (ptrace)
+Patch22: valgrind-3.13.0-arm64-ptrace.patch
+
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -316,6 +319,7 @@ Valgrind User Manual for details.
 %patch19 -p1
 %patch20 -p1
 %patch21 -p1
+%patch22 -p1
 
 %build
 # We need to use the software collection compiler and binutils if available.
@@ -548,6 +552,7 @@ echo ===============END TESTING===============
 %changelog
 * Thu Apr 12 2018 Mark Wielaard <mjw@fedoraproject.org> - 3.13.0-19
 - Improved valgrind-3.13.0-arm64-hwcap.patch
+- Add valgrind-3.13.0-arm64-ptrace.patch
 
 * Thu Apr 12 2018 Mark Wielaard <mjw@fedoraproject.org> - 3.13.0-18
 - Add valgrind-3.13.0-build-id-phdrs.patch (#1566639)
