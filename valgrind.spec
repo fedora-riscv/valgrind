@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.13.0
-Release: 19%{?dist}
+Release: 20%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -69,20 +69,26 @@ Group: Development/Debuggers
 # On arm the gdb integration tests hang for unknown reasons.
 # On rhel6 the gdb_server tests hang.
 # On rhel7 they hang on ppc64 and ppc64le.
+# And when creating the DTS scl the interaction between old gdb
+# and new valgrind might hang.
 %ifarch %{arm}
   %global run_full_regtest 0
 %else
-  %if 0%{?rhel} == 6
+  %if %{is_scl}
     %global run_full_regtest 0
   %else
-    %if 0%{?rhel} == 7
-      %ifarch ppc64 ppc64le
-        %global run_full_regtest 0
+    %if 0%{?rhel} == 6
+      %global run_full_regtest 0
+    %else
+      %if 0%{?rhel} == 7
+        %ifarch ppc64 ppc64le
+          %global run_full_regtest 0
+        %else
+          %global run_full_regtest 1
+        %endif
       %else
         %global run_full_regtest 1
       %endif
-    %else
-      %global run_full_regtest 1
     %endif
   %endif
 %endif
@@ -194,12 +200,9 @@ BuildRequires: glibc-devel >= 2.5
 BuildRequires: openmpi-devel >= 1.3.3
 %endif
 
-# For %%build and %%check.
-# In case of a software collection, pick the matching gdb and binutils.
 %if %{run_full_regtest}
-BuildRequires: %{?scl_prefix}gdb
+BuildRequires: gdb
 %endif
-BuildRequires: %{?scl_prefix}binutils
 
 # gdbserver_tests/filter_make_empty uses ps in test
 BuildRequires: procps
@@ -322,11 +325,6 @@ Valgrind User Manual for details.
 %patch22 -p1
 
 %build
-# We need to use the software collection compiler and binutils if available.
-# The configure checks might otherwise miss support for various newer
-# assembler instructions.
-%{?scl:PATH=%{_bindir}${PATH:+:${PATH}}}
-
 CC=gcc
 %if %{build_multilib}
 # Ugly hack - libgcc 32-bit package might not be installed
@@ -449,9 +447,9 @@ chmod 644 $RPM_BUILD_ROOT%{_libdir}/valgrind/vgpreload*-%{valarch}-*so
 # Add || true because rpm on copr EPEL6 acts weirdly and we don't want
 # to break the build.
 uname -a
-rpm -q glibc gcc %{?scl_prefix}binutils || true
+rpm -q glibc gcc binutils || true
 %if %{run_full_regtest}
-rpm -q %{?scl_prefix}gdb || true
+rpm -q gdb || true
 %endif
 
 LD_SHOW_AUXV=1 /bin/true
@@ -550,6 +548,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Thu Jul  5 2018 Mark Wielaard <mjw@fedoraproject.org> - 3.13.0-20
+- Don't try a full_regtest under scl, also don't adjust PATH.
+
 * Thu Apr 12 2018 Mark Wielaard <mjw@fedoraproject.org> - 3.13.0-19
 - Improved valgrind-3.13.0-arm64-hwcap.patch
 - Add valgrind-3.13.0-arm64-ptrace.patch
