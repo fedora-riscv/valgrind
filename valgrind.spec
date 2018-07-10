@@ -498,7 +498,6 @@ cat diffs
 echo ===============END TESTING===============
 
 %files
-%defattr(-,root,root)
 %doc COPYING NEWS README_*
 %doc docs/installed/html docs/installed/*.pdf
 %{_bindir}/*
@@ -520,7 +519,6 @@ echo ===============END TESTING===============
 %{_mandir}/man1/*
 
 %files devel
-%defattr(-,root,root)
 %dir %{_includedir}/valgrind
 %{_includedir}/valgrind/valgrind.h
 %{_includedir}/valgrind/callgrind.h
@@ -541,7 +539,6 @@ echo ===============END TESTING===============
 
 %if %{build_openmpi}
 %files openmpi
-%defattr(-,root,root)
 %dir %{_libdir}/valgrind
 %{_libdir}/openmpi/valgrind/libmpiwrap*.so
 %{_libdir}/valgrind/libmpiwrap*.so
