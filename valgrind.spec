@@ -185,6 +185,9 @@ Patch22: valgrind-3.13.0-arm64-ptrace.patch
 # Accept read-only PT_LOAD segments and .rodata created by ld -z separate-code.
 Patch23: valgrind-3.13.0-ld-separate-code.patch
 
+# KDE#396452 none/test/arm/vfp.c doesn't build with binutils 2.31 gas
+Patch24: valgrind-3.13.0-arm-disable-vfp-test.patch
+
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -328,6 +331,7 @@ Valgrind User Manual for details.
 %patch21 -p1
 %patch22 -p1
 %patch23 -p1
+%patch24 -p1
 
 %build
 CC=gcc
@@ -552,6 +556,7 @@ echo ===============END TESTING===============
 %changelog
 * Thu Jul 12 2018 Mark Wielaard <mjw@fedoraproject.org> - 3.13.0-21
 - Add valgrind-3.13.0-separate-code.patch (#1600034)
+- Add valgrind-3.13.0-arm-disable-vfp-test.patch
 
 * Thu Jul  5 2018 Mark Wielaard <mjw@fedoraproject.org> - 3.13.0-20
 - Don't try a full_regtest under scl, also don't adjust PATH.
