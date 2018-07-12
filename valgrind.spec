@@ -181,6 +181,10 @@ Patch21: valgrind-3.13.0-build-id-phdrs.patch
 # KDE#368913 WARNING: unhandled arm64-linux syscall: 117 (ptrace)
 Patch22: valgrind-3.13.0-arm64-ptrace.patch
 
+# RHBZ#1600034 KDE#395682
+# Accept read-only PT_LOAD segments and .rodata created by ld -z separate-code.
+Patch23: valgrind-3.13.0-ld-separate-code.patch
+
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -323,6 +327,7 @@ Valgrind User Manual for details.
 %patch20 -p1
 %patch21 -p1
 %patch22 -p1
+%patch23 -p1
 
 %build
 CC=gcc
@@ -545,6 +550,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Thu Jul 15 2018 Mark Wielaard <mjw@fedoraproject.org> - 3.13.0-21
+- Add valgrind-3.13.0-separate-code.patch (#1600034)
+
 * Thu Jul  5 2018 Mark Wielaard <mjw@fedoraproject.org> - 3.13.0-20
 - Don't try a full_regtest under scl, also don't adjust PATH.
 
