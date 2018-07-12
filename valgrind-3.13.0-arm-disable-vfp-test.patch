@@ -1,0 +1,23 @@
+diff -ur valgrind-3.13.0.orig/none/tests/arm/Makefile.am valgrind-3.13.0/none/tests/arm/Makefile.am
+--- valgrind-3.13.0.orig/none/tests/arm/Makefile.am	2018-07-12 22:14:06.943404097 +0200
++++ valgrind-3.13.0/none/tests/arm/Makefile.am	2018-07-12 22:15:24.496724854 +0200
+@@ -40,7 +40,6 @@
+ 	v8memory_a \
+ 	v8memory_t \
+ 	vcvt_fixed_float_VFP \
+-	vfp \
+ 	vfpv4_fma
+ 
+ AM_CFLAGS    += @FLAG_M32@
+diff -ur valgrind-3.13.0.orig/none/tests/arm/Makefile.in valgrind-3.13.0/none/tests/arm/Makefile.in
+--- valgrind-3.13.0.orig/none/tests/arm/Makefile.in	2018-07-12 22:14:06.948403990 +0200
++++ valgrind-3.13.0/none/tests/arm/Makefile.in	2018-07-12 22:15:53.625091368 +0200
+@@ -125,7 +125,7 @@
+ 	v6intARM$(EXEEXT) v6intThumb$(EXEEXT) v6media$(EXEEXT) \
+ 	v8crypto_a$(EXEEXT) v8crypto_t$(EXEEXT) v8fpsimd_a$(EXEEXT) \
+ 	v8fpsimd_t$(EXEEXT) v8memory_a$(EXEEXT) v8memory_t$(EXEEXT) \
+-	vcvt_fixed_float_VFP$(EXEEXT) vfp$(EXEEXT) vfpv4_fma$(EXEEXT)
++	vcvt_fixed_float_VFP$(EXEEXT) vfpv4_fma$(EXEEXT)
+ subdir = none/tests/arm
+ ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
+ am__aclocal_m4_deps = $(top_srcdir)/configure.ac
