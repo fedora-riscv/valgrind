@@ -550,7 +550,7 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
-* Thu Jul 15 2018 Mark Wielaard <mjw@fedoraproject.org> - 3.13.0-21
+* Thu Jul 12 2018 Mark Wielaard <mjw@fedoraproject.org> - 3.13.0-21
 - Add valgrind-3.13.0-separate-code.patch (#1600034)
 
 * Thu Jul  5 2018 Mark Wielaard <mjw@fedoraproject.org> - 3.13.0-20
