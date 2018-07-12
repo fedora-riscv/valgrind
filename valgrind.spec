@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.13.0
-Release: 20%{?dist}
+Release: 21%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
