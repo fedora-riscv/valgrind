@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.13.0
-Release: 21%{?dist}
+Release: 22%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -188,6 +188,9 @@ Patch23: valgrind-3.13.0-ld-separate-code.patch
 # KDE#396452 none/test/arm/vfp.c doesn't build with binutils 2.31 gas
 Patch24: valgrind-3.13.0-arm-disable-vfp-test.patch
 
+# KDE#396887 arch_prctl should return EINVAL on unknown option
+Patch25: valgrind-3.13.0-arch_prctl.patch
+
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -332,6 +335,7 @@ Valgrind User Manual for details.
 %patch22 -p1
 %patch23 -p1
 %patch24 -p1
+%patch25 -p1
 
 %build
 CC=gcc
@@ -554,6 +558,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Thu Jul 26 2018 Mark Wielaard <mjw@fedoraproject.org> - 3.13.0-22
+- Add valgrind-3.13.0-arch_prctl.patch (#1608824)
+
 * Thu Jul 12 2018 Mark Wielaard <mjw@fedoraproject.org> - 3.13.0-21
 - Add valgrind-3.13.0-separate-code.patch (#1600034)
 - Add valgrind-3.13.0-arm-disable-vfp-test.patch
