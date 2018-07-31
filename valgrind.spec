@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.13.0
-Release: 23%{?dist}
+Release: 24%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -554,6 +554,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Tue Jul 31 2018 Florian Weimer <fweimer@redhat.com> - 3.13.0-24
+- Rebuild with fixed binutils
+
 * Fri Jul 27 2018 Mark Wielaard <mjw@fedoraproject.org> - 3.13.0-23
 - Remove valgrind-3.13.0-arm-disable-vfp-test.patch
 
