@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.13.0
-Release: 24%{?dist}
+Release: 25%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -188,6 +188,9 @@ Patch23: valgrind-3.13.0-ld-separate-code.patch
 # KDE#396887 arch_prctl should return EINVAL on unknown option
 Patch24: valgrind-3.13.0-arch_prctl.patch
 
+# KDE#397012 glibc ld.so uses arch_prctl on i386
+Patch25: valgrind-3.13.0-x86-arch_prctl.patch
+
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -332,6 +335,7 @@ Valgrind User Manual for details.
 %patch22 -p1
 %patch23 -p1
 %patch24 -p1
+%patch25 -p1
 
 %build
 CC=gcc
@@ -554,6 +558,9 @@ echo ===============END TESTING===============
 %endif
 
 %changelog
+* Tue Jul 31 2018 Mark Wielaard  <mjw@fedoraproject.org>  - 3.13.0-25
+- Add valgrind-3.13.0-x86-arch_prctl.patch (#1610304)
+
 * Tue Jul 31 2018 Florian Weimer <fweimer@redhat.com> - 3.13.0-24
 - Rebuild with fixed binutils
 
