@@ -228,6 +228,13 @@ BuildRequires: perl(Getopt::Long)
 
 %{?scl:Requires:%scl_runtime}
 
+# We need to fixup selinux file context when doing a scl build.
+# In RHEL6 we might need to fix up the labels even though the
+# meta package sets up a fs equivalence. See post.
+%if 0%{?rhel} == 6
+%{?scl:Requires(post): /sbin/restorecon}
+%endif
+
 ExclusiveArch: %{ix86} x86_64 ppc ppc64 ppc64le s390x armv7hl aarch64
 %ifarch %{ix86}
 %define valarch x86
@@ -557,8 +564,23 @@ echo ===============END TESTING===============
 %{_libdir}/valgrind/libmpiwrap*.so
 %endif
 
+%if 0%{?rhel} == 6
+%post
+# There is a bug in rpm (rhbz#214737) that might cause post to be run
+# even thought the binary isn't installed when installing two multilib
+# versions at the same time.
+if [ -x %{_bindir}/valgrind ]; then
+# On RHEL6 the fs equivalency should be setup by the devtoolset meta
+# package, but because of a rpm bug (rhbz#924044) it might not work.
+%{?scl:/sbin/restorecon %{_bindir}/valgrind}%{!?scl:true}
+fi
+%endif
+
 %changelog
-* Tue Jul 31 2018 Mark Wielaard  <mjw@fedoraproject.org>  - 3.13.0-25
+* Wed Aug  2 2018 Mark Wielaard  <mjw@fedoraproject.org>
+- Use restorecon for scl on rhel6 to work around rpm bug (#1610676).
+
+* Tue Jul 31 2018 Mark Wielaard  <mjw@fedoraproject.org> - 3.13.0-25
 - Add valgrind-3.13.0-x86-arch_prctl.patch (#1610304)
 
 * Tue Jul 31 2018 Florian Weimer <fweimer@redhat.com> - 3.13.0-24
