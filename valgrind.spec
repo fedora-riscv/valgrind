@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.13.0
-Release: 26%{?dist}
+Release: 27%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -191,6 +191,10 @@ Patch24: valgrind-3.13.0-arch_prctl.patch
 # KDE#397012 glibc ld.so uses arch_prctl on i386
 Patch25: valgrind-3.13.0-x86-arch_prctl.patch
 
+# KDE#393017 - Add missing support for xsmaxcdp instruction,
+# bug fixes for xsmincdp, lxssp, stxssp and stxvl instructions.
+Patch26: valgrind-3.13.0-ppc64-xsmaxcdp.patch
+
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -348,6 +352,7 @@ Valgrind User Manual for details.
 %patch23 -p1
 %patch24 -p1
 %patch25 -p1
+%patch26 -p1
 
 %build
 CC=gcc
@@ -582,6 +587,9 @@ fi
 %endif
 
 %changelog
+* Fri Aug  3 2018 Mark Wielaard  <mjw@fedoraproject.org> - 3.13.0-27
+- Add valgrind-3.13.0-ppc64-xsmaxcdp.patch
+
 * Fri Aug  3 2018 Mark Wielaard  <mjw@fedoraproject.org> - 3.13.0-26
 - Use valgrind_arches for ExclusiveArch when defined.
 - Use restorecon for scl on rhel6 to work around rpm bug (#1610676).
