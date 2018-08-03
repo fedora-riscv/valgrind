@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.13.0
-Release: 25%{?dist}
+Release: 26%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -235,7 +235,12 @@ BuildRequires: perl(Getopt::Long)
 %{?scl:Requires(post): /sbin/restorecon}
 %endif
 
+# Might be defined in redhat-rpm-config
+%if 0%{?valgrind_arches:1}
+ExclusiveArch: %{valgrind_arches}
+%else
 ExclusiveArch: %{ix86} x86_64 ppc ppc64 ppc64le s390x armv7hl aarch64
+%endif
 %ifarch %{ix86}
 %define valarch x86
 %define valsecarch %{nil}
@@ -577,7 +582,8 @@ fi
 %endif
 
 %changelog
-* Wed Aug  2 2018 Mark Wielaard  <mjw@fedoraproject.org>
+* Fri Aug  3 2018 Mark Wielaard  <mjw@fedoraproject.org> - 3.13.0-26
+- Use valgrind_arches for ExclusiveArch when defined.
 - Use restorecon for scl on rhel6 to work around rpm bug (#1610676).
 
 * Tue Jul 31 2018 Mark Wielaard  <mjw@fedoraproject.org> - 3.13.0-25
