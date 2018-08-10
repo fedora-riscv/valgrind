@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.13.0
-Release: 27%{?dist}
+Release: 28%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -195,6 +195,9 @@ Patch25: valgrind-3.13.0-x86-arch_prctl.patch
 # bug fixes for xsmincdp, lxssp, stxssp and stxvl instructions.
 Patch26: valgrind-3.13.0-ppc64-xsmaxcdp.patch
 
+# KDE#397354 utimensat should ignore tv_sec for UTIME_NOW or UTIME_OMIT.
+Patch27: valgrind-3.13.0-utime.patch
+
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -353,6 +356,7 @@ Valgrind User Manual for details.
 %patch24 -p1
 %patch25 -p1
 %patch26 -p1
+%patch27 -p1
 
 %build
 CC=gcc
@@ -587,6 +591,9 @@ fi
 %endif
 
 %changelog
+* Fri Aug 10 2018 Mark Wielaard  <mjw@fedoraproject.org> - 3.13.0-28
+- Add valgrind-3.13.0-utime.patch
+
 * Fri Aug  3 2018 Mark Wielaard  <mjw@fedoraproject.org> - 3.13.0-27
 - Add valgrind-3.13.0-ppc64-xsmaxcdp.patch
 
