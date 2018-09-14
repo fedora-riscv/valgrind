@@ -113,6 +113,10 @@ Patch2: valgrind-3.9.0-helgrind-race-supp.patch
 # Make ld.so supressions slightly less specific.
 Patch3: valgrind-3.9.0-ldso-supp.patch
 
+# Missing file for s390x testsuite.
+# Upstream commit 4f5e6168e75a1915a6a27e7068aef04d670aeb7e
+Patch4: valgrind-3.14.0-add-vector-h.patch
+
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -248,6 +252,7 @@ Valgrind User Manual for details.
 %patch1 -p1
 %patch2 -p1
 %patch3 -p1
+%patch4 -p1
 
 %build
 CC=gcc
@@ -484,6 +489,7 @@ fi
 %changelog
 * Fri Sep 14 2018 Mark Wielaard  <mjw@fedoraproject.org> - 3.14.0-0.1.GIT
 - New upstream (pre-)release.
+- Add valgrind-3.14.0-add-vector-h.patch.
 
 * Fri Aug 10 2018 Mark Wielaard  <mjw@fedoraproject.org> - 3.13.0-28
 - Add valgrind-3.13.0-utime.patch
