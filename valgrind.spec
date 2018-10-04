@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.14.0
-Release: 0.1.GIT%{?dist}
+Release: 0.2.RC2%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -102,7 +102,7 @@ Group: Development/Debuggers
 
 # Source0: ftp://sourceware.org/pub/valgrind/valgrind-%{version}.tar.bz2
 # commit 5d41dadeb3cb805546497b350750ca3bee365210
-Source0: valgrind-3.14.0.GIT.tar.bz2
+Source0: valgrind-3.14.0.RC2.tar.bz2
 
 # Needs investigation and pushing upstream
 Patch1: valgrind-3.9.0-cachegrind-improvements.patch
@@ -112,10 +112,6 @@ Patch2: valgrind-3.9.0-helgrind-race-supp.patch
 
 # Make ld.so supressions slightly less specific.
 Patch3: valgrind-3.9.0-ldso-supp.patch
-
-# Missing file for s390x testsuite.
-# Upstream commit 4f5e6168e75a1915a6a27e7068aef04d670aeb7e
-Patch4: valgrind-3.14.0-add-vector-h.patch
 
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -247,12 +243,11 @@ Valgrind User Manual for details.
 %endif
 
 %prep
-%setup -q -n %{?scl:%{pkg_name}}%{!?scl:%{name}}-%{version}.GIT
+%setup -q -n %{?scl:%{pkg_name}}%{!?scl:%{name}}-%{version}.RC2
 
 %patch1 -p1
 %patch2 -p1
 %patch3 -p1
-%patch4 -p1
 
 %build
 CC=gcc
@@ -487,6 +482,10 @@ fi
 %endif
 
 %changelog
+* Thu Oct  4 2018 Mark Wielaard  <mjw@fedoraproject.org> - 3.14.0-0.2.RC2
+- Upgrade to RC2.
+- Drop valgrind-3.14.0-add-vector-h.patch.
+
 * Fri Sep 14 2018 Mark Wielaard  <mjw@fedoraproject.org> - 3.14.0-0.1.GIT
 - New upstream (pre-)release.
 - Add valgrind-3.14.0-add-vector-h.patch.
