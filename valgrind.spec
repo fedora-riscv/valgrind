@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.14.0
-Release: 0.2.RC2%{?dist}
+Release: 1%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -100,9 +100,7 @@ Group: Development/Debuggers
 # So those will already have their full symbol table.
 %undefine _include_minidebuginfo
 
-# Source0: ftp://sourceware.org/pub/valgrind/valgrind-%{version}.tar.bz2
-# commit 5d41dadeb3cb805546497b350750ca3bee365210
-Source0: valgrind-3.14.0.RC2.tar.bz2
+Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
 
 # Needs investigation and pushing upstream
 Patch1: valgrind-3.9.0-cachegrind-improvements.patch
@@ -243,7 +241,7 @@ Valgrind User Manual for details.
 %endif
 
 %prep
-%setup -q -n %{?scl:%{pkg_name}}%{!?scl:%{name}}-%{version}.RC2
+%setup -q -n %{?scl:%{pkg_name}}%{!?scl:%{name}}-%{version}
 
 %patch1 -p1
 %patch2 -p1
@@ -482,6 +480,9 @@ fi
 %endif
 
 %changelog
+* Tue Oct  9 2018 Mark Wielaard  <mjw@fedoraproject.org> - 3.14.0-1
+- valgrind 3.14.0 final.
+
 * Thu Oct  4 2018 Mark Wielaard  <mjw@fedoraproject.org> - 3.14.0-0.2.RC2
 - Upgrade to RC2.
 - Drop valgrind-3.14.0-add-vector-h.patch.
