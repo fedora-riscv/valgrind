@@ -1,0 +1,2313 @@
+From 148f232e414e24e83a547b1c024239da42bde66a Mon Sep 17 00:00:00 2001
+From: Vadim Barkov <vbrkov@gmail.com>
+Date: Fri, 5 Oct 2018 13:46:44 +0300
+Subject: [PATCH 1/2] Vector floating point implementation (tests)
+
+---
+ .gitignore                               |   10 +
+ none/tests/s390x/Makefile.am             |    5 +-
+ none/tests/s390x/vector.h                |   92 +-
+ none/tests/s390x/vector_float.c          |  174 +++
+ none/tests/s390x/vector_float.stderr.exp |    2 +
+ none/tests/s390x/vector_float.stdout.exp | 1808 ++++++++++++++++++++++
+ none/tests/s390x/vector_float.vgtest     |    2 +
+ 7 files changed, 2079 insertions(+), 14 deletions(-)
+ create mode 100644 none/tests/s390x/vector_float.c
+ create mode 100644 none/tests/s390x/vector_float.stderr.exp
+ create mode 100644 none/tests/s390x/vector_float.stdout.exp
+ create mode 100644 none/tests/s390x/vector_float.vgtest
+
+diff --git a/none/tests/s390x/Makefile.am b/none/tests/s390x/Makefile.am
+index 77c00ba19..097c85ac1 100644
+--- a/none/tests/s390x/Makefile.am
++++ b/none/tests/s390x/Makefile.am
+@@ -18,7 +18,8 @@ INSN_TESTS = clc clcle cvb cvd icm lpr tcxb lam_stam xc mvst add sub mul \
+ 	     spechelper-cr  spechelper-clr  \
+ 	     spechelper-ltr spechelper-or   \
+ 	     spechelper-icm-1  spechelper-icm-2 spechelper-tmll \
+-	     spechelper-tm laa vector lsc2 ppno vector_string vector_integer
++	     spechelper-tm laa vector lsc2 ppno vector_string vector_integer \
++	     vector_float
+ 
+ if BUILD_DFP_TESTS
+   INSN_TESTS += dfp-1 dfp-2 dfp-3 dfp-4 dfptest dfpext dfpconv srnmt pfpo
+@@ -71,4 +72,4 @@ vector_CFLAGS    = $(AM_CFLAGS) -march=z13
+ lsc2_CFLAGS       = -march=z13 -DS390_TESTS_NOCOLOR
+ vector_string_CFLAGS = $(AM_CFLAGS) -march=z13 -DS390_TEST_COUNT=5
+ vector_integer_CFLAGS    = $(AM_CFLAGS) -march=z13 -DS390_TEST_COUNT=4
+-
++vector_float_CFLAGS    = $(AM_CFLAGS) -march=z13 -DS390_TEST_COUNT=4
+diff --git a/none/tests/s390x/vector.h b/none/tests/s390x/vector.h
+index adefbcd74..6c40e450f 100644
+--- a/none/tests/s390x/vector.h
++++ b/none/tests/s390x/vector.h
+@@ -12,17 +12,21 @@
+ #endif
+ 
+ /* Test the instruction exactly one time. */
+-#define test_once(insn) test_##insn()
++#define test_once(insn) test_##insn ()
+ 
+ /* Test the instruction exactly S390_TEST_COUNT times.
+    "..." arguments specifies code which must be executed after each tests
+  */
+ #define test(insn, ...) \
+    for(iteration = 0; iteration < S390_TEST_COUNT; iteration++) \
+-     { test_##insn(); \
++     { test_once(insn); \
+         __VA_ARGS__; \
+      }
+ 
++#define test_with_selective_printing(insn, info) \
++   for(iteration = 0; iteration < S390_TEST_COUNT; iteration++) \
++     { test_ ## insn ## _selective(info); }
++
+ #ifdef __GNUC__
+ /* GCC complains about __int128 with -pedantic */
+ /* Hope that we will have int128_t in C standard someday. */
+@@ -38,22 +42,57 @@ typedef union {
+ 
+    uint32_t u32[4];
+    int32_t s32[4];
++   float   f32[4];
+ 
+    uint64_t u64[2];
+    int64_t s64[2];
++   double f64[2];
+ 
+    unsigned __int128 u128[1];
+    __int128 s128[1];
+ } V128;
+ 
++typedef enum {
++   V128_NO_PRINTING = 0,
++   V128_V_RES_AS_INT  = 1 << 0,
++   V128_V_ARG1_AS_INT = 1 << 1,
++   V128_V_ARG2_AS_INT = 1 << 2,
++   V128_V_ARG3_AS_INT = 1 << 3,
++   V128_V_RES_AS_FLOAT64 = 1 << 4,
++   V128_V_ARG1_AS_FLOAT64 = 1 << 5,
++   V128_V_ARG2_AS_FLOAT64 = 1 << 6,
++   V128_V_ARG3_AS_FLOAT64 = 1 << 7,
++   V128_V_RES_AS_FLOAT32 = 1 << 8,
++   V128_V_ARG1_AS_FLOAT32 = 1 << 9,
++   V128_V_ARG2_AS_FLOAT32 = 1 << 10,
++   V128_V_ARG3_AS_FLOAT32 = 1 << 11,
++   V128_R_RES = 1 << 12,
++   V128_R_ARG1 = 1 << 13,
++   V128_R_ARG2 = 1 << 14,
++   V128_R_ARG3 = 1 << 15,
++   V128_PRINT_ALL = V128_V_RES_AS_INT | 
++                    V128_V_ARG1_AS_INT | V128_V_ARG2_AS_INT | V128_V_ARG3_AS_INT |
++                    V128_R_RES |
++                    V128_R_ARG1 | V128_R_ARG2 | V128_R_ARG3
++} s390x_test_usageInfo;
++
+ void print_hex(const V128 value) {
+    printf("%016lx | %016lx\n", value.u64[0], value.u64[1]);
+ }
+ 
++void print_f32(const V128 value) {
++   printf("%.5e | %.5e | %.5e | %.5e\n", value.f32[0], value.f32[1], value.f32[2], value.f32[3]);
++}
++
++void print_f64(const V128 value) {
++   printf("%.9e | %.9e\n", value.f64[0], value.f64[1]);
++}
++
+ void print_uint64_t(const uint64_t value) {
+    printf("%016lx\n", value);
+ }
+ 
++
+ uint8_t random_element ( void )
+ {
+    static uint32_t seed = 80021;
+@@ -118,7 +157,7 @@ void randomize_memory_pool()
+ 
+ */
+ #define s390_test_generate(insn, asm_string) \
+-static void test_##insn() \
++static void test_##insn##_selective(const s390x_test_usageInfo info) \
+ { \
+    V128 v_result = { .u64 = {0ULL, 0ULL} }; \
+    V128 v_arg1; \
+@@ -138,6 +177,7 @@ static void test_##insn() \
+        "vl  %%v2, %[v_arg2]\n" \
+        "vl  %%v3, %[v_arg3]\n" \
+        "vone %%v5\n" \
++       "srnmb 1(0)\n " \
+        asm_string "\n"\
+        "vst %%v5, %[v_result]\n" \
+        "vst %%v1, %[v_arg1]\n" \
+@@ -162,15 +202,43 @@ static void test_##insn() \
+          "v1", "v2", "v3", "v5"); \
+     \
+    printf("insn %s:\n", #insn); \
+-   printf("  v_arg1   = "); print_hex(v_arg1); \
+-   printf("  v_arg2   = "); print_hex(v_arg2); \
+-   printf("  v_arg3   = "); print_hex(v_arg3); \
+-   printf("  v_result = "); print_hex(v_result); \
+-   printf("  r_arg1   = "); print_uint64_t(r_arg1); \
+-   printf("  r_arg2   = "); print_uint64_t(r_arg2); \
+-   printf("  r_arg3   = "); print_uint64_t(r_arg3); \
+-   printf("  r_result = "); print_uint64_t(r_result); \
+-}
++   if(info & V128_V_ARG1_AS_INT) \
++      {printf("  v_arg1   = "); print_hex(v_arg1);} \
++   if(info & V128_V_ARG2_AS_INT) \
++      {printf("  v_arg2   = "); print_hex(v_arg2);} \
++   if(info & V128_V_ARG3_AS_INT) \
++      {printf("  v_arg3   = "); print_hex(v_arg3);} \
++   if(info & V128_V_RES_AS_INT) \
++      {printf("  v_result = "); print_hex(v_result);} \
++   \
++   if(info & V128_V_ARG1_AS_FLOAT64) \
++      {printf("  v_arg1   = "); print_f64(v_arg1);} \
++   if(info & V128_V_ARG2_AS_FLOAT64) \
++      {printf("  v_arg2   = "); print_f64(v_arg2);} \
++   if(info & V128_V_ARG3_AS_FLOAT64) \
++      {printf("  v_arg3   = "); print_f64(v_arg3);} \
++   if(info & V128_V_RES_AS_FLOAT64) \
++      {printf("  v_result = "); print_f64(v_result);} \
++   \
++   if(info & V128_V_ARG1_AS_FLOAT32) \
++      {printf("  v_arg1   = "); print_f32(v_arg1);} \
++   if(info & V128_V_ARG2_AS_FLOAT32) \
++      {printf("  v_arg2   = "); print_f32(v_arg2);} \
++   if(info & V128_V_ARG3_AS_FLOAT32) \
++      {printf("  v_arg3   = "); print_f32(v_arg3);} \
++   if(info & V128_V_RES_AS_FLOAT32) \
++      {printf("  v_result = "); print_f32(v_result);} \
++   \
++   if(info & V128_R_ARG1) \
++      {printf("  r_arg1   = "); print_uint64_t(r_arg1);} \
++   if(info & V128_R_ARG2) \
++      {printf("  r_arg2   = "); print_uint64_t(r_arg2);} \
++   if(info & V128_R_ARG3) \
++      {printf("  r_arg3   = "); print_uint64_t(r_arg3);} \
++   if(info & V128_R_RES) \
++      {printf("  r_result = "); print_uint64_t(r_result);} \
++} \
++__attribute__((unused)) static void test_##insn() { test_##insn##_selective (V128_PRINT_ALL); }
+ 
+ /* Stores CC to %[r_result].
+    Usefull when testing instructions which modify condition code.
+diff --git a/none/tests/s390x/vector_float.c b/none/tests/s390x/vector_float.c
+new file mode 100644
+index 000000000..119336d6a
+--- /dev/null
++++ b/none/tests/s390x/vector_float.c
+@@ -0,0 +1,174 @@
++#include "vector.h"
++
++#define s390_generate_float_test(insn, asm_string) \
++   s390_test_generate(v##insn##00,   "v" #insn " " asm_string ",0, 0") \
++   s390_test_generate(v##insn##01,   "v" #insn " " asm_string ",0, 1") \
++   s390_test_generate(v##insn##03,   "v" #insn " " asm_string ",0, 3") \
++   s390_test_generate(v##insn##04,   "v" #insn " " asm_string ",0, 4") \
++   s390_test_generate(v##insn##05,   "v" #insn " " asm_string ",0, 5") \
++   s390_test_generate(v##insn##06,   "v" #insn " " asm_string ",0, 6") \
++   s390_test_generate(v##insn##07,   "v" #insn " " asm_string ",0, 7") \
++   s390_test_generate(w##insn##00,   "w" #insn " " asm_string ",0, 0") \
++   s390_test_generate(w##insn##01,   "w" #insn " " asm_string ",0, 1") \
++   s390_test_generate(w##insn##03,   "w" #insn " " asm_string ",0, 3") \
++   s390_test_generate(w##insn##04,   "w" #insn " " asm_string ",0, 4") \
++   s390_test_generate(w##insn##05,   "w" #insn " " asm_string ",0, 5") \
++   s390_test_generate(w##insn##06,   "w" #insn " " asm_string ",0, 6") \
++   s390_test_generate(w##insn##07,   "w" #insn " " asm_string ",0, 7") \
++
++#define s390_call_float_test(insn, info) \
++   test_with_selective_printing(v ##insn ## 00, info); \
++   test_with_selective_printing(v ##insn ## 01, info); \
++   test_with_selective_printing(v ##insn ## 03, info); \
++   test_with_selective_printing(v ##insn ## 04, info); \
++   test_with_selective_printing(v ##insn ## 05, info); \
++   test_with_selective_printing(v ##insn ## 06, info); \
++   test_with_selective_printing(v ##insn ## 07, info); \
++   test_with_selective_printing(w ##insn ## 00, info); \
++   test_with_selective_printing(w ##insn ## 01, info); \
++   test_with_selective_printing(w ##insn ## 03, info); \
++   test_with_selective_printing(w ##insn ## 04, info); \
++   test_with_selective_printing(w ##insn ## 05, info); \
++   test_with_selective_printing(w ##insn ## 06, info); \
++   test_with_selective_printing(w ##insn ## 07, info); \
++
++s390_generate_float_test(cdgb, " %%v5, %%v1")
++s390_generate_float_test(cdlgb, " %%v5, %%v1")
++s390_generate_float_test(cgdb, " %%v5, %%v1")
++s390_generate_float_test(clgdb, " %%v5, %%v1")
++s390_generate_float_test(fidb, " %%v5, %%v1")
++s390_generate_float_test(ledb, " %%v5, %%v1")
++
++s390_test_generate(vldeb, "vldeb %%v5, %%v1")
++s390_test_generate(wldeb, "wldeb %%v5, %%v1")
++
++s390_test_generate(vflcdb, "vflcdb %%v5, %%v1")
++s390_test_generate(wflcdb, "wflcdb %%v5, %%v1")
++s390_test_generate(vflndb, "vflndb %%v5, %%v1")
++s390_test_generate(wflndb, "wflndb %%v5, %%v1")
++s390_test_generate(vflpdb, "vflpdb %%v5, %%v1")
++s390_test_generate(wflpdb, "wflpdb %%v5, %%v1")
++
++s390_test_generate(vfadb, "vfadb %%v5, %%v1, %%v2")
++s390_test_generate(wfadb, "wfadb %%v5, %%v1, %%v2")
++s390_test_generate(vfsdb, "vfsdb %%v5, %%v1, %%v2")
++s390_test_generate(wfsdb, "wfsdb %%v5, %%v1, %%v2")
++s390_test_generate(vfmdb, "vfmdb %%v5, %%v1, %%v2")
++s390_test_generate(wfmdb, "wfmdb %%v5, %%v1, %%v2")
++s390_test_generate(vfddb, "vfddb %%v5, %%v1, %%v2")
++s390_test_generate(wfddb, "wfddb %%v5, %%v1, %%v2")
++
++s390_test_generate(vfsqdb, "vfsqdb %%v5, %%v1")
++s390_test_generate(wfsqdb, "wfsqdb %%v5, %%v1")
++
++s390_test_generate(vfmadb, "vfmadb %%v5, %%v1, %%v2, %%v3")
++s390_test_generate(wfmadb, "wfmadb %%v5, %%v1, %%v2, %%v3")
++s390_test_generate(vfmsdb, "vfmsdb %%v5, %%v1, %%v2, %%v3")
++s390_test_generate(wfmsdb, "wfmsdb %%v5, %%v1, %%v2, %%v3")
++
++s390_test_generate(wfcdb, "wfcdb %%v1, %%v2\n" S390_TEST_PUT_CC_TO_RESULT)
++s390_test_generate(wfkdb, "wfkdb %%v1, %%v2\n" S390_TEST_PUT_CC_TO_RESULT)
++
++s390_test_generate(vfcedb,  "vfcedb  %%v5, %%v1, %%v2")
++s390_test_generate(wfcedb,  "wfcedb  %%v5, %%v1, %%v2")
++s390_test_generate(vfcedbs, "vfcedbs %%v5, %%v1, %%v2\n" S390_TEST_PUT_CC_TO_RESULT)
++s390_test_generate(wfcedbs, "wfcedbs %%v5, %%v1, %%v2\n" S390_TEST_PUT_CC_TO_RESULT)
++
++s390_test_generate(vfchdb,  "vfchdb  %%v5, %%v1, %%v2")
++s390_test_generate(wfchdb,  "wfchdb  %%v5, %%v1, %%v2")
++s390_test_generate(vfchdbs, "vfchdbs %%v5, %%v1, %%v2\n" S390_TEST_PUT_CC_TO_RESULT)
++s390_test_generate(wfchdbs, "wfchdbs %%v5, %%v1, %%v2\n" S390_TEST_PUT_CC_TO_RESULT)
++
++s390_test_generate(vfchedb,  "vfchedb  %%v5, %%v1, %%v2")
++s390_test_generate(wfchedb,  "wfchedb  %%v5, %%v1, %%v2")
++s390_test_generate(vfchedbs, "vfchedbs %%v5, %%v1, %%v2\n" S390_TEST_PUT_CC_TO_RESULT)
++s390_test_generate(wfchedbs, "wfchedbs %%v5, %%v1, %%v2\n" S390_TEST_PUT_CC_TO_RESULT)
++
++s390_test_generate(vftcidb0,    "vftcidb %%v5, %%v1,  0  \n" S390_TEST_PUT_CC_TO_RESULT)
++s390_test_generate(vftcidb1,    "vftcidb %%v5, %%v1,  1  \n" S390_TEST_PUT_CC_TO_RESULT)
++s390_test_generate(vftcidb2,    "vftcidb %%v5, %%v1,  2  \n" S390_TEST_PUT_CC_TO_RESULT)
++s390_test_generate(vftcidb3,    "vftcidb %%v5, %%v1,  0  \n" S390_TEST_PUT_CC_TO_RESULT)
++s390_test_generate(vftcidb4,    "vftcidb %%v5, %%v1,  4  \n" S390_TEST_PUT_CC_TO_RESULT)
++s390_test_generate(vftcidb8,    "vftcidb %%v5, %%v1,  8  \n" S390_TEST_PUT_CC_TO_RESULT)
++s390_test_generate(vftcidb16,   "vftcidb %%v5, %%v1, 16  \n" S390_TEST_PUT_CC_TO_RESULT)
++s390_test_generate(vftcidb32,   "vftcidb %%v5, %%v1, 32  \n" S390_TEST_PUT_CC_TO_RESULT)
++s390_test_generate(vftcidb64,   "vftcidb %%v5, %%v1, 64  \n" S390_TEST_PUT_CC_TO_RESULT)
++s390_test_generate(vftcidb128,  "vftcidb %%v5, %%v1, 128 \n" S390_TEST_PUT_CC_TO_RESULT)
++s390_test_generate(vftcidb256,  "vftcidb %%v5, %%v1, 256 \n" S390_TEST_PUT_CC_TO_RESULT)
++s390_test_generate(vftcidb512,  "vftcidb %%v5, %%v1, 512 \n" S390_TEST_PUT_CC_TO_RESULT)
++s390_test_generate(vftcidb1024, "vftcidb %%v5, %%v1, 1024\n" S390_TEST_PUT_CC_TO_RESULT)
++s390_test_generate(vftcidb2048, "vftcidb %%v5, %%v1, 2048\n" S390_TEST_PUT_CC_TO_RESULT)
++
++int main() {
++   size_t iteration = 0;
++
++   s390_call_float_test(cdgb, (V128_V_RES_AS_FLOAT64 | V128_V_ARG1_AS_INT));
++   s390_call_float_test(cdlgb, (V128_V_RES_AS_FLOAT64 | V128_V_ARG1_AS_INT));
++   s390_call_float_test(cgdb, (V128_V_RES_AS_INT | V128_V_ARG1_AS_FLOAT64));
++   s390_call_float_test(clgdb, V128_V_RES_AS_INT | V128_V_ARG1_AS_FLOAT64);
++   s390_call_float_test(fidb, V128_V_RES_AS_FLOAT64 | V128_V_ARG1_AS_FLOAT64);
++   s390_call_float_test(ledb, V128_V_RES_AS_FLOAT64 | V128_V_ARG1_AS_FLOAT64);
++
++   test_with_selective_printing(vldeb, V128_V_RES_AS_FLOAT64 | V128_V_ARG1_AS_FLOAT64);
++   test_with_selective_printing(wldeb, V128_V_RES_AS_FLOAT64 | V128_V_ARG1_AS_FLOAT64);
++
++   test_with_selective_printing(vflcdb, (V128_V_RES_AS_FLOAT64 | V128_V_ARG1_AS_FLOAT64));
++   test_with_selective_printing(wflcdb, (V128_V_RES_AS_FLOAT64 | V128_V_ARG1_AS_FLOAT64));
++   test_with_selective_printing(vflndb, (V128_V_RES_AS_FLOAT64 | V128_V_ARG1_AS_FLOAT64));
++   test_with_selective_printing(wflndb, (V128_V_RES_AS_FLOAT64 | V128_V_ARG1_AS_FLOAT64));
++   test_with_selective_printing(vflpdb, (V128_V_RES_AS_FLOAT64 | V128_V_ARG1_AS_FLOAT64));
++   test_with_selective_printing(wflpdb, (V128_V_RES_AS_FLOAT64 | V128_V_ARG1_AS_FLOAT64));
++
++   test_with_selective_printing(vfadb, (V128_V_RES_AS_FLOAT64 | V128_V_ARG1_AS_FLOAT64| V128_V_ARG2_AS_FLOAT64));
++   test_with_selective_printing(wfadb, (V128_V_RES_AS_FLOAT64 | V128_V_ARG1_AS_FLOAT64| V128_V_ARG2_AS_FLOAT64));
++   test_with_selective_printing(vfsdb, (V128_V_RES_AS_FLOAT64 | V128_V_ARG1_AS_FLOAT64| V128_V_ARG2_AS_FLOAT64));
++   test_with_selective_printing(wfsdb, (V128_V_RES_AS_FLOAT64 | V128_V_ARG1_AS_FLOAT64| V128_V_ARG2_AS_FLOAT64));
++   test_with_selective_printing(vfmdb, (V128_V_RES_AS_FLOAT64 | V128_V_ARG1_AS_FLOAT64| V128_V_ARG2_AS_FLOAT64));
++   test_with_selective_printing(wfmdb, (V128_V_RES_AS_FLOAT64 | V128_V_ARG1_AS_FLOAT64| V128_V_ARG2_AS_FLOAT64));
++   test_with_selective_printing(vfddb, (V128_V_RES_AS_FLOAT64 | V128_V_ARG1_AS_FLOAT64| V128_V_ARG2_AS_FLOAT64));
++   test_with_selective_printing(wfddb, (V128_V_RES_AS_FLOAT64 | V128_V_ARG1_AS_FLOAT64| V128_V_ARG2_AS_FLOAT64));
++ 
++   test_with_selective_printing(vfsqdb, (V128_V_RES_AS_FLOAT64 | V128_V_ARG1_AS_FLOAT64));
++   test_with_selective_printing(wfsqdb, (V128_V_RES_AS_FLOAT64 | V128_V_ARG1_AS_FLOAT64));
++
++   test_with_selective_printing(vfmadb, (V128_V_RES_AS_FLOAT64 | V128_V_ARG1_AS_FLOAT64 | V128_V_ARG2_AS_FLOAT64 | V128_V_ARG3_AS_FLOAT64));
++   test_with_selective_printing(wfmadb, (V128_V_RES_AS_FLOAT64 | V128_V_ARG1_AS_FLOAT64 | V128_V_ARG2_AS_FLOAT64 | V128_V_ARG3_AS_FLOAT64));
++   test_with_selective_printing(vfmsdb, (V128_V_RES_AS_FLOAT64 | V128_V_ARG1_AS_FLOAT64 | V128_V_ARG2_AS_FLOAT64 | V128_V_ARG3_AS_FLOAT64));
++   test_with_selective_printing(wfmsdb, (V128_V_RES_AS_FLOAT64 | V128_V_ARG1_AS_FLOAT64 | V128_V_ARG2_AS_FLOAT64 | V128_V_ARG3_AS_FLOAT64));
++
++   test_with_selective_printing(wfcdb, (V128_V_ARG1_AS_FLOAT64 | V128_V_ARG2_AS_FLOAT64 | V128_R_RES));
++   test_with_selective_printing(wfkdb, (V128_V_ARG1_AS_FLOAT64 | V128_V_ARG2_AS_FLOAT64 | V128_R_RES));
++
++   test_with_selective_printing(vfcedb,  (V128_V_RES_AS_INT | V128_V_ARG1_AS_FLOAT64 | V128_V_ARG2_AS_FLOAT64));
++   test_with_selective_printing(wfcedb,  (V128_V_RES_AS_INT | V128_V_ARG1_AS_FLOAT64 | V128_V_ARG2_AS_FLOAT64));
++   test_with_selective_printing(vfcedbs, (V128_V_RES_AS_INT | V128_V_ARG1_AS_FLOAT64 | V128_V_ARG2_AS_FLOAT64 | V128_R_RES));
++   test_with_selective_printing(wfcedbs, (V128_V_RES_AS_INT | V128_V_ARG1_AS_FLOAT64 | V128_V_ARG2_AS_FLOAT64 | V128_R_RES));
++
++   test_with_selective_printing(vfchdb,  (V128_V_RES_AS_INT | V128_V_ARG1_AS_FLOAT64 | V128_V_ARG2_AS_FLOAT64));
++   test_with_selective_printing(wfchdb,  (V128_V_RES_AS_INT | V128_V_ARG1_AS_FLOAT64 | V128_V_ARG2_AS_FLOAT64));
++   test_with_selective_printing(vfchdbs, (V128_V_RES_AS_INT | V128_V_ARG1_AS_FLOAT64 | V128_V_ARG2_AS_FLOAT64 | V128_R_RES));
++   test_with_selective_printing(wfchdbs, (V128_V_RES_AS_INT | V128_V_ARG1_AS_FLOAT64 | V128_V_ARG2_AS_FLOAT64 | V128_R_RES));
++
++   test_with_selective_printing(vfchedb,  (V128_V_RES_AS_INT | V128_V_ARG1_AS_FLOAT64 | V128_V_ARG2_AS_FLOAT64));
++   test_with_selective_printing(wfchedb,  (V128_V_RES_AS_INT | V128_V_ARG1_AS_FLOAT64 | V128_V_ARG2_AS_FLOAT64));
++   test_with_selective_printing(vfchedbs, (V128_V_RES_AS_INT | V128_V_ARG1_AS_FLOAT64 | V128_V_ARG2_AS_FLOAT64 | V128_R_RES));
++   test_with_selective_printing(wfchedbs, (V128_V_RES_AS_INT | V128_V_ARG1_AS_FLOAT64 | V128_V_ARG2_AS_FLOAT64 | V128_R_RES));
++
++   test_with_selective_printing(vftcidb0,    (V128_V_RES_AS_INT | V128_V_ARG1_AS_FLOAT64 | V128_R_RES));
++   test_with_selective_printing(vftcidb1,    (V128_V_RES_AS_INT | V128_V_ARG1_AS_FLOAT64 | V128_R_RES));
++   test_with_selective_printing(vftcidb2,    (V128_V_RES_AS_INT | V128_V_ARG1_AS_FLOAT64 | V128_R_RES));
++   test_with_selective_printing(vftcidb3,    (V128_V_RES_AS_INT | V128_V_ARG1_AS_FLOAT64 | V128_R_RES));
++   test_with_selective_printing(vftcidb4,    (V128_V_RES_AS_INT | V128_V_ARG1_AS_FLOAT64 | V128_R_RES));
++   test_with_selective_printing(vftcidb8,    (V128_V_RES_AS_INT | V128_V_ARG1_AS_FLOAT64 | V128_R_RES));
++   test_with_selective_printing(vftcidb16,   (V128_V_RES_AS_INT | V128_V_ARG1_AS_FLOAT64 | V128_R_RES));
++   test_with_selective_printing(vftcidb32,   (V128_V_RES_AS_INT | V128_V_ARG1_AS_FLOAT64 | V128_R_RES));
++   test_with_selective_printing(vftcidb64,   (V128_V_RES_AS_INT | V128_V_ARG1_AS_FLOAT64 | V128_R_RES));
++   test_with_selective_printing(vftcidb128,  (V128_V_RES_AS_INT | V128_V_ARG1_AS_FLOAT64 | V128_R_RES));
++   test_with_selective_printing(vftcidb256,  (V128_V_RES_AS_INT | V128_V_ARG1_AS_FLOAT64 | V128_R_RES));
++   test_with_selective_printing(vftcidb512,  (V128_V_RES_AS_INT | V128_V_ARG1_AS_FLOAT64 | V128_R_RES));
++   test_with_selective_printing(vftcidb1024, (V128_V_RES_AS_INT | V128_V_ARG1_AS_FLOAT64 | V128_R_RES));
++   test_with_selective_printing(vftcidb2048, (V128_V_RES_AS_INT | V128_V_ARG1_AS_FLOAT64 | V128_R_RES));
++
++   return 0;
++}
++
+diff --git a/none/tests/s390x/vector_float.stderr.exp b/none/tests/s390x/vector_float.stderr.exp
+new file mode 100644
+index 000000000..139597f9c
+--- /dev/null
++++ b/none/tests/s390x/vector_float.stderr.exp
+@@ -0,0 +1,2 @@
++
++
+diff --git a/none/tests/s390x/vector_float.stdout.exp b/none/tests/s390x/vector_float.stdout.exp
+new file mode 100644
+index 000000000..a7ac38576
+--- /dev/null
++++ b/none/tests/s390x/vector_float.stdout.exp
+@@ -0,0 +1,1808 @@
++insn vcdgb00:
++  v_arg1   = 0d6a95fac528657d | 501eefeec0d8b847
++  v_result = 9.667499743e+17 | 5.773315581e+18
++insn vcdgb00:
++  v_arg1   = e540bc6839c44b4a | 36ed3550df9899d8
++  v_result = -1.927333484e+18 | 3.957878268e+18
++insn vcdgb00:
++  v_arg1   = 979569ee6d5cbcd8 | 966cf73d98a42d54
++  v_result = -7.523991129e+18 | -7.607433826e+18
++insn vcdgb00:
++  v_arg1   = 10985cc9e2b9c255 | b2683bbf21432695
++  v_result = 1.195807723e+18 | -5.591153245e+18
++insn vcdgb01:
++  v_arg1   = 4208cb757c0f3e0a | 91fe3de1d5e7ca54
++  v_result = 4.758276711e+18 | -7.926830253e+18
++insn vcdgb01:
++  v_arg1   = e5f1216d47c3a621 | c1582e6bf6f3b5e9
++  v_result = -1.877682816e+18 | -4.514807585e+18
++insn vcdgb01:
++  v_arg1   = 376fbfe93425c861 | 1870f7a36a759b08
++  v_result = 3.994622402e+18 | 1.761179735e+18
++insn vcdgb01:
++  v_arg1   = bc68bf9dda3685ee | 6fcaf40c7feb0484
++  v_result = -4.870432312e+18 | 8.055519218e+18
++insn vcdgb03:
++  v_arg1   = ff55ac7f3661970c | 663cba29a8010f0e
++  v_result = -4.794255864e+16 | 7.366967778e+18
++insn vcdgb03:
++  v_arg1   = 50f94b806c444cdc | 23a9d13a3e4f30f5
++  v_result = 5.834777807e+18 | 2.569815110e+18
++insn vcdgb03:
++  v_arg1   = 8526565084674a1c | 13c07bfc401df2e6
++  v_result = -8.852293113e+18 | 1.423273805e+18
++insn vcdgb03:
++  v_arg1   = bb7d3d1d2e024aea | a9bf6c6c1422b7ac
++  v_result = -4.936722420e+18 | -6.215129749e+18
++insn vcdgb04:
++  v_arg1   = 122de4537ebadd80 | 1b359083443f73f0
++  v_result = 1.309954113e+18 | 1.960632106e+18
++insn vcdgb04:
++  v_arg1   = 74b2685cb1632af8 | 28bac9f9424875f9
++  v_result = 8.408898201e+18 | 2.934880179e+18
++insn vcdgb04:
++  v_arg1   = 4f96da5fe8beae08 | d5b8af0426ba1f6b
++  v_result = 5.735011280e+18 | -3.046492715e+18
++insn vcdgb04:
++  v_arg1   = 57330304e93afcc5 | 2c244e196b83aa0a
++  v_result = 6.283369224e+18 | 3.180753107e+18
++insn vcdgb05:
++  v_arg1   = 466d1f2de1b67b62 | fc44eca9b6c0e377
++  v_result = 5.074746637e+18 | -2.688298640e+17
++insn vcdgb05:
++  v_arg1   = 9c7aa2bc253b2bf0 | 9c69c1e38f79f1f0
++  v_result = -7.171240527e+18 | -7.175991348e+18
++insn vcdgb05:
++  v_arg1   = 609cf752ecc5611e | a9b4be7727660d13
++  v_result = 6.961711059e+18 | -6.218135766e+18
++insn vcdgb05:
++  v_arg1   = dde43c0d17fa87f9 | c4d4485011ac499a
++  v_result = -2.457773469e+18 | -4.263703438e+18
++insn vcdgb06:
++  v_arg1   = 67f00848ebf0ddad | 55c5fa58099e4a1e
++  v_result = 7.489495289e+18 | 6.180621319e+18
++insn vcdgb06:
++  v_arg1   = 14ac275ed2ea3c41 | 4c916736b17f0fd7
++  v_result = 1.489608864e+18 | 5.517304503e+18
++insn vcdgb06:
++  v_arg1   = 841359651e19ce5c | db11d6114f3da959
++  v_result = -8.929695345e+18 | -2.661110534e+18
++insn vcdgb06:
++  v_arg1   = 9aee16f6c65ed705 | 3dab044d91370057
++  v_result = -7.282858298e+18 | 4.443650188e+18
++insn vcdgb07:
++  v_arg1   = 41924de22705705d | 7314e64c4af69562
++  v_result = 4.724924592e+18 | 8.292506029e+18
++insn vcdgb07:
++  v_arg1   = 28a421fcc48a4766 | 020e652d33f63ba9
++  v_result = 2.928503027e+18 | 1.481670825e+17
++insn vcdgb07:
++  v_arg1   = 87d7abd5085662be | b72a218eab5dddb9
++  v_result = -8.658262827e+18 | -5.248345519e+18
++insn vcdgb07:
++  v_arg1   = d9abbb790081d963 | 63852f4c78c03c3d
++  v_result = -2.761907818e+18 | 7.171189987e+18
++insn wcdgb00:
++  v_arg1   = a02f983522909f6f | a08ddc4185e4afbe
++  v_result = -6.904132349e+18 | 0.000000000e+00
++insn wcdgb00:
++  v_arg1   = 24bfbc5409373bdb | 8bbc6803a279e263
++  v_result = 2.648042175e+18 | 0.000000000e+00
++insn wcdgb00:
++  v_arg1   = 35c59adc3617873f | 895bccaa47e097b0
++  v_result = 3.874673325e+18 | 0.000000000e+00
++insn wcdgb00:
++  v_arg1   = e5795953d180798f | 033f758952e56949
++  v_result = -1.911398350e+18 | 0.000000000e+00
++insn wcdgb01:
++  v_arg1   = 50a3967f672fd7de | 2a8d07f3c58484af
++  v_result = 5.810653418e+18 | 0.000000000e+00
++insn wcdgb01:
++  v_arg1   = 55572620ab0f011d | b4781cf689a66f00
++  v_result = 6.149425737e+18 | 0.000000000e+00
++insn wcdgb01:
++  v_arg1   = 5ab7d2b735faacdb | 9d0003212fe3c3b9
++  v_result = 6.536925068e+18 | 0.000000000e+00
++insn wcdgb01:
++  v_arg1   = 0cb41a414677a106 | e7b48241aa40f176
++  v_result = 9.153854919e+17 | 0.000000000e+00
++insn wcdgb03:
++  v_arg1   = 1dcbf3fa837c83a7 | 5c6f941e16f101b0
++  v_result = 2.147077904e+18 | 0.000000000e+00
++insn wcdgb03:
++  v_arg1   = 05ca8a1db62c87a8 | 471d2d4175174e7c
++  v_result = 4.172977757e+17 | 0.000000000e+00
++insn wcdgb03:
++  v_arg1   = c28bffa291993a8f | 3f76f2af6e814c51
++  v_result = -4.428164734e+18 | 0.000000000e+00
++insn wcdgb03:
++  v_arg1   = 99b62bfd6b813f43 | ddc001ae0d6e42c1
++  v_result = -7.370655372e+18 | 0.000000000e+00
++insn wcdgb04:
++  v_arg1   = d3825be401140fc5 | 818fb07e8648113d
++  v_result = -3.205898949e+18 | 0.000000000e+00
++insn wcdgb04:
++  v_arg1   = 8273130837abb8f7 | 1287461ff268ecd4
++  v_result = -9.046866300e+18 | 0.000000000e+00
++insn wcdgb04:
++  v_arg1   = 3a1ccdd9d5909f57 | bc17c41010d81ef3
++  v_result = 4.187448089e+18 | 0.000000000e+00
++insn wcdgb04:
++  v_arg1   = d8ddb8444bbc3ec3 | b03fa00d060ac825
++  v_result = -2.819895188e+18 | 0.000000000e+00
++insn wcdgb05:
++  v_arg1   = 3fa47a776e92e735 | e74a85ce1fa4a0d3
++  v_result = 4.585924973e+18 | 0.000000000e+00
++insn wcdgb05:
++  v_arg1   = 16aeee9b39a78086 | e09214ce8b37b404
++  v_result = 1.634506065e+18 | 0.000000000e+00
++insn wcdgb05:
++  v_arg1   = 8c46e7988e7d462e | 5e41a7002202251c
++  v_result = -8.338723017e+18 | 0.000000000e+00
++insn wcdgb05:
++  v_arg1   = 1584ecd3f3428b01 | 2c0d099a22b2ed9f
++  v_result = 1.550624566e+18 | 0.000000000e+00
++insn wcdgb06:
++  v_arg1   = 2b0dfbf1569378f2 | d9fa40cced239bee
++  v_result = 3.102412732e+18 | 0.000000000e+00
++insn wcdgb06:
++  v_arg1   = 0fd84793ca3eccd2 | 7d1b4488cd1e1207
++  v_result = 1.141741205e+18 | 0.000000000e+00
++insn wcdgb06:
++  v_arg1   = 86e6fb1a47fa9c10 | 7350c53bb01b4e47
++  v_result = -8.726011137e+18 | 0.000000000e+00
++insn wcdgb06:
++  v_arg1   = 9c07f5646f2f1179 | 1d07e991ed001f2a
++  v_result = -7.203519267e+18 | 0.000000000e+00
++insn wcdgb07:
++  v_arg1   = 659a8c8c44b32df8 | a3fd0c33fddfed09
++  v_result = 7.321318678e+18 | 0.000000000e+00
++insn wcdgb07:
++  v_arg1   = b84c4aadf38a8756 | b5fd808b43ba73d9
++  v_result = -5.166672561e+18 | 0.000000000e+00
++insn wcdgb07:
++  v_arg1   = f2d6b39d8ea40bfa | 459e4b7dc64184f1
++  v_result = -9.483731822e+17 | 0.000000000e+00
++insn wcdgb07:
++  v_arg1   = bac2fdb4caa1bca9 | 4f08ec2df290cac3
++  v_result = -4.989146484e+18 | 0.000000000e+00
++insn vcdlgb00:
++  v_arg1   = b826d785c58e7345 | 91ae17bf5bf582a0
++  v_result = 1.326953032e+19 | 1.049735389e+19
++insn vcdlgb00:
++  v_arg1   = 5c6623a3c3a79e8f | 541375117aa74277
++  v_result = 6.658048285e+18 | 6.058314641e+18
++insn vcdlgb00:
++  v_arg1   = 9ef4bc5cec1602e7 | 228965816f8eb495
++  v_result = 1.145398685e+19 | 2.488631875e+18
++insn vcdlgb00:
++  v_arg1   = b912318010b2790a | 8eecbeacbe005865
++  v_result = 1.333577587e+19 | 1.029881609e+19
++insn vcdlgb01:
++  v_arg1   = f08d891964bfb5d2 | f0698b2c12804730
++  v_result = 1.733366128e+19 | 1.732353046e+19
++insn vcdlgb01:
++  v_arg1   = 4982fe3244b3fcf9 | 263cce57fe80ebdd
++  v_result = 5.297075603e+18 | 2.755303949e+18
++insn vcdlgb01:
++  v_arg1   = 551bc293efedead4 | 556b3f05b71fc8b0
++  v_result = 6.132709258e+18 | 6.155082609e+18
++insn vcdlgb01:
++  v_arg1   = e751bd824f7e331a | a68f0b49dcea370d
++  v_result = 1.666831206e+19 | 1.200182394e+19
++insn vcdlgb03:
++  v_arg1   = d8ab4e82afe45f9d | 0a8b96352f9d2734
++  v_result = 1.561265885e+19 | 7.598661173e+17
++insn vcdlgb03:
++  v_arg1   = cafc061682c88d0e | f751399a5ae2db05
++  v_result = 1.462657238e+19 | 1.782108853e+19
++insn vcdlgb03:
++  v_arg1   = e328717e23c531bd | 2aa205c4ab0fafbd
++  v_result = 1.636845763e+19 | 3.072024238e+18
++insn vcdlgb03:
++  v_arg1   = 8eddcd779023d755 | 63cd7e40d9ebd3b6
++  v_result = 1.029461023e+19 | 7.191542996e+18
++insn vcdlgb04:
++  v_arg1   = 3e5cd1fd2f96dea2 | 2d6e6298be680e29
++  v_result = 4.493697413e+18 | 3.273662387e+18
++insn vcdlgb04:
++  v_arg1   = 2c31690b8a033d4d | 943061141b697dee
++  v_result = 3.184441909e+18 | 1.067814145e+19
++insn vcdlgb04:
++  v_arg1   = 14f57558143a429c | ed8ae27a577c5238
++  v_result = 1.510242271e+18 | 1.711674234e+19
++insn vcdlgb04:
++  v_arg1   = fc128d1be2bb4f36 | 9283c5cd409f975c
++  v_result = 1.816373539e+19 | 1.055749943e+19
++insn vcdlgb05:
++  v_arg1   = ee7dc0c772749ddc | a3701c10cafde98a
++  v_result = 1.718510371e+19 | 1.177694388e+19
++insn vcdlgb05:
++  v_arg1   = b97c51cd687ff92f | c7b3f102ccb03d91
++  v_result = 1.336564773e+19 | 1.439011022e+19
++insn vcdlgb05:
++  v_arg1   = b460795f4de78a6f | ea7d04e2c6809f9e
++  v_result = 1.299752197e+19 | 1.689666674e+19
++insn vcdlgb05:
++  v_arg1   = 7c4a292a4f638939 | fd8c8a2c9fa1effc
++  v_result = 8.956016070e+18 | 1.827012971e+19
++insn vcdlgb06:
++  v_arg1   = b2e9c51a04180847 | baecf0585f77a3d4
++  v_result = 1.289205212e+19 | 1.346940484e+19
++insn vcdlgb06:
++  v_arg1   = be39eb18285aad32 | 5eb896a0fa5488ed
++  v_result = 1.370724542e+19 | 6.825370853e+18
++insn vcdlgb06:
++  v_arg1   = 8f442ace5a6a7432 | 6dd995ba0537816b
++  v_result = 1.032342331e+19 | 7.915522446e+18
++insn vcdlgb06:
++  v_arg1   = 5ae3cc60e43771db | 72c47a987f8e4792
++  v_result = 6.549302999e+18 | 8.269869611e+18
++insn vcdlgb07:
++  v_arg1   = 577c8e33711f8ce0 | bc3f092e8bf32882
++  v_result = 6.304069930e+18 | 1.356457069e+19
++insn vcdlgb07:
++  v_arg1   = 88c462a8d4ae43d2 | 231bfc2b30f1c9fb
++  v_result = 9.855110361e+18 | 2.529892878e+18
++insn vcdlgb07:
++  v_arg1   = 727d35e1c85c6ce0 | c2f9c2bc20bfe51a
++  v_result = 8.249809336e+18 | 1.404947462e+19
++insn vcdlgb07:
++  v_arg1   = e238a379ac52f197 | bb08414f6f020c19
++  v_result = 1.630095859e+19 | 1.347709369e+19
++insn wcdlgb00:
++  v_arg1   = a912c54e442593a2 | f7c3954d578d6511
++  v_result = 1.218301688e+19 | 0.000000000e+00
++insn wcdlgb00:
++  v_arg1   = 6179e4397b98a98a | e4b6cfddfb236dba
++  v_result = 7.023896029e+18 | 0.000000000e+00
++insn wcdlgb00:
++  v_arg1   = 27e744d3235cdf76 | 3539b7a62232b627
++  v_result = 2.875342560e+18 | 0.000000000e+00
++insn wcdlgb00:
++  v_arg1   = 60a5da31b4d1f8ea | a6328b8cf898a98d
++  v_result = 6.964212305e+18 | 0.000000000e+00
++insn wcdlgb01:
++  v_arg1   = 758817a709c58c8a | b6d6be70d26145fc
++  v_result = 8.469045105e+18 | 0.000000000e+00
++insn wcdlgb01:
++  v_arg1   = 97b59c872733cad7 | 6c67baf3e785de23
++  v_result = 1.093181577e+19 | 0.000000000e+00
++insn wcdlgb01:
++  v_arg1   = 7c5f03e2f70438ef | 13f5a03218ade00f
++  v_result = 8.961886056e+18 | 0.000000000e+00
++insn wcdlgb01:
++  v_arg1   = 20869d4407d06f50 | fe20038aa9ed8aeb
++  v_result = 2.343733571e+18 | 0.000000000e+00
++insn wcdlgb03:
++  v_arg1   = 85b92f7a4d9ce094 | 45d3b155068ab4c0
++  v_result = 9.635785080e+18 | 0.000000000e+00
++insn wcdlgb03:
++  v_arg1   = 74d3b54ee59c9334 | 87096ba97fb48a34
++  v_result = 8.418271478e+18 | 0.000000000e+00
++insn wcdlgb03:
++  v_arg1   = 3bc02048cff1e348 | a78aa81e0d4c504e
++  v_result = 4.305476740e+18 | 0.000000000e+00
++insn wcdlgb03:
++  v_arg1   = 6e38186eb26b4443 | 8fad57870c9d1c2e
++  v_result = 7.942124806e+18 | 0.000000000e+00
++insn wcdlgb04:
++  v_arg1   = a781bb039c46fdba | f0169ab6ff259fd8
++  v_result = 1.207013410e+19 | 0.000000000e+00
++insn wcdlgb04:
++  v_arg1   = 462f5c4ac0efef1d | 01788c3b504cdde9
++  v_result = 5.057362382e+18 | 0.000000000e+00
++insn wcdlgb04:
++  v_arg1   = 32e6464337bf4d7c | 3c53fd240e2af05e
++  v_result = 3.667696201e+18 | 0.000000000e+00
++insn wcdlgb04:
++  v_arg1   = 9615776bc1bd6242 | 25b531bdae44ca53
++  v_result = 1.081468138e+19 | 0.000000000e+00
++insn wcdlgb05:
++  v_arg1   = a6bc667e825f4ffb | 04fca550cb4ef1c0
++  v_result = 1.201459059e+19 | 0.000000000e+00
++insn wcdlgb05:
++  v_arg1   = 5826bd37c548ca0f | a690cbe5e6e9423d
++  v_result = 6.351972371e+18 | 0.000000000e+00
++insn wcdlgb05:
++  v_arg1   = 2cad200dbc09e187 | 20acc9022764afbe
++  v_result = 3.219264552e+18 | 0.000000000e+00
++insn wcdlgb05:
++  v_arg1   = e57be5f73fe3b5c6 | 8c153e6a1a7d0156
++  v_result = 1.653606330e+19 | 0.000000000e+00
++insn wcdlgb06:
++  v_arg1   = 4e46db2789824050 | cbdffee0732097f5
++  v_result = 5.640436546e+18 | 0.000000000e+00
++insn wcdlgb06:
++  v_arg1   = f61204d100c21186 | 422ed2e3cc26252c
++  v_result = 1.773123997e+19 | 0.000000000e+00
++insn wcdlgb06:
++  v_arg1   = f5f25be4ea6d0b66 | 9ef13972631676e7
++  v_result = 1.772232852e+19 | 0.000000000e+00
++insn wcdlgb06:
++  v_arg1   = a5c590ce39f92a4e | 90a72ac9dde52c31
++  v_result = 1.194511280e+19 | 0.000000000e+00
++insn wcdlgb07:
++  v_arg1   = 6afcc73a404c3eb8 | 921dd02006b87bf3
++  v_result = 7.709255715e+18 | 0.000000000e+00
++insn wcdlgb07:
++  v_arg1   = 6c515dd47c7aaffd | a12d4e718fa0f2b3
++  v_result = 7.805122796e+18 | 0.000000000e+00
++insn wcdlgb07:
++  v_arg1   = 598fa3024d843814 | 027f7932ce5b3358
++  v_result = 6.453556021e+18 | 0.000000000e+00
++insn wcdlgb07:
++  v_arg1   = 2450a2abba1aac53 | fe49a1158218b7e3
++  v_result = 2.616770241e+18 | 0.000000000e+00
++insn vcgdb00:
++  v_result = 8000000000000000 | 0000000000000000
++  v_arg1   = -2.250950833e+42 | -2.553961254e-125
++insn vcgdb00:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = 1.364339746e-278 | -1.335490841e-229
++insn vcgdb00:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = 2.051970952e-133 | -9.376530105e-190
++insn vcgdb00:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -1.142955858e-89 | -1.703946028e-150
++insn vcgdb01:
++  v_result = 0000000000000000 | 7fffffffffffffff
++  v_arg1   = 1.638036580e-56 | 4.472828669e+82
++insn vcgdb01:
++  v_result = 0000000000000000 | 8000000000000000
++  v_arg1   = 9.267037966e-226 | -2.004905058e+124
++insn vcgdb01:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = 1.476043457e-143 | -1.735423388e-92
++insn vcgdb01:
++  v_result = 0000000000000000 | 7fffffffffffffff
++  v_arg1   = -7.393155460e-253 | 2.570801943e+20
++insn vcgdb03:
++  v_result = 7fffffffffffffff | 8000000000000000
++  v_arg1   = 3.252857911e+273 | -8.114052184e+161
++insn vcgdb03:
++  v_result = 8000000000000000 | 7fffffffffffffff
++  v_arg1   = -7.519346061e+113 | 4.423630116e+48
++insn vcgdb03:
++  v_result = 0000000000000001 | ffffffffffffffff
++  v_arg1   = 6.972121955e-159 | -2.187256619e-258
++insn vcgdb03:
++  v_result = 0000000000000001 | ffffffffffffffff
++  v_arg1   = 1.091135678e-250 | -1.513405992e-57
++insn vcgdb04:
++  v_result = 7fffffffffffffff | 0000000000000000
++  v_arg1   = 4.172351456e+162 | -6.833019586e-146
++insn vcgdb04:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -4.359213596e-127 | -3.105920425e-91
++insn vcgdb04:
++  v_result = 8000000000000000 | 7fffffffffffffff
++  v_arg1   = -3.512185119e+191 | 2.467800744e+302
++insn vcgdb04:
++  v_result = 7fffffffffffffff | 0000000000000000
++  v_arg1   = 2.112347477e+285 | -3.777249473e-07
++insn vcgdb05:
++  v_result = 0000000000000000 | 8000000000000000
++  v_arg1   = -5.656075694e-19 | -7.661383209e+140
++insn vcgdb05:
++  v_result = 8000000000000000 | 8000000000000000
++  v_arg1   = -2.252253258e+43 | -6.898297177e+81
++insn vcgdb05:
++  v_result = 7fffffffffffffff | 8000000000000000
++  v_arg1   = 3.894658942e+38 | -6.270934018e+101
++insn vcgdb05:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = 1.490641152e-133 | 6.775625997e-90
++insn vcgdb06:
++  v_result = 7fffffffffffffff | 8000000000000000
++  v_arg1   = 1.714758021e+96 | -7.832933439e+154
++insn vcgdb06:
++  v_result = 0000000000000000 | 7fffffffffffffff
++  v_arg1   = -1.673157881e-252 | 1.315140509e+300
++insn vcgdb06:
++  v_result = 0000000000000001 | 8000000000000000
++  v_arg1   = 6.037303970e-262 | -7.575582216e+124
++insn vcgdb06:
++  v_result = 7fffffffffffffff | 8000000000000000
++  v_arg1   = 1.680276219e+101 | -1.344819936e+65
++insn vcgdb07:
++  v_result = 8000000000000000 | 8000000000000000
++  v_arg1   = -8.701672660e+254 | -1.004729988e+279
++insn vcgdb07:
++  v_result = 0000000000000000 | ffffffffffffffff
++  v_arg1   = 4.464304171e-33 | -1.469246183e-289
++insn vcgdb07:
++  v_result = 8000000000000000 | 8000000000000000
++  v_arg1   = -2.810105723e+288 | -1.222879064e+118
++insn vcgdb07:
++  v_result = 7fffffffffffffff | 7fffffffffffffff
++  v_arg1   = 8.938401011e+102 | 2.195137478e+205
++insn wcgdb00:
++  v_result = 7fffffffffffffff | 0000000000000000
++  v_arg1   = 9.032134522e+201 | 2.933189189e+240
++insn wcgdb00:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = 7.109650301e-150 | -4.569235607e-97
++insn wcgdb00:
++  v_result = 8000000000000000 | 0000000000000000
++  v_arg1   = -5.776306980e+193 | 4.855850646e-168
++insn wcgdb00:
++  v_result = 7fffffffffffffff | 0000000000000000
++  v_arg1   = 4.022453677e+254 | -2.111487035e+80
++insn wcgdb01:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -5.647452984e-305 | -2.366562369e-205
++insn wcgdb01:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -2.449025155e-254 | -1.130661814e+10
++insn wcgdb01:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -5.767996221e-171 | -1.581642028e+248
++insn wcgdb01:
++  v_result = 8000000000000000 | 0000000000000000
++  v_arg1   = -4.261646376e+302 | -2.922681489e+55
++insn wcgdb03:
++  v_result = 0000000000000001 | 0000000000000000
++  v_arg1   = 2.409266154e-287 | -6.034001446e-68
++insn wcgdb03:
++  v_result = 8000000000000000 | 0000000000000000
++  v_arg1   = -3.990154908e+31 | -5.958882134e-212
++insn wcgdb03:
++  v_result = 8000000000000000 | 0000000000000000
++  v_arg1   = -4.724110542e+168 | -4.131894607e-113
++insn wcgdb03:
++  v_result = 0000000000000001 | 0000000000000000
++  v_arg1   = 4.653517954e-12 | 2.842024946e-116
++insn wcgdb04:
++  v_result = ffffffffe9479a7d | 0000000000000000
++  v_arg1   = -3.811833632e+08 | 4.654888641e-218
++insn wcgdb04:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = 3.357338565e-164 | -3.688011320e+226
++insn wcgdb04:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -1.476764166e-269 | -3.072148588e-270
++insn wcgdb04:
++  v_result = 7fffffffffffffff | 0000000000000000
++  v_arg1   = 4.448581351e+306 | -4.564743018e-68
++insn wcgdb05:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -6.669844029e-292 | 1.564663301e-297
++insn wcgdb05:
++  v_result = 8000000000000000 | 0000000000000000
++  v_arg1   = -6.005299507e+135 | -8.818660585e-181
++insn wcgdb05:
++  v_result = 7fffffffffffffff | 0000000000000000
++  v_arg1   = 1.351318974e+130 | -5.169901269e+139
++insn wcgdb05:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = 1.508143982e-235 | 1.854099168e-61
++insn wcgdb06:
++  v_result = 0000000000000001 | 0000000000000000
++  v_arg1   = 7.420698293e-200 | -4.165126129e+76
++insn wcgdb06:
++  v_result = 7fffffffffffffff | 0000000000000000
++  v_arg1   = 3.637693277e+78 | 6.985241716e+181
++insn wcgdb06:
++  v_result = 0000000000000001 | 0000000000000000
++  v_arg1   = 1.894416205e-143 | -1.378653328e+250
++insn wcgdb06:
++  v_result = 0000000000000001 | 0000000000000000
++  v_arg1   = 7.808253488e-31 | 9.659895527e+288
++insn wcgdb07:
++  v_result = 7fffffffffffffff | 0000000000000000
++  v_arg1   = 3.357358000e+33 | -2.386052583e+18
++insn wcgdb07:
++  v_result = e636b693e39a1100 | 0000000000000000
++  v_arg1   = -1.858097049e+18 | 1.142435541e-172
++insn wcgdb07:
++  v_result = ffffffffffffffff | 0000000000000000
++  v_arg1   = -9.242667875e-92 | 9.505507107e-188
++insn wcgdb07:
++  v_result = 7fffffffffffffff | 0000000000000000
++  v_arg1   = 9.088820454e+45 | 7.644784340e+94
++insn vclgdb00:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -4.880640399e+155 | 8.667290392e-95
++insn vclgdb00:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -8.274173733e-290 | -2.968365014e-260
++insn vclgdb00:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -1.087873570e+34 | -5.349810693e-193
++insn vclgdb00:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -2.427992802e-251 | -6.090649075e-264
++insn vclgdb01:
++  v_result = 0000000000000000 | ffffffffffffffff
++  v_arg1   = -1.796859445e-84 | 1.746633468e+102
++insn vclgdb01:
++  v_result = 0000000000000000 | ffffffffffffffff
++  v_arg1   = -2.338822907e+126 | 1.910769483e+289
++insn vclgdb01:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = 1.529123016e-14 | -2.931048896e-10
++insn vclgdb01:
++  v_result = ffffffffffffffff | 0000000000000000
++  v_arg1   = 7.733542346e+54 | -3.395155301e+196
++insn vclgdb03:
++  v_result = ffffffffffffffff | 0000000000000000
++  v_arg1   = 7.644891834e+301 | -1.051492428e-258
++insn vclgdb03:
++  v_result = 0000000000000001 | 0000000000000000
++  v_arg1   = 1.487759613e-198 | -7.860865792e-25
++insn vclgdb03:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -1.494414851e+121 | -7.136682242e+102
++insn vclgdb03:
++  v_result = 0000000000000000 | 0000000000000001
++  v_arg1   = -1.065625124e+102 | 1.695799638e-15
++insn vclgdb04:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = 5.969296665e-182 | 7.209405400e-196
++insn vclgdb04:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -2.242195681e-297 | 4.585518127e-204
++insn vclgdb04:
++  v_result = ffffffffffffffff | 0000000000000000
++  v_arg1   = 1.912050716e+202 | 8.785139846e-100
++insn vclgdb04:
++  v_result = ffffffffffffffff | ffffffffffffffff
++  v_arg1   = 4.134866933e+258 | 5.504170257e+84
++insn vclgdb05:
++  v_result = ffffffffffffffff | ffffffffffffffff
++  v_arg1   = 6.707260887e+79 | 8.044225988e+41
++insn vclgdb05:
++  v_result = ffffffffffffffff | ffffffffffffffff
++  v_arg1   = 3.035806876e+202 | 1.311555596e+112
++insn vclgdb05:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -9.457965414e-37 | 8.365086984e-258
++insn vclgdb05:
++  v_result = ffffffffffffffff | 0000000000000000
++  v_arg1   = 1.249132742e+271 | -4.779736496e+248
++insn vclgdb06:
++  v_result = 0000000000000000 | ffffffffffffffff
++  v_arg1   = -5.266749878e+207 | 3.276901487e+204
++insn vclgdb06:
++  v_result = 0000000000000001 | ffffffffffffffff
++  v_arg1   = 9.919034170e-188 | 1.688434800e+64
++insn vclgdb06:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -1.637172863e-219 | -2.665961381e+01
++insn vclgdb06:
++  v_result = 0000000000000001 | 0000000000000000
++  v_arg1   = 7.848439727e-115 | -1.017795247e+226
++insn vclgdb07:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -9.770940911e-40 | -1.909760026e+34
++insn vclgdb07:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -3.350835310e+140 | -5.969121772e+08
++insn vclgdb07:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -2.424974377e+19 | -1.383849005e-189
++insn vclgdb07:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -1.402923620e+92 | 5.264362659e-240
++insn wclgdb00:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -2.164707177e-305 | -4.449413528e-92
++insn wclgdb00:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = 2.341441542e-297 | -3.969880446e-306
++insn wclgdb00:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = 1.130273328e-194 | -5.557748843e+146
++insn wclgdb00:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -1.009763309e+15 | 1.428684894e-151
++insn wclgdb01:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = 9.489348235e-220 | 5.577969873e+185
++insn wclgdb01:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -6.685999144e+87 | 1.704659821e+113
++insn wclgdb01:
++  v_result = ffffffffffffffff | 0000000000000000
++  v_arg1   = 7.655981082e+127 | -7.040461257e+147
++insn wclgdb01:
++  v_result = ffffffffffffffff | 0000000000000000
++  v_arg1   = 7.234693170e+31 | -5.424692149e+225
++insn wclgdb03:
++  v_result = 0000000000000001 | 0000000000000000
++  v_arg1   = 5.793368246e-34 | 2.402306303e+00
++insn wclgdb03:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -5.874541103e-179 | 7.657765536e-230
++insn wclgdb03:
++  v_result = ffffffffffffffff | 0000000000000000
++  v_arg1   = 1.759106980e+117 | -2.521806959e+177
++insn wclgdb03:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -2.212955896e-116 | 2.875387222e+32
++insn wclgdb04:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -2.483792680e+06 | -2.051928990e-280
++insn wclgdb04:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -1.212813490e-125 | 3.977258052e+275
++insn wclgdb04:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -2.265438158e+144 | 4.675553720e-14
++insn wclgdb04:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = 2.845529115e-65 | -2.593040696e+246
++insn wclgdb05:
++  v_result = ffffffffffffffff | 0000000000000000
++  v_arg1   = 1.600666773e+265 | -3.046433798e-292
++insn wclgdb05:
++  v_result = 1ce8d9951b8c8600 | 0000000000000000
++  v_arg1   = 2.083154062e+18 | 1.533597002e+143
++insn wclgdb05:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -1.685604080e-47 | 4.135051071e-62
++insn wclgdb05:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = 1.737476522e-59 | -4.941554876e+04
++insn wclgdb06:
++  v_result = 0000000000000001 | 0000000000000000
++  v_arg1   = 6.355724199e-130 | -1.594081088e-284
++insn wclgdb06:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -2.697808812e-17 | -2.651702127e-271
++insn wclgdb06:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -1.782450677e-91 | 3.834534551e-216
++insn wclgdb06:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -5.016325726e+264 | 1.778932106e+289
++insn wclgdb07:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -7.330127666e-191 | -1.720716620e+111
++insn wclgdb07:
++  v_result = ffffffffffffffff | 0000000000000000
++  v_arg1   = 1.877487450e+138 | -6.280614639e+25
++insn wclgdb07:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -8.168224180e-230 | 1.179946010e-103
++insn wclgdb07:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -5.840963925e+35 | -4.177517439e+227
++insn vfidb00:
++  v_arg1   = -1.061156573e-164 | -2.016075042e+28
++  v_result = -0.000000000e+00 | -2.016075042e+28
++insn vfidb00:
++  v_arg1   = 7.592184597e+238 | -4.883213521e+164
++  v_result = 7.592184597e+238 | -4.883213521e+164
++insn vfidb00:
++  v_arg1   = 6.408778030e-102 | -5.935002058e+17
++  v_result = 0.000000000e+00 | -5.935002058e+17
++insn vfidb00:
++  v_arg1   = -2.478665243e+248 | -5.875030556e+194
++  v_result = -2.478665243e+248 | -5.875030556e+194
++insn vfidb01:
++  v_arg1   = -1.197181731e+305 | -4.470726643e-175
++  v_result = -1.197181731e+305 | -0.000000000e+00
++insn vfidb01:
++  v_arg1   = 5.242256987e+31 | -8.600112358e-106
++  v_result = 5.242256987e+31 | -0.000000000e+00
++insn vfidb01:
++  v_arg1   = 1.364864372e+32 | 1.362733455e-107
++  v_result = 1.364864372e+32 | 0.000000000e+00
++insn vfidb01:
++  v_arg1   = -7.292757011e+22 | 6.900047080e-66
++  v_result = -7.292757011e+22 | 0.000000000e+00
++insn vfidb03:
++  v_arg1   = -2.911809156e-258 | -6.835348512e-125
++  v_result = -1.000000000e+00 | -1.000000000e+00
++insn vfidb03:
++  v_arg1   = 3.875874778e-116 | -2.002927285e+203
++  v_result = 1.000000000e+00 | -2.002927285e+203
++insn vfidb03:
++  v_arg1   = -1.558123380e-66 | -6.467943492e-105
++  v_result = -1.000000000e+00 | -1.000000000e+00
++insn vfidb03:
++  v_arg1   = -6.015661098e-269 | -8.367862624e-183
++  v_result = -1.000000000e+00 | -1.000000000e+00
++insn vfidb04:
++  v_arg1   = 6.476788718e-259 | 1.999454988e-75
++  v_result = 0.000000000e+00 | 0.000000000e+00
++insn vfidb04:
++  v_arg1   = 4.124042088e+155 | 2.659915256e+212
++  v_result = 4.124042088e+155 | 2.659915256e+212
++insn vfidb04:
++  v_arg1   = 2.626873010e-30 | -9.536890026e-224
++  v_result = 0.000000000e+00 | -0.000000000e+00
++insn vfidb04:
++  v_arg1   = -1.316584445e-262 | -3.974190484e+204
++  v_result = -0.000000000e+00 | -3.974190484e+204
++insn vfidb05:
++  v_arg1   = 5.659580441e+56 | -1.413128353e-270
++  v_result = 5.659580441e+56 | -0.000000000e+00
++insn vfidb05:
++  v_arg1   = 1.712657822e-11 | -2.350055015e+297
++  v_result = 0.000000000e+00 | -2.350055015e+297
++insn vfidb05:
++  v_arg1   = -9.922819027e-121 | 7.116542778e-106
++  v_result = -0.000000000e+00 | 0.000000000e+00
++insn vfidb05:
++  v_arg1   = 9.715544436e-203 | -1.814057731e+227
++  v_result = 0.000000000e+00 | -1.814057731e+227
++insn vfidb06:
++  v_arg1   = 7.020954428e-186 | -1.549680602e+260
++  v_result = 1.000000000e+00 | -1.549680602e+260
++insn vfidb06:
++  v_arg1   = 3.498779983e-257 | 1.024040407e+207
++  v_result = 1.000000000e+00 | 1.024040407e+207
++insn vfidb06:
++  v_arg1   = -5.445034386e+42 | -3.151096043e+05
++  v_result = -5.445034386e+42 | -3.151090000e+05
++insn vfidb06:
++  v_arg1   = 3.399712440e+269 | 7.781118106e+260
++  v_result = 3.399712440e+269 | 7.781118106e+260
++insn vfidb07:
++  v_arg1   = 6.400869599e+02 | -2.358310186e+43
++  v_result = 6.400000000e+02 | -2.358310186e+43
++insn vfidb07:
++  v_arg1   = 1.663939085e-209 | 1.073162872e+297
++  v_result = 0.000000000e+00 | 1.073162872e+297
++insn vfidb07:
++  v_arg1   = 9.183830226e+197 | -1.586493565e-140
++  v_result = 9.183830226e+197 | -1.000000000e+00
++insn vfidb07:
++  v_arg1   = -2.868172911e+287 | 5.135497201e+44
++  v_result = -2.868172911e+287 | 5.135497201e+44
++insn wfidb00:
++  v_arg1   = -9.881257853e-248 | 2.140392178e+54
++  v_result = -0.000000000e+00 | 0.000000000e+00
++insn wfidb00:
++  v_arg1   = -6.279590634e-127 | 1.946612913e-286
++  v_result = -0.000000000e+00 | 0.000000000e+00
++insn wfidb00:
++  v_arg1   = 1.717522767e+99 | 8.146636480e-179
++  v_result = 1.717522767e+99 | 0.000000000e+00
++insn wfidb00:
++  v_arg1   = -4.285783317e+219 | 5.880210638e-47
++  v_result = -4.285783317e+219 | 0.000000000e+00
++insn wfidb01:
++  v_arg1   = -1.142444399e+52 | -2.074951773e+44
++  v_result = -1.142444399e+52 | 0.000000000e+00
++insn wfidb01:
++  v_arg1   = 2.891731816e-253 | -2.195546949e+52
++  v_result = 0.000000000e+00 | 0.000000000e+00
++insn wfidb01:
++  v_arg1   = 9.978946730e+111 | 6.501569967e+248
++  v_result = 9.978946730e+111 | 0.000000000e+00
++insn wfidb01:
++  v_arg1   = -1.835018573e-183 | 1.148828914e-268
++  v_result = -0.000000000e+00 | 0.000000000e+00
++insn wfidb03:
++  v_arg1   = -6.364493628e+22 | -2.717703691e-231
++  v_result = -6.364493628e+22 | 0.000000000e+00
++insn wfidb03:
++  v_arg1   = -2.017063478e-230 | -1.698953607e-178
++  v_result = -1.000000000e+00 | 0.000000000e+00
++insn wfidb03:
++  v_arg1   = 1.367931325e-15 | -1.837222009e+285
++  v_result = 1.000000000e+00 | 0.000000000e+00
++insn wfidb03:
++  v_arg1   = 1.112315305e+55 | -6.608303795e-251
++  v_result = 1.112315305e+55 | 0.000000000e+00
++insn wfidb04:
++  v_arg1   = 1.432224181e+40 | -1.454888195e+209
++  v_result = 1.432224181e+40 | 0.000000000e+00
++insn wfidb04:
++  v_arg1   = -2.048895597e-297 | 4.374800053e+10
++  v_result = -0.000000000e+00 | 0.000000000e+00
++insn wfidb04:
++  v_arg1   = -9.088906540e+83 | -2.762946037e+289
++  v_result = -9.088906540e+83 | 0.000000000e+00
++insn wfidb04:
++  v_arg1   = 3.751211242e+72 | -2.020155991e-254
++  v_result = 3.751211242e+72 | 0.000000000e+00
++insn wfidb05:
++  v_arg1   = 1.698927665e-152 | 5.924660291e-119
++  v_result = 0.000000000e+00 | 0.000000000e+00
++insn wfidb05:
++  v_arg1   = 3.337121536e-96 | -3.571596094e-241
++  v_result = 0.000000000e+00 | 0.000000000e+00
++insn wfidb05:
++  v_arg1   = -2.417064110e+157 | -1.732302577e+22
++  v_result = -2.417064110e+157 | 0.000000000e+00
++insn wfidb05:
++  v_arg1   = -2.563161290e+242 | -1.754893975e+101
++  v_result = -2.563161290e+242 | 0.000000000e+00
++insn wfidb06:
++  v_arg1   = 9.992263694e-179 | -7.891324063e-239
++  v_result = 1.000000000e+00 | 0.000000000e+00
++insn wfidb06:
++  v_arg1   = -1.296233923e+130 | 1.822558736e+41
++  v_result = -1.296233923e+130 | 0.000000000e+00
++insn wfidb06:
++  v_arg1   = 1.218950043e-41 | -1.036213688e-163
++  v_result = 1.000000000e+00 | 0.000000000e+00
++insn wfidb06:
++  v_arg1   = 2.666504937e+301 | 2.770990494e-63
++  v_result = 2.666504937e+301 | 0.000000000e+00
++insn wfidb07:
++  v_arg1   = 4.860401117e-300 | 2.169090494e+217
++  v_result = 0.000000000e+00 | 0.000000000e+00
++insn wfidb07:
++  v_arg1   = -7.162566543e+116 | 1.255802249e-12
++  v_result = -7.162566543e+116 | 0.000000000e+00
++insn wfidb07:
++  v_arg1   = -2.513320523e-146 | -2.112170578e+106
++  v_result = -1.000000000e+00 | 0.000000000e+00
++insn wfidb07:
++  v_arg1   = 4.296130131e+05 | 5.897176873e+236
++  v_result = 4.296130000e+05 | 0.000000000e+00
++insn vledb00:
++  v_arg1   = -3.318287632e-146 | 9.571309915e-225
++  v_result = -2.121995790e-314 | 2.121995790e-314
++insn vledb00:
++  v_arg1   = 1.608131309e+242 | 1.754556148e-30
++  v_result = 1.404447761e+306 | 5.688820890e-241
++insn vledb00:
++  v_arg1   = -9.059641070e+203 | -9.469984123e-36
++  v_result = -1.404447761e+306 | -3.416813451e-283
++insn vledb00:
++  v_arg1   = -1.201116905e-282 | 1.034099019e+146
++  v_result = -2.121995790e-314 | 1.404447761e+306
++insn vledb01:
++  v_arg1   = -2.131672984e+32 | -1.455189969e+24
++  v_result = -2.267210284e+256 | -1.161740370e+191
++insn vledb01:
++  v_arg1   = -3.822451271e+252 | 3.785726599e-264
++  v_result = -1.404449100e+306 | 2.121995790e-314
++insn vledb01:
++  v_arg1   = -7.320207397e+144 | -1.252458998e-229
++  v_result = -1.404449100e+306 | -2.121995790e-314
++insn vledb01:
++  v_arg1   = -2.064929095e-189 | -1.297492262e+16
++  v_result = -2.121995790e-314 | -4.126639302e+126
++insn vledb03:
++  v_arg1   = 1.050554979e-17 | -4.644117108e+96
++  v_result = 7.470787484e-139 | -1.404447761e+306
++insn vledb03:
++  v_arg1   = -2.059246895e-101 | 9.877882900e+268
++  v_result = -4.243991581e-314 | 1.404447761e+306
++insn vledb03:
++  v_arg1   = 2.134055529e+47 | -1.951983167e-103
++  v_result = 1.404447761e+306 | -4.243991581e-314
++insn vledb03:
++  v_arg1   = -1.029812216e+27 | 1.188736331e+222
++  v_result = -7.056225743e+213 | 1.404447761e+306
++insn vledb04:
++  v_arg1   = -5.391605751e+76 | -3.907528595e-251
++  v_result = -1.404449100e+306 | -2.121995790e-314
++insn vledb04:
++  v_arg1   = -6.862967811e+161 | 2.026866160e+83
++  v_result = -1.404449100e+306 | 1.404449100e+306
++insn vledb04:
++  v_arg1   = -8.695609395e+271 | 9.667700874e+89
++  v_result = -1.404449100e+306 | 1.404449100e+306
++insn vledb04:
++  v_arg1   = 2.674141956e+116 | 2.664050795e-109
++  v_result = 1.404449100e+306 | 2.121995790e-314
++insn vledb05:
++  v_arg1   = 2.367602520e+62 | 3.584189964e-43
++  v_result = 1.404447761e+306 | 5.432309224e-312
++insn vledb05:
++  v_arg1   = -1.204276103e+170 | 2.603133239e+161
++  v_result = -1.404447761e+306 | 1.404447761e+306
++insn vledb05:
++  v_arg1   = -1.020627540e-49 | -3.352820326e+100
++  v_result = -2.121995790e-314 | -1.404447761e+306
++insn vledb05:
++  v_arg1   = -4.382899884e-165 | -7.666853114e+10
++  v_result = -2.121995790e-314 | -7.480798873e+84
++insn vledb06:
++  v_arg1   = 4.789343429e+295 | 1.021772091e-135
++  v_result = 1.404449100e+306 | 4.243991581e-314
++insn vledb06:
++  v_arg1   = -3.311478460e+301 | 1.052397331e+257
++  v_result = -1.404447761e+306 | 1.404449100e+306
++insn vledb06:
++  v_arg1   = 1.995055112e+71 | 4.496698026e+296
++  v_result = 1.404449100e+306 | 1.404449100e+306
++insn vledb06:
++  v_arg1   = -3.657046371e+154 | 6.048051516e-288
++  v_result = -1.404447761e+306 | 4.243991581e-314
++insn vledb07:
++  v_arg1   = 2.856847233e-77 | -1.773279287e-175
++  v_result = 2.121995790e-314 | -4.243991581e-314
++insn vledb07:
++  v_arg1   = 5.242220689e+297 | 9.547883901e+118
++  v_result = 1.404447761e+306 | 1.404447761e+306
++insn vledb07:
++  v_arg1   = -2.939587831e-245 | -3.107359523e-197
++  v_result = -4.243991581e-314 | -4.243991581e-314
++insn vledb07:
++  v_arg1   = 3.077685530e+217 | -1.141363956e-21
++  v_result = 1.404447761e+306 | -1.473815324e-170
++insn wledb00:
++  v_arg1   = 5.462326220e-78 | -7.633075151e+210
++  v_result = 2.121995790e-314 | 0.000000000e+00
++insn wledb00:
++  v_arg1   = -2.572760095e-100 | -6.927649059e+107
++  v_result = -2.121995790e-314 | 0.000000000e+00
++insn wledb00:
++  v_arg1   = 4.940063725e+04 | 2.007483344e+236
++  v_result = 1.762395614e+35 | 0.000000000e+00
++insn wledb00:
++  v_arg1   = -5.371163827e-225 | -1.034752004e-58
++  v_result = -2.121995790e-314 | 0.000000000e+00
++insn wledb01:
++  v_arg1   = 2.678143261e+42 | 7.273145812e+151
++  v_result = 1.404449100e+306 | 0.000000000e+00
++insn wledb01:
++  v_arg1   = -1.894591175e+108 | -1.947724133e-23
++  v_result = -1.404449100e+306 | 0.000000000e+00
++insn wledb01:
++  v_arg1   = 7.546480806e-64 | 1.206296800e+94
++  v_result = 2.121995790e-314 | 0.000000000e+00
++insn wledb01:
++  v_arg1   = -1.504134542e-201 | -1.675823209e-38
++  v_result = -2.121995790e-314 | 0.000000000e+00
++insn wledb03:
++  v_arg1   = 2.491195390e+31 | 5.835392408e+20
++  v_result = 8.171191861e+248 | 0.000000000e+00
++insn wledb03:
++  v_arg1   = 2.944180648e+46 | -4.825025573e+92
++  v_result = 1.404447761e+306 | 0.000000000e+00
++insn wledb03:
++  v_arg1   = 2.635719877e-83 | -2.667226057e-251
++  v_result = 4.243991581e-314 | 0.000000000e+00
++insn wledb03:
++  v_arg1   = -7.382411377e+43 | -1.487852560e-202
++  v_result = -1.404447761e+306 | 0.000000000e+00
++insn wledb04:
++  v_arg1   = -6.079083495e+259 | -6.061152290e+175
++  v_result = -1.404449100e+306 | 0.000000000e+00
++insn wledb04:
++  v_arg1   = 8.285804218e+77 | -5.371910723e+207
++  v_result = 1.404449100e+306 | 0.000000000e+00
++insn wledb04:
++  v_arg1   = 6.115559462e-296 | 4.034824854e+186
++  v_result = 2.121995790e-314 | 0.000000000e+00
++insn wledb04:
++  v_arg1   = 8.064082156e+265 | 1.264491472e-180
++  v_result = 1.404449100e+306 | 0.000000000e+00
++insn wledb05:
++  v_arg1   = 1.569563614e-145 | -4.578712590e-249
++  v_result = 2.121995790e-314 | 0.000000000e+00
++insn wledb05:
++  v_arg1   = 5.733553694e-42 | -3.117163510e+66
++  v_result = 8.683206776e-311 | 0.000000000e+00
++insn wledb05:
++  v_arg1   = 1.063794741e+276 | 1.252019705e-81
++  v_result = 1.404447761e+306 | 0.000000000e+00
++insn wledb05:
++  v_arg1   = -6.106439971e+211 | 2.252730918e-238
++  v_result = -1.404447761e+306 | 0.000000000e+00
++insn wledb06:
++  v_arg1   = -3.010722565e-201 | -3.191508337e-263
++  v_result = -2.121995790e-314 | 0.000000000e+00
++insn wledb06:
++  v_arg1   = 5.844267882e+56 | 3.156680540e+29
++  v_result = 1.404449100e+306 | 0.000000000e+00
++insn wledb06:
++  v_arg1   = 7.676226741e+151 | 9.775922973e-65
++  v_result = 1.404449100e+306 | 0.000000000e+00
++insn wledb06:
++  v_arg1   = 3.813462890e+239 | 9.516428612e-01
++  v_result = 1.404449100e+306 | 0.000000000e+00
++insn wledb07:
++  v_arg1   = 2.212701275e-154 | 6.503210584e-121
++  v_result = 2.121995790e-314 | 0.000000000e+00
++insn wledb07:
++  v_arg1   = -5.694456664e+108 | 7.837975564e-136
++  v_result = -1.404449100e+306 | 0.000000000e+00
++insn wledb07:
++  v_arg1   = -4.713043195e-303 | -5.312083638e-17
++  v_result = -4.243991581e-314 | 0.000000000e+00
++insn wledb07:
++  v_arg1   = 4.458668508e+100 | 7.841231794e+281
++  v_result = 1.404447761e+306 | 0.000000000e+00
++insn vldeb:
++  v_arg1   = -2.698091888e-251 | -2.166269797e-85
++  v_result = -8.964299348e-32 | -4.977969078e-11
++insn vldeb:
++  v_arg1   = 6.497433512e-130 | 9.219213407e-87
++  v_result = 1.360234592e-16 | 3.327379691e-11
++insn vldeb:
++  v_arg1   = -2.762440973e-110 | 9.451306781e-197
++  v_result = -3.921497255e-14 | 6.083001596e-25
++insn vldeb:
++  v_arg1   = -3.491935257e+167 | -2.295650476e-260
++  v_result = -1.694212662e+21 | -6.480261583e-33
++insn wldeb:
++  v_arg1   = -2.053299582e-131 | 1.428160191e+231
++  v_result = -8.896909823e-17 | 0.000000000e+00
++insn wldeb:
++  v_arg1   = -2.155011920e-280 | 4.822954718e-51
++  v_result = -2.099849757e-35 | 0.000000000e+00
++insn wldeb:
++  v_arg1   = -2.793014366e-133 | -2.147990293e-231
++  v_result = -5.060532830e-17 | 0.000000000e+00
++insn wldeb:
++  v_arg1   = 4.993557570e+186 | 6.075971627e-27
++  v_result = 4.211466251e+23 | 0.000000000e+00
++insn vflcdb:
++  v_arg1   = 1.114633658e-50 | -6.085871555e-58
++  v_result = -1.114633658e-50 | 6.085871555e-58
++insn vflcdb:
++  v_arg1   = 8.509948164e+05 | 1.699969908e-289
++  v_result = -8.509948164e+05 | -1.699969908e-289
++insn vflcdb:
++  v_arg1   = 6.023236037e-02 | 2.296236906e+252
++  v_result = -6.023236037e-02 | -2.296236906e+252
++insn vflcdb:
++  v_arg1   = 2.697319935e-91 | 2.700296999e+119
++  v_result = -2.697319935e-91 | -2.700296999e+119
++insn wflcdb:
++  v_arg1   = 1.396231918e-250 | -1.420002551e+44
++  v_result = -1.396231918e-250 | 0.000000000e+00
++insn wflcdb:
++  v_arg1   = -1.157606164e-133 | 5.323741307e+175
++  v_result = 1.157606164e-133 | 0.000000000e+00
++insn wflcdb:
++  v_arg1   = 3.671589186e+28 | 8.619391787e-244
++  v_result = -3.671589186e+28 | 0.000000000e+00
++insn wflcdb:
++  v_arg1   = -4.819581845e-302 | -1.796844926e-79
++  v_result = 4.819581845e-302 | 0.000000000e+00
++insn vflndb:
++  v_arg1   = -4.751271620e+246 | -4.781545627e+281
++  v_result = -4.751271620e+246 | -4.781545627e+281
++insn vflndb:
++  v_arg1   = -7.895303303e+292 | 4.181808977e-132
++  v_result = -7.895303303e+292 | -4.181808977e-132
++insn vflndb:
++  v_arg1   = -6.538884336e-300 | -2.583011768e-107
++  v_result = -6.538884336e-300 | -2.583011768e-107
++insn vflndb:
++  v_arg1   = -1.913346745e-78 | 3.095513670e-251
++  v_result = -1.913346745e-78 | -3.095513670e-251
++insn wflndb:
++  v_arg1   = -1.151873357e-35 | -2.128261154e-215
++  v_result = -1.151873357e-35 | 0.000000000e+00
++insn wflndb:
++  v_arg1   = -1.215821342e-208 | 9.655382077e-234
++  v_result = -1.215821342e-208 | 0.000000000e+00
++insn wflndb:
++  v_arg1   = -1.210045084e+07 | -1.002236531e-213
++  v_result = -1.210045084e+07 | 0.000000000e+00
++insn wflndb:
++  v_arg1   = 8.536518593e-286 | 4.820296677e-36
++  v_result = -8.536518593e-286 | 0.000000000e+00
++insn vflpdb:
++  v_arg1   = 4.215332566e-123 | -5.562612862e+160
++  v_result = 4.215332566e-123 | 5.562612862e+160
++insn vflpdb:
++  v_arg1   = -2.273890588e-35 | -1.060214486e+241
++  v_result = 2.273890588e-35 | 1.060214486e+241
++insn vflpdb:
++  v_arg1   = -4.635848183e+79 | 2.621061998e-195
++  v_result = 4.635848183e+79 | 2.621061998e-195
++insn vflpdb:
++  v_arg1   = -2.279809631e+51 | 6.704771907e-292
++  v_result = 2.279809631e+51 | 6.704771907e-292
++insn wflpdb:
++  v_arg1   = 1.049009059e-262 | 3.530446378e-84
++  v_result = 1.049009059e-262 | 0.000000000e+00
++insn wflpdb:
++  v_arg1   = -5.482790822e-58 | -3.875993337e-194
++  v_result = 5.482790822e-58 | 0.000000000e+00
++insn wflpdb:
++  v_arg1   = 9.766470263e+283 | -1.367212748e-305
++  v_result = 9.766470263e+283 | 0.000000000e+00
++insn wflpdb:
++  v_arg1   = 8.098776786e+75 | 1.447292028e-46
++  v_result = 8.098776786e+75 | 0.000000000e+00
++insn vfadb:
++  v_arg1   = 4.259925651e-89 | -9.924441632e+36
++  v_arg2   = -9.113437066e+278 | 1.248570335e+204
++  v_result = -9.113437066e+278 | 1.248570335e+204
++insn vfadb:
++  v_arg1   = -5.895137888e+96 | -1.662961748e+57
++  v_arg2   = 6.054475177e-198 | -4.866765308e+95
++  v_result = -5.895137888e+96 | -4.866765308e+95
++insn vfadb:
++  v_arg1   = -3.875108393e-253 | 4.217789560e-167
++  v_arg2   = -1.941984410e+183 | 1.777451991e-26
++  v_result = -1.941984410e+183 | 1.777451991e-26
++insn vfadb:
++  v_arg1   = -8.007903519e+141 | -7.407594591e-163
++  v_arg2   = 1.758294907e+155 | 4.800319656e+212
++  v_result = 1.758294907e+155 | 4.800319656e+212
++insn wfadb:
++  v_arg1   = 1.975003524e+147 | -1.517181339e+278
++  v_arg2   = 3.102793875e-285 | 2.913321229e+301
++  v_result = 1.975003524e+147 | 0.000000000e+00
++insn wfadb:
++  v_arg1   = 8.360780583e+173 | 1.322543627e+130
++  v_arg2   = -2.452630856e-206 | -1.734795962e-252
++  v_result = 8.360780583e+173 | 0.000000000e+00
++insn wfadb:
++  v_arg1   = -4.388383981e+73 | 4.426788795e-43
++  v_arg2   = -8.558850266e+144 | 1.011275065e+244
++  v_result = -8.558850266e+144 | 0.000000000e+00
++insn wfadb:
++  v_arg1   = -2.026678447e+10 | 8.955624510e-266
++  v_arg2   = 4.940417777e+227 | -3.978941725e-186
++  v_result = 4.940417777e+227 | 0.000000000e+00
++insn vfsdb:
++  v_arg1   = 7.451375639e+193 | 2.001220815e-235
++  v_arg2   = 9.984325696e+148 | -3.649389910e-91
++  v_result = 7.451375639e+193 | 3.649389910e-91
++insn vfsdb:
++  v_arg1   = -2.045829031e-70 | 1.513010077e-226
++  v_arg2   = 1.346232903e-270 | 3.363028125e+155
++  v_result = -2.045829031e-70 | -3.363028125e+155
++insn vfsdb:
++  v_arg1   = 6.519119042e-218 | 1.969584649e-177
++  v_arg2   = -3.789371037e+61 | 3.202715271e-104
++  v_result = 3.789371037e+61 | -3.202715271e-104
++insn vfsdb:
++  v_arg1   = 1.095779942e+44 | 2.246049834e-04
++  v_arg2   = -3.680570843e+106 | 4.727390154e-262
++  v_result = 3.680570843e+106 | 2.246049834e-04
++insn wfsdb:
++  v_arg1   = 1.339666669e-195 | 1.214487515e+99
++  v_arg2   = -2.210076021e+95 | 4.984601399e+12
++  v_result = 2.210076021e+95 | 0.000000000e+00
++insn wfsdb:
++  v_arg1   = 1.798636245e-281 | -7.255618572e-20
++  v_arg2   = -4.095598373e-47 | 1.127688122e-157
++  v_result = 4.095598373e-47 | 0.000000000e+00
++insn wfsdb:
++  v_arg1   = 1.654364893e-148 | 3.815406135e-207
++  v_arg2   = 1.087974347e+289 | -8.090545905e-80
++  v_result = -1.087974347e+289 | 0.000000000e+00
++insn wfsdb:
++  v_arg1   = -2.566322333e-06 | 1.044472206e-236
++  v_arg2   = -5.927152129e+159 | -3.628829140e-262
++  v_result = 5.927152129e+159 | 0.000000000e+00
++insn vfmdb:
++  v_arg1   = 7.221373687e-38 | 4.077773219e-198
++  v_arg2   = 7.105764609e-81 | -1.114338612e-264
++  v_result = 5.131338158e-118 | -0.000000000e+00
++insn vfmdb:
++  v_arg1   = -1.328400199e-82 | 1.946233021e-137
++  v_arg2   = -2.730257796e+235 | -1.029551562e-217
++  v_result = 3.626875000e+153 | -0.000000000e+00
++insn vfmdb:
++  v_arg1   = -4.793206151e+30 | 7.906597933e+245
++  v_arg2   = -4.368790788e-41 | 1.069094067e+54
++  v_result = 2.094051487e-10 | 8.452896946e+299
++insn vfmdb:
++  v_arg1   = 3.294497693e+219 | 1.229062173e+15
++  v_arg2   = -1.880053790e+143 | -9.148762339e+169
++  v_result = -1.797693134e+308 | -1.124439772e+185
++insn wfmdb:
++  v_arg1   = -4.298096132e-206 | -3.934242530e-150
++  v_arg2   = 5.091335681e-08 | -4.240093317e+68
++  v_result = -2.188305020e-213 | 0.000000000e+00
++insn wfmdb:
++  v_arg1   = -7.074722335e+263 | 1.199298767e-194
++  v_arg2   = 8.450016725e-305 | -2.251678302e-276
++  v_result = -5.978152206e-41 | 0.000000000e+00
++insn wfmdb:
++  v_arg1   = -5.364190063e+76 | 8.239661072e+290
++  v_arg2   = 8.561988480e+64 | 4.009500651e+61
++  v_result = -4.592813353e+141 | 0.000000000e+00
++insn wfmdb:
++  v_arg1   = -9.938490277e-142 | -3.393630118e-109
++  v_arg2   = 1.471367221e-211 | -5.121088576e+179
++  v_result = -0.000000000e+00 | 0.000000000e+00
++insn vfddb:
++  v_arg1   = -9.603647854e+291 | 1.709696656e-06
++  v_arg2   = -6.497417830e+62 | 2.167128020e+145
++  v_result = 1.478071459e+229 | 7.889227773e-152
++insn vfddb:
++  v_arg1   = 5.165593907e-100 | 1.049023221e+165
++  v_arg2   = 7.024091349e-65 | -1.080284051e+42
++  v_result = 7.354109806e-36 | -9.710623971e+122
++insn vfddb:
++  v_arg1   = 5.822985653e-276 | -1.536810724e-301
++  v_arg2   = 4.214240762e-273 | -7.865615856e+296
++  v_result = 1.381740147e-03 | 0.000000000e+00
++insn vfddb:
++  v_arg1   = -1.285414065e-103 | 7.076318510e-247
++  v_arg2   = -1.465795040e+96 | 2.664208156e+128
++  v_result = 8.769398381e-200 | 0.000000000e+00
++insn wfddb:
++  v_arg1   = 8.374830339e-35 | 7.344444003e-16
++  v_arg2   = -1.055595553e-121 | -4.710488974e-293
++  v_result = -7.933749163e+86 | 0.000000000e+00
++insn wfddb:
++  v_arg1   = -1.876871152e-192 | -1.150035064e+82
++  v_arg2   = -9.261063073e+89 | 3.812904802e-137
++  v_result = 2.026626033e-282 | 0.000000000e+00
++insn wfddb:
++  v_arg1   = 1.238064503e-29 | -1.164276299e+57
++  v_arg2   = -2.638722597e-66 | -5.824755244e-106
++  v_result = -4.691908518e+36 | 0.000000000e+00
++insn wfddb:
++  v_arg1   = -3.210236365e+75 | 4.406735706e-38
++  v_arg2   = 2.308593293e+189 | 1.768700925e-245
++  v_result = -1.390559512e-114 | 0.000000000e+00
++insn vfsqdb:
++  v_arg1   = 4.660398830e-212 | -1.629766426e+190
++  v_result = 2.158795689e-106 | nan
++insn vfsqdb:
++  v_arg1   = -6.112512022e-263 | 9.043888843e-88
++  v_result = nan | 3.007305911e-44
++insn vfsqdb:
++  v_arg1   = 3.046267132e-62 | -3.978617665e-113
++  v_result = 1.745355875e-31 | nan
++insn vfsqdb:
++  v_arg1   = 1.872495768e+150 | -2.462414979e+276
++  v_result = 1.368391672e+75 | nan
++insn wfsqdb:
++  v_arg1   = 9.016116890e+144 | -2.986586314e-265
++  v_result = 3.002684946e+72 | 0.000000000e+00
++insn wfsqdb:
++  v_arg1   = 1.590421718e+52 | 5.171736977e+32
++  v_result = 1.261119232e+26 | 0.000000000e+00
++insn wfsqdb:
++  v_arg1   = -8.605469690e+01 | 2.020863316e+170
++  v_result = nan | 0.000000000e+00
++insn wfsqdb:
++  v_arg1   = -7.639053161e-133 | 3.116600749e-173
++  v_result = nan | 0.000000000e+00
++insn vfmadb:
++  v_arg1   = -1.725764103e+162 | 1.194650762e+231
++  v_arg2   = -2.489705238e+215 | 2.689558029e+229
++  v_arg3   = 1.275911836e+107 | 4.755088845e-282
++  v_result = 1.797693134e+308 | 1.797693134e+308
++insn vfmadb:
++  v_arg1   = 2.892817144e-119 | -3.508423938e+180
++  v_arg2   = 2.226352128e-08 | -2.146371031e+05
++  v_arg3   = 6.689152543e-299 | 1.752893113e+121
++  v_result = 6.440429607e-127 | 7.530379509e+185
++insn vfmadb:
++  v_arg1   = -2.846559434e-95 | 8.425888605e+39
++  v_arg2   = 1.676722347e+94 | -2.689514863e-226
++  v_arg3   = -1.847527318e-254 | 3.785211040e+83
++  v_result = -4.772889818e-01 | 3.785211040e+83
++insn vfmadb:
++  v_arg1   = -4.352566868e+212 | 3.063362691e+209
++  v_arg2   = 5.441874533e-219 | -5.794019666e-177
++  v_arg3   = 6.984700416e+30 | -3.701065630e-197
++  v_result = 6.984700416e+30 | -1.774918368e+33
++insn wfmadb:
++  v_arg1   = 1.362369079e+201 | -3.828344234e+185
++  v_arg2   = -5.477005627e+203 | -2.412880331e+179
++  v_arg3   = -1.160994057e-244 | -1.564090733e-168
++  v_result = -1.797693134e+308 | 0.000000000e+00
++insn wfmadb:
++  v_arg1   = 4.638108816e+214 | -9.276248753e+114
++  v_arg2   = -4.153409483e-233 | 4.301692291e+277
++  v_arg3   = -1.459895630e-306 | 6.247623456e+113
++  v_result = -1.926396514e-18 | 0.000000000e+00
++insn wfmadb:
++  v_arg1   = -2.006326709e+19 | -1.645650707e-136
++  v_arg2   = -3.495473314e-20 | 8.372809353e-122
++  v_arg3   = -1.155942031e+30 | 2.530283583e-290
++  v_result = -1.155942031e+30 | 0.000000000e+00
++insn wfmadb:
++  v_arg1   = -5.612166170e-298 | -1.665524984e-62
++  v_arg2   = -1.210446896e+222 | 3.768728017e+15
++  v_arg3   = 4.278783524e+56 | -1.519979365e+167
++  v_result = 4.278783524e+56 | 0.000000000e+00
++insn vfmsdb:
++  v_arg1   = -2.803108342e+10 | 6.532042297e-34
++  v_arg2   = 2.255448620e-80 | 8.657756711e+220
++  v_arg3   = 3.762649361e-305 | -8.823304468e+294
++  v_result = -6.322266842e-70 | 8.823304468e+294
++insn vfmsdb:
++  v_arg1   = 6.447673500e+181 | -2.403728022e+201
++  v_arg2   = -6.288659967e+43 | 2.293872874e+26
++  v_arg3   = -9.337458878e-158 | -8.661706564e+161
++  v_result = -4.054722623e+225 | -5.513846509e+227
++insn vfmsdb:
++  v_arg1   = -4.588354637e+82 | -2.452631111e+01
++  v_arg2   = 5.539451561e-229 | 1.648561022e-58
++  v_arg3   = 2.708682437e+181 | 4.256377497e+172
++  v_result = -2.708682437e+181 | -4.256377497e+172
++insn vfmsdb:
++  v_arg1   = -2.596331172e-71 | -1.742948325e+05
++  v_arg2   = 3.111748151e-179 | 2.151047890e-123
++  v_arg3   = -3.126475221e+108 | 3.206777376e+146
++  v_result = 3.126475221e+108 | -3.206777376e+146
++insn wfmsdb:
++  v_arg1   = -1.148162989e-30 | -5.660356238e-63
++  v_arg2   = -5.814460142e-275 | 5.269711154e+95
++  v_arg3   = 6.805983740e+295 | 7.206720198e+236
++  v_result = -6.805983740e+295 | 0.000000000e+00
++insn wfmsdb:
++  v_arg1   = 4.788815267e+150 | -1.034853279e+179
++  v_arg2   = 6.215462126e-26 | -1.001782626e+243
++  v_arg3   = -4.209812930e-106 | -3.083158186e+14
++  v_result = 2.976469992e+125 | 0.000000000e+00
++insn wfmsdb:
++  v_arg1   = -7.146138375e-142 | -3.154194200e+207
++  v_arg2   = 1.213522328e-162 | 2.796919016e-280
++  v_arg3   = 6.466267074e-66 | -1.900669946e-07
++  v_result = -6.466267074e-66 | 0.000000000e+00
++insn wfmsdb:
++  v_arg1   = -9.700991790e+36 | 3.701959958e+154
++  v_arg2   = -2.666884687e+166 | 2.434688677e-226
++  v_arg3   = 2.963099619e-58 | -5.406623875e+111
++  v_result = 2.587142645e+203 | 0.000000000e+00
++insn wfcdb:
++  v_arg1   = 3.332920378e-191 | -1.900641299e-141
++  v_arg2   = -1.180177621e-05 | -3.345606043e+171
++  r_result = 0000000000000002
++insn wfcdb:
++  v_arg1   = -4.707272313e-133 | -8.899012275e-185
++  v_arg2   = 1.665380738e-91 | 8.172676374e+59
++  r_result = 0000000000000001
++insn wfcdb:
++  v_arg1   = 2.981122897e-292 | 4.259903229e+238
++  v_arg2   = -2.559918727e-72 | -2.269813902e+183
++  r_result = 0000000000000002
++insn wfcdb:
++  v_arg1   = 1.599823550e-233 | 1.205066691e+135
++  v_arg2   = -7.298043711e-221 | -1.403144890e+72
++  r_result = 0000000000000002
++insn wfkdb:
++  v_arg1   = -5.166748518e-92 | 5.573084181e+84
++  v_arg2   = -7.641901728e-150 | 4.113501001e+199
++  r_result = 0000000000000001
++insn wfkdb:
++  v_arg1   = -2.591024788e-295 | -4.460292430e+79
++  v_arg2   = -4.086609351e+219 | 2.302865503e-153
++  r_result = 0000000000000002
++insn wfkdb:
++  v_arg1   = -1.069680115e-08 | -4.180119649e-169
++  v_arg2   = -2.632581524e-204 | 3.714040841e-132
++  r_result = 0000000000000001
++insn wfkdb:
++  v_arg1   = -1.956078167e+104 | -4.307756680e-305
++  v_arg2   = 3.046339477e+267 | 9.305929470e-98
++  r_result = 0000000000000001
++insn vfcedb:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = 4.255056885e+11 | 5.027679644e-247
++  v_arg2   = -1.433392304e+275 | 1.900865854e-69
++insn vfcedb:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = 1.237904063e+22 | 2.094121109e+107
++  v_arg2   = -5.917178259e+40 | 6.697769970e-35
++insn vfcedb:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -3.374213249e-149 | -3.625622909e-25
++  v_arg2   = -4.620512928e-198 | 1.704128688e-264
++insn vfcedb:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = 6.430051476e+187 | -1.362415875e-182
++  v_arg2   = -1.094473459e+133 | -8.039072172e+243
++insn wfcedb:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -1.438834737e-133 | 4.862103420e-155
++  v_arg2   = -2.342193323e-207 | -2.810268613e-271
++insn wfcedb:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = 3.774615426e-53 | -1.202219821e+269
++  v_arg2   = 4.439637438e-265 | 1.589530135e+164
++insn wfcedb:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = 1.032641639e+264 | 3.957875699e-205
++  v_arg2   = -1.016083961e-304 | -2.427439899e+173
++insn wfcedb:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = 4.259682164e-246 | 1.714513882e+256
++  v_arg2   = 9.726506298e-247 | -8.273010615e+236
++insn vfcedbs:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -2.043462719e-150 | -1.208393539e+107
++  v_arg2   = 4.898230754e+08 | -1.437764286e-43
++  r_result = 0000000000000003
++insn vfcedbs:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -1.462469626e-136 | 1.690344995e+304
++  v_arg2   = -2.296009343e+293 | 9.961563640e+200
++  r_result = 0000000000000003
++insn vfcedbs:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = 2.663531686e-255 | -4.693276092e+285
++  v_arg2   = 4.342340132e-154 | -3.713096528e+295
++  r_result = 0000000000000003
++insn vfcedbs:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = 1.109673769e-211 | -2.127030814e+142
++  v_arg2   = 1.470146837e+100 | -2.744379897e+247
++  r_result = 0000000000000003
++insn wfcedbs:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = 2.078388601e-300 | 6.994780763e+298
++  v_arg2   = -1.793122040e+34 | 3.588324357e-237
++  r_result = 0000000000000003
++insn wfcedbs:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -1.534168809e+125 | -1.140940472e-24
++  v_arg2   = -4.701073452e+217 | 2.644629392e-185
++  r_result = 0000000000000003
++insn wfcedbs:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = 4.548266507e-97 | -1.693375093e-41
++  v_arg2   = 2.575050428e+03 | -5.005791233e-137
++  r_result = 0000000000000003
++insn wfcedbs:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -5.741654936e+56 | -8.476892260e-164
++  v_arg2   = 2.807532236e-301 | -2.184401870e+24
++  r_result = 0000000000000003
++insn vfchdb:
++  v_result = ffffffffffffffff | ffffffffffffffff
++  v_arg1   = -2.446148841e-213 | 3.649413095e+162
++  v_arg2   = -2.886224874e+259 | -7.430068370e+108
++insn vfchdb:
++  v_result = 0000000000000000 | ffffffffffffffff
++  v_arg1   = 2.449175857e-135 | 9.192781439e+251
++  v_arg2   = 1.314909013e-114 | 1.607743982e-06
++insn vfchdb:
++  v_result = ffffffffffffffff | 0000000000000000
++  v_arg1   = -5.553551083e-144 | -4.750259764e-205
++  v_arg2   = -1.690132403e-85 | 2.468997847e-148
++insn vfchdb:
++  v_result = ffffffffffffffff | 0000000000000000
++  v_arg1   = 8.985832908e+284 | -8.191728814e-281
++  v_arg2   = 6.374104669e+147 | 1.886555182e-77
++insn wfchdb:
++  v_result = ffffffffffffffff | 0000000000000000
++  v_arg1   = 2.189297579e-140 | -2.085951585e+61
++  v_arg2   = -3.042592032e-203 | 2.184549783e+142
++insn wfchdb:
++  v_result = ffffffffffffffff | 0000000000000000
++  v_arg1   = -1.876610600e+64 | 4.709894330e+283
++  v_arg2   = -7.191917489e+282 | -4.270870228e-131
++insn wfchdb:
++  v_result = ffffffffffffffff | 0000000000000000
++  v_arg1   = 2.694953458e-16 | -7.001301972e+162
++  v_arg2   = 2.823321610e-53 | -5.426421831e+17
++insn wfchdb:
++  v_result = ffffffffffffffff | 0000000000000000
++  v_arg1   = 1.460426097e+244 | 2.138111190e+137
++  v_arg2   = -8.094822172e-47 | 4.502838235e-293
++insn vfchdbs:
++  v_result = ffffffffffffffff | ffffffffffffffff
++  v_arg1   = 6.505442675e+279 | 1.126582939e-249
++  v_arg2   = 2.012396053e+256 | -1.201449758e+222
++  r_result = 0000000000000000
++insn vfchdbs:
++  v_result = ffffffffffffffff | 0000000000000000
++  v_arg1   = 1.455618689e-134 | -4.637565356e-200
++  v_arg2   = -5.458548053e-89 | 1.538399565e-193
++  r_result = 0000000000000001
++insn vfchdbs:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -9.187972591e+25 | -5.556874111e+190
++  v_arg2   = -7.951619909e-152 | -1.105003869e+111
++  r_result = 0000000000000003
++insn vfchdbs:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -5.788075539e+287 | -7.071763125e+240
++  v_arg2   = 4.548189589e+111 | 9.701092469e-263
++  r_result = 0000000000000003
++insn wfchdbs:
++  v_result = ffffffffffffffff | 0000000000000000
++  v_arg1   = 3.246454913e+192 | 2.354065483e+211
++  v_arg2   = 3.603066073e+156 | -1.547463904e+104
++  r_result = 0000000000000000
++insn wfchdbs:
++  v_result = ffffffffffffffff | 0000000000000000
++  v_arg1   = 6.473697621e+245 | -3.443807764e-206
++  v_arg2   = -4.902289457e-234 | 1.453395310e+172
++  r_result = 0000000000000000
++insn wfchdbs:
++  v_result = ffffffffffffffff | 0000000000000000
++  v_arg1   = 7.307898289e-261 | -1.079399332e+247
++  v_arg2   = -6.823669292e-11 | -1.287328328e-131
++  r_result = 0000000000000000
++insn wfchdbs:
++  v_result = ffffffffffffffff | 0000000000000000
++  v_arg1   = 1.040852521e+167 | 1.095763951e-240
++  v_arg2   = -9.818593942e-250 | 1.395970479e-237
++  r_result = 0000000000000000
++insn vfchedb:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -2.661898890e-51 | 2.805579930e-40
++  v_arg2   = 6.890922319e-142 | 1.100324054e+142
++insn vfchedb:
++  v_result = ffffffffffffffff | 0000000000000000
++  v_arg1   = 6.313672147e-289 | 5.680993139e+23
++  v_arg2   = -7.791990659e+205 | 9.009019262e+96
++insn vfchedb:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -1.476515913e+103 | 1.122082917e+83
++  v_arg2   = 1.816299348e+114 | 1.220664262e+281
++insn vfchedb:
++  v_result = 0000000000000000 | ffffffffffffffff
++  v_arg1   = -5.094793600e+249 | -8.145100941e-300
++  v_arg2   = -1.708584930e-144 | -3.303068910e+148
++insn wfchedb:
++  v_result = ffffffffffffffff | 0000000000000000
++  v_arg1   = 2.436116423e-70 | -6.262508695e-23
++  v_arg2   = -3.355472188e-272 | -2.061763942e+101
++insn wfchedb:
++  v_result = ffffffffffffffff | 0000000000000000
++  v_arg1   = 1.432153370e-116 | 5.596570189e+222
++  v_arg2   = 2.641392419e-248 | -2.430868598e-39
++insn wfchedb:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -1.782595755e+248 | 2.583558089e+71
++  v_arg2   = 7.459498887e-25 | -6.077586820e-126
++insn wfchedb:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -1.755625620e+282 | 6.832954351e-203
++  v_arg2   = -8.995972510e+168 | 1.809895724e+31
++insn vfchedbs:
++  v_result = 0000000000000000 | ffffffffffffffff
++  v_arg1   = -3.792466282e-126 | 3.058680331e+19
++  v_arg2   = 9.701648768e+130 | -4.446045425e-277
++  r_result = 0000000000000001
++insn vfchedbs:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = 4.435382602e-127 | -1.046298194e+150
++  v_arg2   = 1.605953871e+02 | 5.405318131e+106
++  r_result = 0000000000000003
++insn vfchedbs:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = 6.455195021e-72 | 1.294732461e-56
++  v_arg2   = 1.097022153e-60 | 6.253030678e+231
++  r_result = 0000000000000003
++insn vfchedbs:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -8.621677282e+15 | -7.384553853e-206
++  v_arg2   = -6.630006742e-172 | 8.875091256e-229
++  r_result = 0000000000000003
++insn wfchedbs:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -1.731685168e+152 | 2.191562676e-178
++  v_arg2   = 2.500327650e+203 | -3.628919081e-12
++  r_result = 0000000000000003
++insn wfchedbs:
++  v_result = ffffffffffffffff | 0000000000000000
++  v_arg1   = 2.861117729e+62 | 8.215311594e+170
++  v_arg2   = -1.116622714e+90 | -8.705103017e+305
++  r_result = 0000000000000000
++insn wfchedbs:
++  v_result = ffffffffffffffff | 0000000000000000
++  v_arg1   = 7.484666607e+121 | 2.241933037e+83
++  v_arg2   = 6.745471652e-250 | 1.627726871e-125
++  r_result = 0000000000000000
++insn wfchedbs:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -4.010695768e-182 | -4.587311642e+76
++  v_arg2   = 1.911591070e-185 | 5.539907405e-260
++  r_result = 0000000000000003
++insn vftcidb0:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -7.755576323e-110 | -4.181113913e-232
++  r_result = 0000000000000003
++insn vftcidb0:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -1.664585697e+192 | -3.159918182e+29
++  r_result = 0000000000000003
++insn vftcidb0:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = 2.921584440e-31 | -6.686669619e+230
++  r_result = 0000000000000003
++insn vftcidb0:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -6.263790716e+62 | -1.380895669e-239
++  r_result = 0000000000000003
++insn vftcidb1:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -7.396630933e+86 | -4.044679556e+211
++  r_result = 0000000000000003
++insn vftcidb1:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = 1.642109065e+14 | -6.171377206e+100
++  r_result = 0000000000000003
++insn vftcidb1:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -1.983255661e-173 | 5.943986139e+137
++  r_result = 0000000000000003
++insn vftcidb1:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -1.074053803e-136 | -3.989544962e-156
++  r_result = 0000000000000003
++insn vftcidb2:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = 1.208072737e-142 | 9.178144881e+290
++  r_result = 0000000000000003
++insn vftcidb2:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -2.713139352e-109 | 1.051470149e+124
++  r_result = 0000000000000003
++insn vftcidb2:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = 2.538110318e+70 | -9.508673668e+171
++  r_result = 0000000000000003
++insn vftcidb2:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = 1.035919003e+221 | -3.073603372e+61
++  r_result = 0000000000000003
++insn vftcidb3:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = 1.010841368e+196 | -1.175741623e-247
++  r_result = 0000000000000003
++insn vftcidb3:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = 2.882324537e+196 | 7.571081666e-148
++  r_result = 0000000000000003
++insn vftcidb3:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = 2.118744165e-174 | -8.199093702e+79
++  r_result = 0000000000000003
++insn vftcidb3:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = 1.290495699e+254 | -3.098996343e+165
++  r_result = 0000000000000003
++insn vftcidb4:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = 1.865312893e+228 | 8.768759350e+193
++  r_result = 0000000000000003
++insn vftcidb4:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -2.558314242e+54 | -7.282752951e+278
++  r_result = 0000000000000003
++insn vftcidb4:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -8.444440407e+76 | 2.202196117e+229
++  r_result = 0000000000000003
++insn vftcidb4:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = 1.689081996e-276 | -1.142172414e-85
++  r_result = 0000000000000003
++insn vftcidb8:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = 3.052709647e-292 | 2.901076717e+141
++  r_result = 0000000000000003
++insn vftcidb8:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = 7.866509814e-163 | -2.195774605e-97
++  r_result = 0000000000000003
++insn vftcidb8:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = 3.897402949e-46 | 1.713580689e-250
++  r_result = 0000000000000003
++insn vftcidb8:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = 3.168591491e+222 | -3.090455716e+282
++  r_result = 0000000000000003
++insn vftcidb16:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -1.113956295e+235 | -6.616133002e-47
++  r_result = 0000000000000003
++insn vftcidb16:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -4.961861634e-86 | 7.927703278e-283
++  r_result = 0000000000000003
++insn vftcidb16:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = 3.083402359e-171 | -1.611071710e+248
++  r_result = 0000000000000003
++insn vftcidb16:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -1.079666682e+272 | -2.706249794e-212
++  r_result = 0000000000000003
++insn vftcidb32:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = 2.219036452e-293 | -8.213622318e-07
++  r_result = 0000000000000003
++insn vftcidb32:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -2.897942666e+26 | -1.159641329e+83
++  r_result = 0000000000000003
++insn vftcidb32:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = 9.729512698e+66 | 4.692742769e+236
++  r_result = 0000000000000003
++insn vftcidb32:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -5.452407172e+235 | 1.957790085e+31
++  r_result = 0000000000000003
++insn vftcidb64:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = 5.636126617e-277 | -7.847928271e+17
++  r_result = 0000000000000003
++insn vftcidb64:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -1.888063607e-71 | -6.901109602e+140
++  r_result = 0000000000000003
++insn vftcidb64:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -2.783862064e-201 | -3.942888222e+78
++  r_result = 0000000000000003
++insn vftcidb64:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -1.411606683e-140 | -1.755329332e+148
++  r_result = 0000000000000003
++insn vftcidb128:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -1.201389672e+33 | 1.484917169e-228
++  r_result = 0000000000000003
++insn vftcidb128:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -2.032477894e-19 | -5.548585434e+251
++  r_result = 0000000000000003
++insn vftcidb128:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -5.715429458e+08 | 6.839165394e+141
++  r_result = 0000000000000003
++insn vftcidb128:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = 3.261858315e+129 | 1.893770303e-117
++  r_result = 0000000000000003
++insn vftcidb256:
++  v_result = 0000000000000000 | ffffffffffffffff
++  v_arg1   = 3.778930697e-228 | -1.184400475e+241
++  r_result = 0000000000000001
++insn vftcidb256:
++  v_result = 0000000000000000 | ffffffffffffffff
++  v_arg1   = 2.562044420e-57 | -4.525123716e+164
++  r_result = 0000000000000001
++insn vftcidb256:
++  v_result = ffffffffffffffff | 0000000000000000
++  v_arg1   = -2.127369946e-173 | 2.438586361e+182
++  r_result = 0000000000000001
++insn vftcidb256:
++  v_result = 0000000000000000 | ffffffffffffffff
++  v_arg1   = 5.947339495e+173 | -2.315946167e+218
++  r_result = 0000000000000001
++insn vftcidb512:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -1.749826041e-81 | -1.592828492e-67
++  r_result = 0000000000000003
++insn vftcidb512:
++  v_result = ffffffffffffffff | ffffffffffffffff
++  v_arg1   = 6.837070781e+173 | 6.671461300e+249
++  r_result = 0000000000000000
++insn vftcidb512:
++  v_result = 0000000000000000 | ffffffffffffffff
++  v_arg1   = -5.995948204e+241 | 8.717704301e-59
++  r_result = 0000000000000001
++insn vftcidb512:
++  v_result = ffffffffffffffff | 0000000000000000
++  v_arg1   = 4.904433958e-242 | -4.151812710e+290
++  r_result = 0000000000000001
++insn vftcidb1024:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = 1.003496386e+222 | -2.048116610e-153
++  r_result = 0000000000000003
++insn vftcidb1024:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -1.179061415e-188 | 2.645116668e+246
++  r_result = 0000000000000003
++insn vftcidb1024:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -9.820338600e-233 | 3.001823083e-217
++  r_result = 0000000000000003
++insn vftcidb1024:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = -2.633769867e-156 | 8.447332903e-152
++  r_result = 0000000000000003
++insn vftcidb2048:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = 6.337601232e-178 | 1.682594878e-280
++  r_result = 0000000000000003
++insn vftcidb2048:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = 9.988476885e-173 | -5.822812106e-83
++  r_result = 0000000000000003
++insn vftcidb2048:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = 5.321533227e-06 | 3.614043333e+79
++  r_result = 0000000000000003
++insn vftcidb2048:
++  v_result = 0000000000000000 | 0000000000000000
++  v_arg1   = 5.571605547e+196 | 1.540286044e-125
++  r_result = 0000000000000003
+diff --git a/none/tests/s390x/vector_float.vgtest b/none/tests/s390x/vector_float.vgtest
+new file mode 100644
+index 000000000..428d2a21c
+--- /dev/null
++++ b/none/tests/s390x/vector_float.vgtest
+@@ -0,0 +1,2 @@
++prog: vector_float
++prereq: test -e vector_float && ../../../tests/s390x_features s390x-vx
+-- 
+2.19.0.windows.1
+
+Only in valgrind-3.14.0: autom4te.cache
+diff -ru valgrind-3.14.0.orig/none/tests/s390x/Makefile.in valgrind-3.14.0/none/tests/s390x/Makefile.in
+--- valgrind-3.14.0.orig/none/tests/s390x/Makefile.in	2018-11-20 17:55:21.383617322 +0100
++++ valgrind-3.14.0/none/tests/s390x/Makefile.in	2018-11-20 17:55:33.442353544 +0100
+@@ -179,8 +179,8 @@
+ 	spechelper-icm-1$(EXEEXT) spechelper-icm-2$(EXEEXT) \
+ 	spechelper-tmll$(EXEEXT) spechelper-tm$(EXEEXT) laa$(EXEEXT) \
+ 	vector$(EXEEXT) lsc2$(EXEEXT) ppno$(EXEEXT) \
+-	vector_string$(EXEEXT) vector_integer$(EXEEXT) $(am__EXEEXT_1) \
+-	$(am__EXEEXT_2)
++	vector_string$(EXEEXT) vector_integer$(EXEEXT) \
++	vector_float$(EXEEXT) $(am__EXEEXT_1) $(am__EXEEXT_2)
+ add_SOURCES = add.c
+ add_OBJECTS = add.$(OBJEXT)
+ add_LDADD = $(LDADD)
+@@ -574,6 +574,11 @@
+ vector_LDADD = $(LDADD)
+ vector_LINK = $(CCLD) $(vector_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
+ 	$(LDFLAGS) -o $@
++vector_float_SOURCES = vector_float.c
++vector_float_OBJECTS = vector_float-vector_float.$(OBJEXT)
++vector_float_LDADD = $(LDADD)
++vector_float_LINK = $(CCLD) $(vector_float_CFLAGS) $(CFLAGS) \
++	$(AM_LDFLAGS) $(LDFLAGS) -o $@
+ vector_integer_SOURCES = vector_integer.c
+ vector_integer_OBJECTS = vector_integer-vector_integer.$(OBJEXT)
+ vector_integer_LDADD = $(LDADD)
+@@ -646,7 +651,8 @@
+ 	srnmb.c srnmt.c srst.c stck.c stcke.c stckf.c stfle.c stmg.c \
+ 	sub.c sub_EI.c tcxb.c test_fork.c test_sig.c tm.c tmll.c tr.c \
+ 	traps.c tre.c troo.c trot.c trto.c trtt.c vector.c \
+-	vector_integer.c vector_string.c xc.c xor.c xor_EI.c
++	vector_float.c vector_integer.c vector_string.c xc.c xor.c \
++	xor_EI.c
+ DIST_SOURCES = add.c add_EI.c add_GE.c allexec.c and.c and_EI.c \
+ 	bfp-1.c bfp-2.c bfp-3.c bfp-4.c cds.c cdsg.c cgij.c cgrj.c \
+ 	cij.c cksm.c clc.c clcl.c clcle.c clgij.c clgrj.c clij.c \
+@@ -667,7 +673,8 @@
+ 	srnmb.c srnmt.c srst.c stck.c stcke.c stckf.c stfle.c stmg.c \
+ 	sub.c sub_EI.c tcxb.c test_fork.c test_sig.c tm.c tmll.c tr.c \
+ 	traps.c tre.c troo.c trot.c trto.c trtt.c vector.c \
+-	vector_integer.c vector_string.c xc.c xor.c xor_EI.c
++	vector_float.c vector_integer.c vector_string.c xc.c xor.c \
++	xor_EI.c
+ am__can_run_installinfo = \
+   case $$AM_UPDATE_INFO_DIR in \
+     n|no|NO) false;; \
+@@ -1080,7 +1087,8 @@
+ 	spechelper-slgr spechelper-cr spechelper-clr spechelper-ltr \
+ 	spechelper-or spechelper-icm-1 spechelper-icm-2 \
+ 	spechelper-tmll spechelper-tm laa vector lsc2 ppno \
+-	vector_string vector_integer $(am__append_11) $(am__append_12)
++	vector_string vector_integer vector_float $(am__append_11) \
++	$(am__append_12)
+ noinst_HEADERS = vector.h
+ EXTRA_DIST = \
+ 	$(addsuffix .stderr.exp,$(INSN_TESTS)) \
+@@ -1116,6 +1124,7 @@
+ lsc2_CFLAGS = -march=z13 -DS390_TESTS_NOCOLOR
+ vector_string_CFLAGS = $(AM_CFLAGS) -march=z13 -DS390_TEST_COUNT=5
+ vector_integer_CFLAGS = $(AM_CFLAGS) -march=z13 -DS390_TEST_COUNT=4
++vector_float_CFLAGS = $(AM_CFLAGS) -march=z13 -DS390_TEST_COUNT=4
+ all: all-am
+ 
+ .SUFFIXES:
+@@ -1654,6 +1663,10 @@
+ 	@rm -f vector$(EXEEXT)
+ 	$(AM_V_CCLD)$(vector_LINK) $(vector_OBJECTS) $(vector_LDADD) $(LIBS)
+ 
++vector_float$(EXEEXT): $(vector_float_OBJECTS) $(vector_float_DEPENDENCIES) $(EXTRA_vector_float_DEPENDENCIES) 
++	@rm -f vector_float$(EXEEXT)
++	$(AM_V_CCLD)$(vector_float_LINK) $(vector_float_OBJECTS) $(vector_float_LDADD) $(LIBS)
++
+ vector_integer$(EXEEXT): $(vector_integer_OBJECTS) $(vector_integer_DEPENDENCIES) $(EXTRA_vector_integer_DEPENDENCIES) 
+ 	@rm -f vector_integer$(EXEEXT)
+ 	$(AM_V_CCLD)$(vector_integer_LINK) $(vector_integer_OBJECTS) $(vector_integer_LDADD) $(LIBS)
+@@ -1805,6 +1818,7 @@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/trto.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/trtt.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/vector-vector.Po@am__quote@
++@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/vector_float-vector_float.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/vector_integer-vector_integer.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/vector_string-vector_string.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xc.Po@am__quote@
+@@ -1953,6 +1967,20 @@
+ @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+ @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(vector_CFLAGS) $(CFLAGS) -c -o vector-vector.obj `if test -f 'vector.c'; then $(CYGPATH_W) 'vector.c'; else $(CYGPATH_W) '$(srcdir)/vector.c'; fi`
+ 
++vector_float-vector_float.o: vector_float.c
++@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(vector_float_CFLAGS) $(CFLAGS) -MT vector_float-vector_float.o -MD -MP -MF $(DEPDIR)/vector_float-vector_float.Tpo -c -o vector_float-vector_float.o `test -f 'vector_float.c' || echo '$(srcdir)/'`vector_float.c
++@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/vector_float-vector_float.Tpo $(DEPDIR)/vector_float-vector_float.Po
++@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='vector_float.c' object='vector_float-vector_float.o' libtool=no @AMDEPBACKSLASH@
++@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
++@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(vector_float_CFLAGS) $(CFLAGS) -c -o vector_float-vector_float.o `test -f 'vector_float.c' || echo '$(srcdir)/'`vector_float.c
++
++vector_float-vector_float.obj: vector_float.c
++@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(vector_float_CFLAGS) $(CFLAGS) -MT vector_float-vector_float.obj -MD -MP -MF $(DEPDIR)/vector_float-vector_float.Tpo -c -o vector_float-vector_float.obj `if test -f 'vector_float.c'; then $(CYGPATH_W) 'vector_float.c'; else $(CYGPATH_W) '$(srcdir)/vector_float.c'; fi`
++@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/vector_float-vector_float.Tpo $(DEPDIR)/vector_float-vector_float.Po
++@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='vector_float.c' object='vector_float-vector_float.obj' libtool=no @AMDEPBACKSLASH@
++@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
++@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(vector_float_CFLAGS) $(CFLAGS) -c -o vector_float-vector_float.obj `if test -f 'vector_float.c'; then $(CYGPATH_W) 'vector_float.c'; else $(CYGPATH_W) '$(srcdir)/vector_float.c'; fi`
++
+ vector_integer-vector_integer.o: vector_integer.c
+ @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(vector_integer_CFLAGS) $(CFLAGS) -MT vector_integer-vector_integer.o -MD -MP -MF $(DEPDIR)/vector_integer-vector_integer.Tpo -c -o vector_integer-vector_integer.o `test -f 'vector_integer.c' || echo '$(srcdir)/'`vector_integer.c
+ @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/vector_integer-vector_integer.Tpo $(DEPDIR)/vector_integer-vector_integer.Po

@@ -120,6 +120,10 @@ Patch5: valgrind-3.14.0-s390x-sign-extend-lochi.patch
 # KDE#397187 s390x: Add vector register support for vgdb
 Patch6: valgrind-3.14.0-s390x-vec-reg-vgdb.patch
 
+# KDE#385411 s390x: z13 vector floating-point instructions not implemented
+Patch7: valgrind-3.14.0-s390x-vec-float-point-code.patch
+Patch8: valgrind-3.14.0-s390x-vec-float-point-tests.patch
+
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -258,6 +262,8 @@ Valgrind User Manual for details.
 %patch4 -p1
 %patch5 -p1
 %patch6 -p1
+%patch7 -p1
+%patch8 -p1
 
 %build
 CC=gcc
@@ -496,6 +502,8 @@ fi
 - Add valgrind-3.14.0-s390x-fix-reg-alloc-vr-vs-fpr.patch.
 - Add valgrind-3.14.0-s390x-sign-extend-lochi.patch.
 - Add valgrind-3.14.0-s390x-vec-reg-vgdb.patch.
+- Add valgrind-3.14.0-s390x-vec-float-point-code.patch
+  and valgrind-3.14.0-s390x-vec-float-point-tests.patch
 
 * Tue Oct  9 2018 Mark Wielaard  <mjw@fedoraproject.org> - 3.14.0-1
 - valgrind 3.14.0 final.
