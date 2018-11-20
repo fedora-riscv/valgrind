@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.14.0
-Release: 1%{?dist}
+Release: 2%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -74,7 +74,8 @@ Group: Development/Debuggers
     %global run_full_regtest 0
   %else
     %if 0%{?fedora}
-      %global run_full_regtest 1
+      # Current rawhide gdb just crashes
+      %global run_full_regtest 0
     %endif
     %if 0%{?rhel}
       %global run_full_regtest (%rhel >= 7)
@@ -489,13 +490,13 @@ fi
 %endif
 
 %changelog
-* Tue Nov 20 2018 Mark Wielaard  <mjw@fedoraproject.org>
+* Tue Nov 20 2018 Mark Wielaard  <mjw@fedoraproject.org> - 3.14.0-2
 - Add valgrind-3.14.0-s390x-fix-reg-alloc-vr-vs-fpr.patch.
 - Add valgrind-3.14.0-s390x-sign-extend-lochi.patch.
 - Add valgrind-3.14.0-s390x-vec-reg-vgdb.patch.
 - Add valgrind-3.14.0-s390x-vec-float-point-code.patch
   and valgrind-3.14.0-s390x-vec-float-point-tests.patch
-- Only run full regtests on x86_64 on fedora or latest rhel.
+- Disable full regtests on fedora everywhere.
 
 * Tue Oct  9 2018 Mark Wielaard  <mjw@fedoraproject.org> - 3.14.0-1
 - valgrind 3.14.0 final.
