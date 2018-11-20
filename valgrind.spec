@@ -65,32 +65,23 @@ Group: Development/Debuggers
 %endif
 
 # Whether to run the full regtest or only a limited set
-# The full regtest includes gdb_server integration tests.
-# On arm the gdb integration tests hang for unknown reasons.
-# On rhel6 the gdb_server tests hang.
-# On rhel7 they hang on ppc64 and ppc64le.
-# And when creating the DTS scl the interaction between old gdb
-# and new valgrind might hang.
-%ifarch %{arm}
-  %global run_full_regtest 0
-%else
+# The full regtest includes gdb_server integration tests
+# and experimental tools.
+# Only run full regtests on x86_64, but not on older rhel
+# or when creating scl, the gdb_server tests might hang.
+%ifarch x86_64
   %if %{is_scl}
     %global run_full_regtest 0
   %else
-    %if 0%{?rhel} == 6
-      %global run_full_regtest 0
-    %else
-      %if 0%{?rhel} == 7
-        %ifarch ppc64 ppc64le
-          %global run_full_regtest 0
-        %else
-          %global run_full_regtest 1
-        %endif
-      %else
-        %global run_full_regtest 1
-      %endif
+    %if 0%{?fedora}
+      %global run_full_regtest 1
+    %endif
+    %if 0%{?rhel}
+      %global run_full_regtest (%rhel >= 7)
     %endif
   %endif
+%else
+  %global run_full_regtest 0
 %endif
 
 # Generating minisymtabs doesn't really work for the staticly linked
@@ -504,6 +495,7 @@ fi
 - Add valgrind-3.14.0-s390x-vec-reg-vgdb.patch.
 - Add valgrind-3.14.0-s390x-vec-float-point-code.patch
   and valgrind-3.14.0-s390x-vec-float-point-tests.patch
+- Only run full regtests on x86_64 on fedora or latest rhel.
 
 * Tue Oct  9 2018 Mark Wielaard  <mjw@fedoraproject.org> - 3.14.0-1
 - valgrind 3.14.0 final.
