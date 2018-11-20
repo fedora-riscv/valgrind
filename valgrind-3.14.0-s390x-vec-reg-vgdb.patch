@@ -1,0 +1,408 @@
+commit 50bd2282bce101012a5668b670cb185375600d2d
+Author: Andreas Arnez <arnez@linux.ibm.com>
+Date:   Thu Oct 18 17:51:57 2018 +0200
+
+    Bug 397187 s390x: Add vector register support for vgdb
+    
+    On s390x machines with a vector facility, Valgrind's gdbserver didn't
+    represent the vector registers.  This is fixed.
+
+diff --git a/coregrind/Makefile.am b/coregrind/Makefile.am
+index 8de1996..94030fd 100644
+--- a/coregrind/Makefile.am
++++ b/coregrind/Makefile.am
+@@ -685,6 +685,11 @@ GDBSERVER_XML_FILES = \
+ 	m_gdbserver/s390x-linux64-valgrind-s1.xml \
+ 	m_gdbserver/s390x-linux64-valgrind-s2.xml \
+ 	m_gdbserver/s390x-linux64.xml \
++	m_gdbserver/s390-vx-valgrind-s1.xml \
++	m_gdbserver/s390-vx-valgrind-s2.xml \
++	m_gdbserver/s390-vx.xml \
++	m_gdbserver/s390x-vx-linux-valgrind.xml \
++	m_gdbserver/s390x-vx-linux.xml \
+ 	m_gdbserver/mips-cp0-valgrind-s1.xml \
+ 	m_gdbserver/mips-cp0-valgrind-s2.xml \
+ 	m_gdbserver/mips-cp0.xml \
+diff --git a/coregrind/m_gdbserver/s390-vx-valgrind-s1.xml b/coregrind/m_gdbserver/s390-vx-valgrind-s1.xml
+new file mode 100644
+index 0000000..ca461b3
+--- /dev/null
++++ b/coregrind/m_gdbserver/s390-vx-valgrind-s1.xml
+@@ -0,0 +1,43 @@
++<?xml version="1.0"?>
++<!-- Copyright (C) 2015-2018 Free Software Foundation, Inc.
++
++     Copying and distribution of this file, with or without modification,
++     are permitted in any medium without royalty provided the copyright
++     notice and this notice are preserved.  -->
++
++<!DOCTYPE feature SYSTEM "gdb-target.dtd">
++<feature name="org.gnu.gdb.s390.vx-valgrind-s1">
++  <reg name="v0ls1" bitsize="64" type="uint64"/>
++  <reg name="v1ls1" bitsize="64" type="uint64"/>
++  <reg name="v2ls1" bitsize="64" type="uint64"/>
++  <reg name="v3ls1" bitsize="64" type="uint64"/>
++  <reg name="v4ls1" bitsize="64" type="uint64"/>
++  <reg name="v5ls1" bitsize="64" type="uint64"/>
++  <reg name="v6ls1" bitsize="64" type="uint64"/>
++  <reg name="v7ls1" bitsize="64" type="uint64"/>
++  <reg name="v8ls1" bitsize="64" type="uint64"/>
++  <reg name="v9ls1" bitsize="64" type="uint64"/>
++  <reg name="v10ls1" bitsize="64" type="uint64"/>
++  <reg name="v11ls1" bitsize="64" type="uint64"/>
++  <reg name="v12ls1" bitsize="64" type="uint64"/>
++  <reg name="v13ls1" bitsize="64" type="uint64"/>
++  <reg name="v14ls1" bitsize="64" type="uint64"/>
++  <reg name="v15ls1" bitsize="64" type="uint64"/>
++
++  <reg name="v16s1" bitsize="128" type="uint128"/>
++  <reg name="v17s1" bitsize="128" type="uint128"/>
++  <reg name="v18s1" bitsize="128" type="uint128"/>
++  <reg name="v19s1" bitsize="128" type="uint128"/>
++  <reg name="v20s1" bitsize="128" type="uint128"/>
++  <reg name="v21s1" bitsize="128" type="uint128"/>
++  <reg name="v22s1" bitsize="128" type="uint128"/>
++  <reg name="v23s1" bitsize="128" type="uint128"/>
++  <reg name="v24s1" bitsize="128" type="uint128"/>
++  <reg name="v25s1" bitsize="128" type="uint128"/>
++  <reg name="v26s1" bitsize="128" type="uint128"/>
++  <reg name="v27s1" bitsize="128" type="uint128"/>
++  <reg name="v28s1" bitsize="128" type="uint128"/>
++  <reg name="v29s1" bitsize="128" type="uint128"/>
++  <reg name="v30s1" bitsize="128" type="uint128"/>
++  <reg name="v31s1" bitsize="128" type="uint128"/>
++</feature>
+diff --git a/coregrind/m_gdbserver/s390-vx-valgrind-s2.xml b/coregrind/m_gdbserver/s390-vx-valgrind-s2.xml
+new file mode 100644
+index 0000000..eccbd8d
+--- /dev/null
++++ b/coregrind/m_gdbserver/s390-vx-valgrind-s2.xml
+@@ -0,0 +1,43 @@
++<?xml version="1.0"?>
++<!-- Copyright (C) 2015-2018 Free Software Foundation, Inc.
++
++     Copying and distribution of this file, with or without modification,
++     are permitted in any medium without royalty provided the copyright
++     notice and this notice are preserved.  -->
++
++<!DOCTYPE feature SYSTEM "gdb-target.dtd">
++<feature name="org.gnu.gdb.s390.vx-valgrind-s2">
++  <reg name="v0ls2" bitsize="64" type="uint64"/>
++  <reg name="v1ls2" bitsize="64" type="uint64"/>
++  <reg name="v2ls2" bitsize="64" type="uint64"/>
++  <reg name="v3ls2" bitsize="64" type="uint64"/>
++  <reg name="v4ls2" bitsize="64" type="uint64"/>
++  <reg name="v5ls2" bitsize="64" type="uint64"/>
++  <reg name="v6ls2" bitsize="64" type="uint64"/>
++  <reg name="v7ls2" bitsize="64" type="uint64"/>
++  <reg name="v8ls2" bitsize="64" type="uint64"/>
++  <reg name="v9ls2" bitsize="64" type="uint64"/>
++  <reg name="v10ls2" bitsize="64" type="uint64"/>
++  <reg name="v11ls2" bitsize="64" type="uint64"/>
++  <reg name="v12ls2" bitsize="64" type="uint64"/>
++  <reg name="v13ls2" bitsize="64" type="uint64"/>
++  <reg name="v14ls2" bitsize="64" type="uint64"/>
++  <reg name="v15ls2" bitsize="64" type="uint64"/>
++
++  <reg name="v16s2" bitsize="128" type="uint128"/>
++  <reg name="v17s2" bitsize="128" type="uint128"/>
++  <reg name="v18s2" bitsize="128" type="uint128"/>
++  <reg name="v19s2" bitsize="128" type="uint128"/>
++  <reg name="v20s2" bitsize="128" type="uint128"/>
++  <reg name="v21s2" bitsize="128" type="uint128"/>
++  <reg name="v22s2" bitsize="128" type="uint128"/>
++  <reg name="v23s2" bitsize="128" type="uint128"/>
++  <reg name="v24s2" bitsize="128" type="uint128"/>
++  <reg name="v25s2" bitsize="128" type="uint128"/>
++  <reg name="v26s2" bitsize="128" type="uint128"/>
++  <reg name="v27s2" bitsize="128" type="uint128"/>
++  <reg name="v28s2" bitsize="128" type="uint128"/>
++  <reg name="v29s2" bitsize="128" type="uint128"/>
++  <reg name="v30s2" bitsize="128" type="uint128"/>
++  <reg name="v31s2" bitsize="128" type="uint128"/>
++</feature>
+diff --git a/coregrind/m_gdbserver/s390-vx.xml b/coregrind/m_gdbserver/s390-vx.xml
+new file mode 100644
+index 0000000..2a16873
+--- /dev/null
++++ b/coregrind/m_gdbserver/s390-vx.xml
+@@ -0,0 +1,59 @@
++<?xml version="1.0"?>
++<!-- Copyright (C) 2015-2018 Free Software Foundation, Inc.
++
++     Copying and distribution of this file, with or without modification,
++     are permitted in any medium without royalty provided the copyright
++     notice and this notice are preserved.  -->
++
++<!DOCTYPE feature SYSTEM "gdb-target.dtd">
++<feature name="org.gnu.gdb.s390.vx">
++  <vector id="v4f" type="ieee_single" count="4"/>
++  <vector id="v2d" type="ieee_double" count="2"/>
++  <vector id="v16i8" type="int8" count="16"/>
++  <vector id="v8i16" type="int16" count="8"/>
++  <vector id="v4i32" type="int32" count="4"/>
++  <vector id="v2i64" type="int64" count="2"/>
++  <union id="vec128">
++    <field name="v4_float" type="v4f"/>
++    <field name="v2_double" type="v2d"/>
++    <field name="v16_int8" type="v16i8"/>
++    <field name="v8_int16" type="v8i16"/>
++    <field name="v4_int32" type="v4i32"/>
++    <field name="v2_int64" type="v2i64"/>
++    <field name="uint128" type="uint128"/>
++  </union>
++
++  <reg name="v0l" bitsize="64" type="uint64"/>
++  <reg name="v1l" bitsize="64" type="uint64"/>
++  <reg name="v2l" bitsize="64" type="uint64"/>
++  <reg name="v3l" bitsize="64" type="uint64"/>
++  <reg name="v4l" bitsize="64" type="uint64"/>
++  <reg name="v5l" bitsize="64" type="uint64"/>
++  <reg name="v6l" bitsize="64" type="uint64"/>
++  <reg name="v7l" bitsize="64" type="uint64"/>
++  <reg name="v8l" bitsize="64" type="uint64"/>
++  <reg name="v9l" bitsize="64" type="uint64"/>
++  <reg name="v10l" bitsize="64" type="uint64"/>
++  <reg name="v11l" bitsize="64" type="uint64"/>
++  <reg name="v12l" bitsize="64" type="uint64"/>
++  <reg name="v13l" bitsize="64" type="uint64"/>
++  <reg name="v14l" bitsize="64" type="uint64"/>
++  <reg name="v15l" bitsize="64" type="uint64"/>
++
++  <reg name="v16" bitsize="128" type="vec128"/>
++  <reg name="v17" bitsize="128" type="vec128"/>
++  <reg name="v18" bitsize="128" type="vec128"/>
++  <reg name="v19" bitsize="128" type="vec128"/>
++  <reg name="v20" bitsize="128" type="vec128"/>
++  <reg name="v21" bitsize="128" type="vec128"/>
++  <reg name="v22" bitsize="128" type="vec128"/>
++  <reg name="v23" bitsize="128" type="vec128"/>
++  <reg name="v24" bitsize="128" type="vec128"/>
++  <reg name="v25" bitsize="128" type="vec128"/>
++  <reg name="v26" bitsize="128" type="vec128"/>
++  <reg name="v27" bitsize="128" type="vec128"/>
++  <reg name="v28" bitsize="128" type="vec128"/>
++  <reg name="v29" bitsize="128" type="vec128"/>
++  <reg name="v30" bitsize="128" type="vec128"/>
++  <reg name="v31" bitsize="128" type="vec128"/>
++</feature>
+diff --git a/coregrind/m_gdbserver/s390x-vx-linux-valgrind.xml b/coregrind/m_gdbserver/s390x-vx-linux-valgrind.xml
+new file mode 100644
+index 0000000..0237002
+--- /dev/null
++++ b/coregrind/m_gdbserver/s390x-vx-linux-valgrind.xml
+@@ -0,0 +1,28 @@
++<?xml version="1.0"?>
++<!-- Copyright (C) 2010-2018 Free Software Foundation, Inc.
++
++     Copying and distribution of this file, with or without modification,
++     are permitted in any medium without royalty provided the copyright
++     notice and this notice are preserved.  -->
++
++<!-- S/390 64-bit user-level code.  -->
++
++<!DOCTYPE target SYSTEM "gdb-target.dtd">
++<target>
++  <architecture>s390:64-bit</architecture>
++  <xi:include href="s390x-core64.xml"/>
++  <xi:include href="s390-acr.xml"/>
++  <xi:include href="s390-fpr.xml"/>
++  <xi:include href="s390x-linux64.xml"/>
++  <xi:include href="s390-vx.xml"/>
++  <xi:include href="s390x-core64-valgrind-s1.xml"/>
++  <xi:include href="s390-acr-valgrind-s1.xml"/>
++  <xi:include href="s390-fpr-valgrind-s1.xml"/>
++  <xi:include href="s390x-linux64-valgrind-s1.xml"/>
++  <xi:include href="s390-vx-valgrind-s1.xml"/>
++  <xi:include href="s390x-core64-valgrind-s2.xml"/>
++  <xi:include href="s390-acr-valgrind-s2.xml"/>
++  <xi:include href="s390-fpr-valgrind-s2.xml"/>
++  <xi:include href="s390x-linux64-valgrind-s2.xml"/>
++  <xi:include href="s390-vx-valgrind-s2.xml"/>
++</target>
+diff --git a/coregrind/m_gdbserver/s390x-vx-linux.xml b/coregrind/m_gdbserver/s390x-vx-linux.xml
+new file mode 100644
+index 0000000..e431c5b
+--- /dev/null
++++ b/coregrind/m_gdbserver/s390x-vx-linux.xml
+@@ -0,0 +1,18 @@
++<?xml version="1.0"?>
++<!-- Copyright (C) 2010-2018 Free Software Foundation, Inc.
++
++     Copying and distribution of this file, with or without modification,
++     are permitted in any medium without royalty provided the copyright
++     notice and this notice are preserved.  -->
++
++<!-- S/390 64-bit user-level code.  -->
++
++<!DOCTYPE target SYSTEM "gdb-target.dtd">
++<target>
++  <architecture>s390:64-bit</architecture>
++  <xi:include href="s390x-core64.xml"/>
++  <xi:include href="s390-acr.xml"/>
++  <xi:include href="s390-fpr.xml"/>
++  <xi:include href="s390x-linux64.xml"/>
++  <xi:include href="s390-vx.xml"/>
++</target>
+diff --git a/coregrind/m_gdbserver/valgrind-low-s390x.c b/coregrind/m_gdbserver/valgrind-low-s390x.c
+index 7bbb2e3..a667f4b 100644
+--- a/coregrind/m_gdbserver/valgrind-low-s390x.c
++++ b/coregrind/m_gdbserver/valgrind-low-s390x.c
+@@ -88,9 +88,42 @@ static struct reg regs[] = {
+   { "f14", 2592, 64 },
+   { "f15", 2656, 64 },
+   { "orig_r2", 2720, 64 },
++  { "v0l", 2784, 64 },
++  { "v1l", 2848, 64 },
++  { "v2l", 2912, 64 },
++  { "v3l", 2976, 64 },
++  { "v4l", 3040, 64 },
++  { "v5l", 3104, 64 },
++  { "v6l", 3168, 64 },
++  { "v7l", 3232, 64 },
++  { "v8l", 3296, 64 },
++  { "v9l", 3360, 64 },
++  { "v10l", 3424, 64 },
++  { "v11l", 3488, 64 },
++  { "v12l", 3552, 64 },
++  { "v13l", 3616, 64 },
++  { "v14l", 3680, 64 },
++  { "v15l", 3744, 64 },
++  { "v16", 3808, 128 },
++  { "v17", 3936, 128 },
++  { "v18", 4064, 128 },
++  { "v19", 4192, 128 },
++  { "v20", 4320, 128 },
++  { "v21", 4448, 128 },
++  { "v22", 4576, 128 },
++  { "v23", 4704, 128 },
++  { "v24", 4832, 128 },
++  { "v25", 4960, 128 },
++  { "v26", 5088, 128 },
++  { "v27", 5216, 128 },
++  { "v28", 5344, 128 },
++  { "v29", 5472, 128 },
++  { "v30", 5600, 128 },
++  { "v31", 5728, 128 },
+ };
+ static const char *expedite_regs[] = { "r14", "r15", "pswa", 0 };
+-#define num_regs (sizeof (regs) / sizeof (regs[0]))
++#define num_regs_all (sizeof (regs) / sizeof (regs[0]))
++static int num_regs;
+ 
+ static
+ CORE_ADDR get_pc (void)
+@@ -165,7 +198,7 @@ void transfer_register (ThreadId tid, int abs_regno, void * buf,
+    case 32: VG_(transfer) (&s390x->guest_a14, buf, dir, size, mod); break;
+    case 33: VG_(transfer) (&s390x->guest_a15, buf, dir, size, mod); break;
+    case 34: VG_(transfer) (&s390x->guest_fpc, buf, dir, size, mod); break;
+-   case 35: VG_(transfer) (&s390x->guest_v0,  buf, dir, size, mod); break;
++   case 35: VG_(transfer) (&s390x->guest_v0.w64[0],  buf, dir, size, mod); break;
+    case 36: VG_(transfer) (&s390x->guest_v1.w64[0],  buf, dir, size, mod); break;
+    case 37: VG_(transfer) (&s390x->guest_v2.w64[0],  buf, dir, size, mod); break;
+    case 38: VG_(transfer) (&s390x->guest_v3.w64[0],  buf, dir, size, mod); break;
+@@ -182,18 +215,65 @@ void transfer_register (ThreadId tid, int abs_regno, void * buf,
+    case 49: VG_(transfer) (&s390x->guest_v14.w64[0], buf, dir, size, mod); break;
+    case 50: VG_(transfer) (&s390x->guest_v15.w64[0], buf, dir, size, mod); break;
+    case 51:  *mod = False; break; //GDBTD??? { "orig_r2", 0, 64 },
++   case 52: VG_(transfer) (&s390x->guest_v0.w64[1],  buf, dir, size, mod); break;
++   case 53: VG_(transfer) (&s390x->guest_v1.w64[1],  buf, dir, size, mod); break;
++   case 54: VG_(transfer) (&s390x->guest_v2.w64[1],  buf, dir, size, mod); break;
++   case 55: VG_(transfer) (&s390x->guest_v3.w64[1],  buf, dir, size, mod); break;
++   case 56: VG_(transfer) (&s390x->guest_v4.w64[1],  buf, dir, size, mod); break;
++   case 57: VG_(transfer) (&s390x->guest_v5.w64[1],  buf, dir, size, mod); break;
++   case 58: VG_(transfer) (&s390x->guest_v6.w64[1],  buf, dir, size, mod); break;
++   case 59: VG_(transfer) (&s390x->guest_v7.w64[1],  buf, dir, size, mod); break;
++   case 60: VG_(transfer) (&s390x->guest_v8.w64[1],  buf, dir, size, mod); break;
++   case 61: VG_(transfer) (&s390x->guest_v9.w64[1],  buf, dir, size, mod); break;
++   case 62: VG_(transfer) (&s390x->guest_v10.w64[1], buf, dir, size, mod); break;
++   case 63: VG_(transfer) (&s390x->guest_v11.w64[1], buf, dir, size, mod); break;
++   case 64: VG_(transfer) (&s390x->guest_v12.w64[1], buf, dir, size, mod); break;
++   case 65: VG_(transfer) (&s390x->guest_v13.w64[1], buf, dir, size, mod); break;
++   case 66: VG_(transfer) (&s390x->guest_v14.w64[1], buf, dir, size, mod); break;
++   case 67: VG_(transfer) (&s390x->guest_v15.w64[1], buf, dir, size, mod); break;
++   case 68: VG_(transfer) (&s390x->guest_v16, buf, dir, size, mod); break;
++   case 69: VG_(transfer) (&s390x->guest_v17, buf, dir, size, mod); break;
++   case 70: VG_(transfer) (&s390x->guest_v18, buf, dir, size, mod); break;
++   case 71: VG_(transfer) (&s390x->guest_v19, buf, dir, size, mod); break;
++   case 72: VG_(transfer) (&s390x->guest_v20, buf, dir, size, mod); break;
++   case 73: VG_(transfer) (&s390x->guest_v21, buf, dir, size, mod); break;
++   case 74: VG_(transfer) (&s390x->guest_v22, buf, dir, size, mod); break;
++   case 75: VG_(transfer) (&s390x->guest_v23, buf, dir, size, mod); break;
++   case 76: VG_(transfer) (&s390x->guest_v24, buf, dir, size, mod); break;
++   case 77: VG_(transfer) (&s390x->guest_v25, buf, dir, size, mod); break;
++   case 78: VG_(transfer) (&s390x->guest_v26, buf, dir, size, mod); break;
++   case 79: VG_(transfer) (&s390x->guest_v27, buf, dir, size, mod); break;
++   case 80: VG_(transfer) (&s390x->guest_v28, buf, dir, size, mod); break;
++   case 81: VG_(transfer) (&s390x->guest_v29, buf, dir, size, mod); break;
++   case 82: VG_(transfer) (&s390x->guest_v30, buf, dir, size, mod); break;
++   case 83: VG_(transfer) (&s390x->guest_v31, buf, dir, size, mod); break;
+    default: vg_assert(0);
+    }
+ }
+ 
+ static
++Bool have_vx (void)
++{
++   VexArch va;
++   VexArchInfo vai;
++   VG_(machine_get_VexArchInfo) (&va, &vai);
++   return (vai.hwcaps & VEX_HWCAPS_S390X_VX) != 0;
++}
++
++static
+ const char* target_xml (Bool shadow_mode)
+ {
+    if (shadow_mode) {
+-      return "s390x-generic-valgrind.xml";
++      if (have_vx())
++         return "s390x-vx-linux-valgrind.xml";
++      else
++         return "s390x-generic-valgrind.xml";
+    } else {
+-      return "s390x-generic.xml";
+-   }  
++      if (have_vx())
++         return "s390x-vx-linux.xml";
++      else
++         return "s390x-generic.xml";
++   }
+ }
+ 
+ static CORE_ADDR** target_get_dtv (ThreadState *tst)
+@@ -206,7 +286,7 @@ static CORE_ADDR** target_get_dtv (ThreadState *tst)
+ }
+ 
+ static struct valgrind_target_ops low_target = {
+-   num_regs,
++   -1, // Override at init time.
+    regs,
+    17, //sp = r15, which is register offset 17 in regs
+    transfer_register,
+@@ -220,6 +300,11 @@ static struct valgrind_target_ops low_target = {
+ void s390x_init_architecture (struct valgrind_target_ops *target)
+ {
+    *target = low_target;
++   if (have_vx())
++      num_regs = num_regs_all;
++   else
++      num_regs = num_regs_all - 32; // Remove all VX registers.
++   target->num_regs = num_regs;
+    set_register_cache (regs, num_regs);
+    gdbserver_expedite_regs = expedite_regs;
+ }
+diff -ru valgrind-3.14.0.orig/coregrind/Makefile.in valgrind-3.14.0/coregrind/Makefile.in
+--- valgrind-3.14.0.orig/coregrind/Makefile.in	2018-11-20 17:30:03.075888111 +0100
++++ valgrind-3.14.0/coregrind/Makefile.in	2018-11-20 17:31:14.999314275 +0100
+@@ -1869,6 +1869,11 @@
+ 	m_gdbserver/s390x-linux64-valgrind-s1.xml \
+ 	m_gdbserver/s390x-linux64-valgrind-s2.xml \
+ 	m_gdbserver/s390x-linux64.xml \
++	m_gdbserver/s390-vx-valgrind-s1.xml \
++	m_gdbserver/s390-vx-valgrind-s2.xml \
++	m_gdbserver/s390-vx.xml \
++	m_gdbserver/s390x-vx-linux-valgrind.xml \
++	m_gdbserver/s390x-vx-linux.xml \
+ 	m_gdbserver/mips-cp0-valgrind-s1.xml \
+ 	m_gdbserver/mips-cp0-valgrind-s2.xml \
+ 	m_gdbserver/mips-cp0.xml \
