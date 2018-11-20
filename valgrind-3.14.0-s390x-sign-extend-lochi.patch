@@ -1,0 +1,41 @@
+commit 9545e9f96beda6e9f2205bdb3c3e96edaf8d9e2b
+Author: Andreas Arnez <arnez@linux.ibm.com>
+Date:   Tue Oct 30 17:06:38 2018 +0100
+
+    Bug 400491 s390x: Sign-extend immediate operand of LOCHI and friends
+    
+    The VEX implementation of each of the z/Architecture instructions LOCHI,
+    LOCHHI, and LOCGHI treats the immediate 16-bit operand as an unsigned
+    integer instead of a signed integer.  This is fixed.
+
+diff --git a/VEX/priv/guest_s390_toIR.c b/VEX/priv/guest_s390_toIR.c
+index 60b6081..9c4d79b 100644
+--- a/VEX/priv/guest_s390_toIR.c
++++ b/VEX/priv/guest_s390_toIR.c
+@@ -16307,7 +16307,7 @@ static const HChar *
+ s390_irgen_LOCHHI(UChar r1, UChar m3, UShort i2, UChar unused)
+ {
+    next_insn_if(binop(Iop_CmpEQ32, s390_call_calculate_cond(m3), mkU32(0)));
+-   put_gpr_w0(r1, mkU32(i2));
++   put_gpr_w0(r1, mkU32((UInt)(Int)(Short)i2));
+ 
+    return "lochhi";
+ }
+@@ -16316,7 +16316,7 @@ static const HChar *
+ s390_irgen_LOCHI(UChar r1, UChar m3, UShort i2, UChar unused)
+ {
+    next_insn_if(binop(Iop_CmpEQ32, s390_call_calculate_cond(m3), mkU32(0)));
+-   put_gpr_w1(r1, mkU32(i2));
++   put_gpr_w1(r1, mkU32((UInt)(Int)(Short)i2));
+ 
+    return "lochi";
+ }
+@@ -16325,7 +16325,7 @@ static const HChar *
+ s390_irgen_LOCGHI(UChar r1, UChar m3, UShort i2, UChar unused)
+ {
+    next_insn_if(binop(Iop_CmpEQ32, s390_call_calculate_cond(m3), mkU32(0)));
+-   put_gpr_dw0(r1, mkU64(i2));
++   put_gpr_dw0(r1, mkU64((UInt)(Int)(Short)i2));
+ 
+    return "locghi";
+ }
