@@ -111,6 +111,9 @@ Patch2: valgrind-3.9.0-helgrind-race-supp.patch
 # Make ld.so supressions slightly less specific.
 Patch3: valgrind-3.9.0-ldso-supp.patch
 
+# KDE#400490 s390x: Fix register allocation for VRs vs FPRs
+Patch4: valgrind-3.14.0-s390x-fix-reg-alloc-vr-vs-fpr.patch
+
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -246,6 +249,7 @@ Valgrind User Manual for details.
 %patch1 -p1
 %patch2 -p1
 %patch3 -p1
+%patch4 -p1
 
 %build
 CC=gcc
@@ -480,6 +484,9 @@ fi
 %endif
 
 %changelog
+* Tue Nov 20 2018 Mark Wielaard  <mjw@fedoraproject.org>
+- Add valgrind-3.14.0-s390x-fix-reg-alloc-vr-vs-fpr.patch.
+
 * Tue Oct  9 2018 Mark Wielaard  <mjw@fedoraproject.org> - 3.14.0-1
 - valgrind 3.14.0 final.
 
