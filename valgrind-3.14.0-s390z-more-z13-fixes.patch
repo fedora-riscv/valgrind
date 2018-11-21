@@ -1,0 +1,51 @@
+From d10cd86ee32bf76495f79c02df62fc242adbcbe3 Mon Sep 17 00:00:00 2001
+From: Andreas Arnez <arnez@linux.vnet.ibm.com>
+Date: Thu, 26 Jul 2018 16:35:24 +0200
+Subject: [PATCH] s390x: More fixes for z13 support
+
+This patch addresses the following:
+
+* Fix the implementation of LOCGHI.  Previously Valgrind performed 32-bit
+  sign extension instead of 64-bit sign extension on the immediate value.
+
+* Advertise VXRS in HWCAP.  If no VXRS are advertised, but the program
+  uses vector registers, this could cause problems with a glibc built with
+  "-march=z13".
+---
+ VEX/priv/guest_s390_toIR.c          | 2 +-
+ coregrind/m_initimg/initimg-linux.c | 6 +++---
+ 2 files changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/VEX/priv/guest_s390_toIR.c b/VEX/priv/guest_s390_toIR.c
+index 9c4d79b87..50a5a4177 100644
+--- a/VEX/priv/guest_s390_toIR.c
++++ b/VEX/priv/guest_s390_toIR.c
+@@ -16325,7 +16325,7 @@ static const HChar *
+ s390_irgen_LOCGHI(UChar r1, UChar m3, UShort i2, UChar unused)
+ {
+    next_insn_if(binop(Iop_CmpEQ32, s390_call_calculate_cond(m3), mkU32(0)));
+-   put_gpr_dw0(r1, mkU64((UInt)(Int)(Short)i2));
++   put_gpr_dw0(r1, mkU64((ULong)(Long)(Short)i2));
+ 
+    return "locghi";
+ }
+diff --git a/coregrind/m_initimg/initimg-linux.c b/coregrind/m_initimg/initimg-linux.c
+index 61cc458bc..8a7f0d024 100644
+--- a/coregrind/m_initimg/initimg-linux.c
++++ b/coregrind/m_initimg/initimg-linux.c
+@@ -699,9 +699,9 @@ Addr setup_client_stack( void*  init_sp,
+             }
+ #           elif defined(VGP_s390x_linux)
+             {
+-               /* Advertise hardware features "below" TE only.  TE and VXRS
+-                  (and anything above) are not supported by Valgrind. */
+-               auxv->u.a_val &= VKI_HWCAP_S390_TE - 1;
++               /* Advertise hardware features "below" TE and VXRS.  TE itself
++                  and anything above VXRS is not supported by Valgrind. */
++               auxv->u.a_val &= (VKI_HWCAP_S390_TE - 1) | VKI_HWCAP_S390_VXRS;
+             }
+ #           elif defined(VGP_arm64_linux)
+             {
+-- 
+2.17.0
+

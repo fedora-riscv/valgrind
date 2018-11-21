@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.14.0
-Release: 2%{?dist}
+Release: 3%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -115,6 +115,9 @@ Patch6: valgrind-3.14.0-s390x-vec-reg-vgdb.patch
 # KDE#385411 s390x: z13 vector floating-point instructions not implemented
 Patch7: valgrind-3.14.0-s390x-vec-float-point-code.patch
 Patch8: valgrind-3.14.0-s390x-vec-float-point-tests.patch
+
+# KDE#401277 More bugs in z13 support
+Patch9: valgrind-3.14.0-s390z-more-z13-fixes.patch
 
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -256,6 +259,7 @@ Valgrind User Manual for details.
 %patch6 -p1
 %patch7 -p1
 %patch8 -p1
+%patch9 -p1
 
 %build
 CC=gcc
@@ -490,6 +494,9 @@ fi
 %endif
 
 %changelog
+* Wed Nov 21 2018 Mark Wielaard  <mjw@fedoraproject.org> - 3.14.0-3
+- Add valgrind-3.14.0-s390z-more-z13-fixes.patch.
+
 * Tue Nov 20 2018 Mark Wielaard  <mjw@fedoraproject.org> - 3.14.0-2
 - Add valgrind-3.14.0-s390x-fix-reg-alloc-vr-vs-fpr.patch.
 - Add valgrind-3.14.0-s390x-sign-extend-lochi.patch.
