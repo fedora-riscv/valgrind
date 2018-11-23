@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.14.0
-Release: 3%{?dist}
+Release: 4%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -118,6 +118,15 @@ Patch8: valgrind-3.14.0-s390x-vec-float-point-tests.patch
 
 # KDE#401277 More bugs in z13 support
 Patch9: valgrind-3.14.0-s390z-more-z13-fixes.patch
+
+# KDE#386945 Bogus memcheck errors on ppc64(le) when using strcmp
+Patch10: valgrind-3.14.0-get_otrack_shadow_offset_wrk-ppc.patch
+Patch11: valgrind-3.14.0-new-strlen-IROps.patch
+Patch12: valgrind-3.14.0-ppc-instr-new-IROps.patch
+Patch13: valgrind-3.14.0-memcheck-new-IROps.patch
+Patch14: valgrind-3.14.0-ppc-frontend-new-IROps.patch
+Patch15: valgrind-3.14.0-transform-popcount64-ctznat64.patch
+Patch16: valgrind-3.14.0-enable-ppc-Iop_Sar_Shr8.patch
 
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -260,6 +269,13 @@ Valgrind User Manual for details.
 %patch7 -p1
 %patch8 -p1
 %patch9 -p1
+%patch10 -p1
+%patch11 -p1
+%patch12 -p1
+%patch13 -p1
+%patch14 -p1
+%patch15 -p1
+%patch16 -p1
 
 %build
 CC=gcc
@@ -494,6 +510,15 @@ fi
 %endif
 
 %changelog
+* Fri Nov 23 2018 Mark Wielaard  <mjw@fedoraproject.org> - 3.14.0-4
+- Add valgrind-3.14.0-get_otrack_shadow_offset_wrk-ppc.patch,
+  valgrind-3.14.0-new-strlen-IROps.patch,
+  valgrind-3.14.0-ppc-instr-new-IROps.patch,
+  valgrind-3.14.0-memcheck-new-IROps.patch,
+  valgrind-3.14.0-ppc-frontend-new-IROps.patch,
+  valgrind-3.14.0-transform-popcount64-ctznat64.patch and
+  valgrind-3.14.0-enable-ppc-Iop_Sar_Shr8.patch (#1652926)
+
 * Wed Nov 21 2018 Mark Wielaard  <mjw@fedoraproject.org> - 3.14.0-3
 - Add valgrind-3.14.0-s390z-more-z13-fixes.patch.
 

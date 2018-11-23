@@ -1,0 +1,124 @@
+commit 4271989815b5fc933c1e29bc75507c2726dc3738
+Author: Julian Seward <jseward@acm.org>
+Date:   Tue Nov 20 10:52:33 2018 +0100
+
+    Add some new IROps to support improved Memcheck analysis of strlen etc.
+    
+    This is part of the fix for bug 386945.  It adds the following IROps, plus
+    their supporting type- and printing- fragments:
+    
+    Iop_Reverse8sIn32_x1: 32-bit byteswap.  A fancy name, but it is consistent
+    with naming for the other swapping IROps that already exist.
+    
+    Iop_PopCount64, Iop_PopCount32: population count
+    
+    Iop_ClzNat64, Iop_ClzNat32, Iop_CtzNat64, Iop_CtzNat32: counting leading and
+    trailing zeroes, with "natural" (Nat) semantics for a zero input, meaning, in
+    the case of zero input, return the number of bits in the word.  These
+    functionally overlap with the existing Iop_Clz64, Iop_Clz32, Iop_Ctz64,
+    Iop_Ctz32.  The existing operations are undefined in case of a zero input.
+    Adding these new variants avoids the complexity of having to change the
+    declared semantics of the existing operations.  Instead they are deprecated
+    but still available for use.
+
+diff --git a/VEX/priv/ir_defs.c b/VEX/priv/ir_defs.c
+index 823b6be..3221033 100644
+--- a/VEX/priv/ir_defs.c
++++ b/VEX/priv/ir_defs.c
+@@ -194,6 +194,14 @@ void ppIROp ( IROp op )
+       case Iop_Ctz64:    vex_printf("Ctz64"); return;
+       case Iop_Ctz32:    vex_printf("Ctz32"); return;
+ 
++      case Iop_ClzNat64: vex_printf("ClzNat64"); return;
++      case Iop_ClzNat32: vex_printf("ClzNat32"); return;
++      case Iop_CtzNat64: vex_printf("CtzNat64"); return;
++      case Iop_CtzNat32: vex_printf("CtzNat32"); return;
++
++      case Iop_PopCount64: vex_printf("PopCount64"); return;
++      case Iop_PopCount32: vex_printf("PopCount32"); return;
++
+       case Iop_CmpLT32S: vex_printf("CmpLT32S"); return;
+       case Iop_CmpLE32S: vex_printf("CmpLE32S"); return;
+       case Iop_CmpLT32U: vex_printf("CmpLT32U"); return;
+@@ -395,6 +403,7 @@ void ppIROp ( IROp op )
+ 
+       case Iop_CmpNEZ16x2: vex_printf("CmpNEZ16x2"); return;
+       case Iop_CmpNEZ8x4:  vex_printf("CmpNEZ8x4"); return;
++      case Iop_Reverse8sIn32_x1: vex_printf("Reverse8sIn32_x1"); return;
+ 
+       case Iop_CmpF64:    vex_printf("CmpF64"); return;
+ 
+@@ -2719,6 +2728,7 @@ void typeOfPrimop ( IROp op,
+          UNARY(Ity_I16, Ity_I16);
+       case Iop_Not32:
+       case Iop_CmpNEZ16x2: case Iop_CmpNEZ8x4:
++      case Iop_Reverse8sIn32_x1:
+          UNARY(Ity_I32, Ity_I32);
+ 
+       case Iop_Not64:
+@@ -2782,9 +2792,13 @@ void typeOfPrimop ( IROp op,
+          BINARY(Ity_I64,Ity_I64, Ity_I128);
+ 
+       case Iop_Clz32: case Iop_Ctz32:
++      case Iop_ClzNat32: case Iop_CtzNat32:
++      case Iop_PopCount32:
+          UNARY(Ity_I32, Ity_I32);
+ 
+       case Iop_Clz64: case Iop_Ctz64:
++      case Iop_ClzNat64: case Iop_CtzNat64:
++      case Iop_PopCount64:
+          UNARY(Ity_I64, Ity_I64);
+ 
+       case Iop_DivU32: case Iop_DivS32: case Iop_DivU32E: case Iop_DivS32E:
+diff --git a/VEX/pub/libvex_ir.h b/VEX/pub/libvex_ir.h
+index 17bcb55..93fa5ac 100644
+--- a/VEX/pub/libvex_ir.h
++++ b/VEX/pub/libvex_ir.h
+@@ -452,12 +452,21 @@ typedef
+       Iop_MullS8, Iop_MullS16, Iop_MullS32, Iop_MullS64,
+       Iop_MullU8, Iop_MullU16, Iop_MullU32, Iop_MullU64,
+ 
+-      /* Wierdo integer stuff */
++      /* Counting bits */
++      /* Ctz64/Ctz32/Clz64/Clz32 are UNDEFINED when given arguments of zero.
++         You must ensure they are never given a zero argument.  As of
++         2018-Nov-14 they are deprecated.  Try to use the Nat variants
++         immediately below, if you can.
++      */
+       Iop_Clz64, Iop_Clz32,   /* count leading zeroes */
+       Iop_Ctz64, Iop_Ctz32,   /* count trailing zeros */
+-      /* Ctz64/Ctz32/Clz64/Clz32 are UNDEFINED when given arguments of
+-         zero.  You must ensure they are never given a zero argument.
+-      */
++      /* Count leading/trailing zeroes, with "natural" semantics for the
++         case where the input is zero: then the result is the number of bits
++         in the word. */
++      Iop_ClzNat64, Iop_ClzNat32,
++      Iop_CtzNat64, Iop_CtzNat32,
++      /* Population count -- compute the number of 1 bits in the argument. */
++      Iop_PopCount64, Iop_PopCount32,
+ 
+       /* Standard integer comparisons */
+       Iop_CmpLT32S, Iop_CmpLT64S,
+@@ -831,6 +840,9 @@ typedef
+       /* MISC (vector integer cmp != 0) */
+       Iop_CmpNEZ16x2, Iop_CmpNEZ8x4,
+ 
++      /* Byte swap in a 32-bit word */
++      Iop_Reverse8sIn32_x1,
++
+       /* ------------------ 64-bit SIMD FP ------------------------ */
+ 
+       /* Convertion to/from int */
+@@ -1034,8 +1046,9 @@ typedef
+       Iop_Slice64,  // (I64, I64, I8) -> I64
+ 
+       /* REVERSE the order of chunks in vector lanes.  Chunks must be
+-         smaller than the vector lanes (obviously) and so may be 8-,
+-         16- and 32-bit in size. */
++         smaller than the vector lanes (obviously) and so may be 8-, 16- and
++         32-bit in size.  Note that the degenerate case,
++         Iop_Reverse8sIn64_x1, is a simply a vanilla byte-swap. */
+       /* Examples:
+             Reverse8sIn16_x4([a,b,c,d,e,f,g,h]) = [b,a,d,c,f,e,h,g]
+             Reverse8sIn32_x2([a,b,c,d,e,f,g,h]) = [d,c,b,a,h,g,f,e]
