@@ -128,6 +128,9 @@ Patch14: valgrind-3.14.0-ppc-frontend-new-IROps.patch
 Patch15: valgrind-3.14.0-transform-popcount64-ctznat64.patch
 Patch16: valgrind-3.14.0-enable-ppc-Iop_Sar_Shr8.patch
 
+# KDE#401627 memcheck errors with glibc avx2 optimized wcsncmp
+Patch17: valgrind-3.14.0-wcsncmp.patch
+
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -276,6 +279,7 @@ Valgrind User Manual for details.
 %patch14 -p1
 %patch15 -p1
 %patch16 -p1
+%patch17 -p1
 
 %build
 CC=gcc
@@ -510,6 +514,9 @@ fi
 %endif
 
 %changelog
+* Sat Dec  1 2018 Mark Wielaard <mjw@fedoraproject.org>
+- Add valgrind-3.14.0-wcsncmp.patch (#1645971)
+
 * Fri Nov 23 2018 Mark Wielaard  <mjw@fedoraproject.org> - 3.14.0-4
 - Add valgrind-3.14.0-get_otrack_shadow_offset_wrk-ppc.patch,
   valgrind-3.14.0-new-strlen-IROps.patch,
