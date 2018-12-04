@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.14.0
-Release: 4%{?dist}
+Release: 5%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -514,8 +514,10 @@ fi
 %endif
 
 %changelog
-* Sat Dec  1 2018 Mark Wielaard <mjw@fedoraproject.org>
+* Sat Dec  1 2018 Mark Wielaard <mjw@fedoraproject.org> - 3.14.0.5
 - Add valgrind-3.14.0-wcsncmp.patch (#1645971)
+- Replace valgrind-3.14.0-s390x-vec-float-point-{code,test}.patch
+  with upstream versions.
 
 * Fri Nov 23 2018 Mark Wielaard  <mjw@fedoraproject.org> - 3.14.0-4
 - Add valgrind-3.14.0-get_otrack_shadow_offset_wrk-ppc.patch,
