@@ -138,6 +138,7 @@ Patch18: valgrind-3.14.0-final_tidyup.patch
 # KDE#386945 Bogus memcheck errors on ppc64(le) when using strcmp
 # See also patches 10 to 16 (yes, there are this many...)
 Patch19: valgrind-3.14.0-ppc64-ldbrx.patch
+Patch20: valgrind-3.14.0-ppc64-unaligned-words.patch
 
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -290,6 +291,7 @@ Valgrind User Manual for details.
 %patch17 -p1
 %patch18 -p1
 %patch19 -p1
+%patch20 -p1
 
 %build
 CC=gcc
@@ -527,6 +529,7 @@ fi
 * Wed Dec 12 2018 Mark Wielaard <mjw@fedoraproject.org>
 - Add valgrind-3.14.0-final_tidyup.patch
 - Add valgrind-3.14.0-ppc64-ldbrx.patch
+- Add valgrind-3.14.0-ppc64-unaligned-words.patch
 
 * Sat Dec  1 2018 Mark Wielaard <mjw@fedoraproject.org> - 3.14.0.5
 - Add valgrind-3.14.0-wcsncmp.patch (#1645971)
