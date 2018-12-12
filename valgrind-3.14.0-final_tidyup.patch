@@ -1,0 +1,59 @@
+commit be7a73004583aab5d4c97cf55276ca58d5b3090b
+Author: Mark Wielaard <mark@klomp.org>
+Date:   Wed Dec 12 14:15:28 2018 +0100
+
+    Mark helper regs defined in final_tidyup before freeres_wrapper call.
+    
+    In final_tidyup we setup the guest to call the freeres_wrapper, which
+    will (possibly) call __gnu_cxx::__freeres() and/or __libc_freeres().
+    
+    In a couple of cases (ppc64be, ppc64le and mips32) this involves setting
+    up one or more helper registers. Since we setup these guest registers
+    we should make sure to mark them as fully defined. Otherwise we might
+    see spurious warnings about undefined value usage if the guest register
+    happened to not be fully defined before.
+    
+    This fixes PR402006.
+
+diff --git a/coregrind/m_main.c b/coregrind/m_main.c
+index 00702fc..22872a2 100644
+--- a/coregrind/m_main.c
++++ b/coregrind/m_main.c
+@@ -2304,22 +2304,35 @@ static void final_tidyup(ThreadId tid)
+                    "Caught __NR_exit; running %s wrapper\n", msgs[to_run - 1]);
+    }
+       
+-   /* set thread context to point to freeres_wrapper */
+-   /* ppc64be-linux note: freeres_wrapper gives us the real
++   /* Set thread context to point to freeres_wrapper.
++      ppc64be-linux note: freeres_wrapper gives us the real
+       function entry point, not a fn descriptor, so can use it
+       directly.  However, we need to set R2 (the toc pointer)
+       appropriately. */
+    VG_(set_IP)(tid, freeres_wrapper);
++
+ #  if defined(VGP_ppc64be_linux)
+    VG_(threads)[tid].arch.vex.guest_GPR2 = r2;
++   VG_TRACK(post_reg_write, Vg_CoreClientReq, tid,
++            offsetof(VexGuestPPC64State, guest_GPR2),
++            sizeof(VG_(threads)[tid].arch.vex.guest_GPR2));
+ #  elif  defined(VGP_ppc64le_linux)
+    /* setting GPR2 but not really needed, GPR12 is needed */
+    VG_(threads)[tid].arch.vex.guest_GPR2  = freeres_wrapper;
++   VG_TRACK(post_reg_write, Vg_CoreClientReq, tid,
++            offsetof(VexGuestPPC64State, guest_GPR2),
++            sizeof(VG_(threads)[tid].arch.vex.guest_GPR2));
+    VG_(threads)[tid].arch.vex.guest_GPR12 = freeres_wrapper;
++   VG_TRACK(post_reg_write, Vg_CoreClientReq, tid,
++            offsetof(VexGuestPPC64State, guest_GPR12),
++            sizeof(VG_(threads)[tid].arch.vex.guest_GPR12));
+ #  endif
+    /* mips-linux note: we need to set t9 */
+ #  if defined(VGP_mips32_linux) || defined(VGP_mips64_linux)
+    VG_(threads)[tid].arch.vex.guest_r25 = freeres_wrapper;
++   VG_TRACK(post_reg_write, Vg_CoreClientReq, tid,
++            offsetof(VexGuestMIPS32State, guest_r25),
++            sizeof(VG_(threads)[tid].arch.vex.guest_r25));
+ #  endif
+ 
+    /* Pass a parameter to freeres_wrapper(). */

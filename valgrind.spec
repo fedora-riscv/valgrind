@@ -131,6 +131,10 @@ Patch16: valgrind-3.14.0-enable-ppc-Iop_Sar_Shr8.patch
 # KDE#401627 memcheck errors with glibc avx2 optimized wcsncmp
 Patch17: valgrind-3.14.0-wcsncmp.patch
 
+# KDE#402006 mark helper regs defined in final_tidyup before freeres_wrapper
+# Prereq for KDE#386945
+Patch18: valgrind-3.14.0-final_tidyup.patch
+
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -280,6 +284,7 @@ Valgrind User Manual for details.
 %patch15 -p1
 %patch16 -p1
 %patch17 -p1
+%patch18 -p1
 
 %build
 CC=gcc
@@ -514,6 +519,9 @@ fi
 %endif
 
 %changelog
+* Wed Dec 12 2018 Mark Wielaard <mjw@fedoraproject.org>
+- Add valgrind-3.14.0-final_tidyup.patch
+
 * Sat Dec  1 2018 Mark Wielaard <mjw@fedoraproject.org> - 3.14.0.5
 - Add valgrind-3.14.0-wcsncmp.patch (#1645971)
 - Replace valgrind-3.14.0-s390x-vec-float-point-{code,test}.patch
