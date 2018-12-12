@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.14.0
-Release: 5%{?dist}
+Release: 6%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -150,6 +150,9 @@ Patch26: valgrind-3.14.0-jm-vmx-constraints.patch
 
 # commit 0c701ba2a Fix sigkill.stderr.exp for glibc-2.28.
 Patch27: valgrind-3.14.0-sigkill.patch
+
+# KDE#402048 Implement minimal ptrace support for ppc64[le]-linux.
+Patch28: valgrind-3.14.0-ppc64-ptrace.patch
 
 
 %if %{build_multilib}
@@ -311,6 +314,7 @@ Valgrind User Manual for details.
 %patch25 -p1
 %patch26 -p1
 %patch27 -p1
+%patch28 -p1
 
 %build
 CC=gcc
@@ -545,7 +549,7 @@ fi
 %endif
 
 %changelog
-* Wed Dec 12 2018 Mark Wielaard <mjw@fedoraproject.org>
+* Wed Dec 12 2018 Mark Wielaard <mjw@fedoraproject.org> - 3.14.0-6
 - Add valgrind-3.14.0-final_tidyup.patch
 - Add valgrind-3.14.0-ppc64-ldbrx.patch
 - Add valgrind-3.14.0-ppc64-unaligned-words.patch
@@ -556,8 +560,9 @@ fi
 - Add valgrind-3.14.0-undef_malloc_args.patch
 - Add valgrind-3.14.0-jm-vmx-constraints.patch
 - Add valgrind-3.14.0-sigkill.patch
+- Add valgrind-3.14.0-ppc64-ptrace.patch
 
-* Sat Dec  1 2018 Mark Wielaard <mjw@fedoraproject.org> - 3.14.0.5
+* Sat Dec  1 2018 Mark Wielaard <mjw@fedoraproject.org> - 3.14.0-5
 - Add valgrind-3.14.0-wcsncmp.patch (#1645971)
 - Replace valgrind-3.14.0-s390x-vec-float-point-{code,test}.patch
   with upstream versions.
