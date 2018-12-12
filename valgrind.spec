@@ -140,6 +140,7 @@ Patch18: valgrind-3.14.0-final_tidyup.patch
 Patch19: valgrind-3.14.0-ppc64-ldbrx.patch
 Patch20: valgrind-3.14.0-ppc64-unaligned-words.patch
 Patch21: valgrind-3.14.0-ppc64-lxvd2x.patch
+Patch22: valgrind-3.14.0-ppc64-unaligned-vecs.patch
 
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -294,6 +295,7 @@ Valgrind User Manual for details.
 %patch19 -p1
 %patch20 -p1
 %patch21 -p1
+%patch22 -p1
 
 %build
 CC=gcc
@@ -533,6 +535,7 @@ fi
 - Add valgrind-3.14.0-ppc64-ldbrx.patch
 - Add valgrind-3.14.0-ppc64-unaligned-words.patch
 - Add valgrind-3.14.0-ppc64-lxvd2x.patch
+- Add valgrind-3.14.0-ppc64-unaligned-vecs.patch
 
 * Sat Dec  1 2018 Mark Wielaard <mjw@fedoraproject.org> - 3.14.0.5
 - Add valgrind-3.14.0-wcsncmp.patch (#1645971)
