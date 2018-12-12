@@ -143,6 +143,7 @@ Patch21: valgrind-3.14.0-ppc64-lxvd2x.patch
 Patch22: valgrind-3.14.0-ppc64-unaligned-vecs.patch
 Patch23: valgrind-3.14.0-ppc64-lxvb16x.patch
 Patch24: valgrind-3.14.0-set_AV_CR6.patch
+Patch25: valgrind-3.14.0-undef_malloc_args.patch
 
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -300,6 +301,7 @@ Valgrind User Manual for details.
 %patch22 -p1
 %patch23 -p1
 %patch24 -p1
+%patch25 -p1
 
 %build
 CC=gcc
@@ -542,6 +544,7 @@ fi
 - Add valgrind-3.14.0-ppc64-unaligned-vecs.patch
 - Add valgrind-3.14.0-ppc64-lxvb16x.patch
 - Add valgrind-3.14.0-set_AV_CR6.patch
+- Add valgrind-3.14.0-undef_malloc_args.patch
 
 * Sat Dec  1 2018 Mark Wielaard <mjw@fedoraproject.org> - 3.14.0.5
 - Add valgrind-3.14.0-wcsncmp.patch (#1645971)

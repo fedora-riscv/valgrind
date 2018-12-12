@@ -1,0 +1,98 @@
+commit 262275da43425ba2b8c240e47063e36b39167996
+Author: Mark Wielaard <mark@klomp.org>
+Date:   Wed Dec 12 13:55:01 2018 +0100
+
+    Fix memcheck/tests/undef_malloc_args testcase.
+
+diff --git a/coregrind/m_replacemalloc/vg_replace_malloc.c b/coregrind/m_replacemalloc/vg_replace_malloc.c
+index 28bdb4a..564829a 100644
+--- a/coregrind/m_replacemalloc/vg_replace_malloc.c
++++ b/coregrind/m_replacemalloc/vg_replace_malloc.c
+@@ -216,9 +216,19 @@ static void init(void);
+    Apart of allowing memcheck to detect an error, the macro
+    TRIGGER_MEMCHECK_ERROR_IF_UNDEFINED has no effect and
+    has a minimal cost for other tools replacing malloc functions.
++
++   Creating an "artificial" use of _x that works reliably is not entirely
++   straightforward.  Simply comparing it against zero often produces no
++   warning if _x contains at least one nonzero bit is defined, because
++   Memcheck knows that the result of the comparison will be defined (cf
++   expensiveCmpEQorNE).
++
++   Really we want to PCast _x, so as to create a value which is entirely
++   undefined if any bit of _x is undefined.  But there's no portable way to do
++   that.
+ */
+-#define TRIGGER_MEMCHECK_ERROR_IF_UNDEFINED(x) \
+-   if ((ULong)x == 0) __asm__ __volatile__( "" ::: "memory" )
++#define TRIGGER_MEMCHECK_ERROR_IF_UNDEFINED(_x) \
++   if ((UWord)(_x) == 0) __asm__ __volatile__( "" ::: "memory" )
+ 
+ /*---------------------- malloc ----------------------*/
+ 
+@@ -504,7 +514,7 @@ static void init(void);
+    void VG_REPLACE_FUNCTION_EZU(10040,soname,fnname) (void *zone, void *p)  \
+    { \
+       DO_INIT; \
+-      TRIGGER_MEMCHECK_ERROR_IF_UNDEFINED((UWord) zone);	\
++      TRIGGER_MEMCHECK_ERROR_IF_UNDEFINED((UWord)zone ^ (UWord)p); \
+       MALLOC_TRACE(#fnname "(%p, %p)\n", zone, p ); \
+       if (p == NULL)  \
+          return; \
+diff --git a/memcheck/tests/undef_malloc_args.c b/memcheck/tests/undef_malloc_args.c
+index 99e2799..654d70d 100644
+--- a/memcheck/tests/undef_malloc_args.c
++++ b/memcheck/tests/undef_malloc_args.c
+@@ -11,29 +11,29 @@ int main (int argc, char*argv[])
+ 
+    {
+       size_t size = def_size;
+-      (void) VALGRIND_MAKE_MEM_UNDEFINED(&size, 1);
++      (void) VALGRIND_MAKE_MEM_UNDEFINED(&size, sizeof(size));
+       p = malloc(size);
+    }
+ 
+-   (void) VALGRIND_MAKE_MEM_UNDEFINED(&p, 1);
++   (void) VALGRIND_MAKE_MEM_UNDEFINED(&p, sizeof(p));
+    new_p = realloc(p, def_size);
+ 
+-   (void) VALGRIND_MAKE_MEM_UNDEFINED(&new_p, 1);
++   (void) VALGRIND_MAKE_MEM_UNDEFINED(&new_p, sizeof(new_p));
+    new_p = realloc(new_p, def_size);
+ 
+-   (void) VALGRIND_MAKE_MEM_UNDEFINED(&new_p, 1);
++   (void) VALGRIND_MAKE_MEM_UNDEFINED(&new_p, sizeof(new_p));
+    free (new_p);
+ 
+    {
+       size_t nmemb = 1;
+-      (void) VALGRIND_MAKE_MEM_UNDEFINED(&nmemb, 1);
++      (void) VALGRIND_MAKE_MEM_UNDEFINED(&nmemb, sizeof(nmemb));
+       new_p = calloc(nmemb, def_size);
+       free (new_p);
+    }
+ #if 0
+    {
+       size_t alignment = 1;
+-      (void) VALGRIND_MAKE_MEM_UNDEFINED(&alignment, 1);
++      (void) VALGRIND_MAKE_MEM_UNDEFINED(&alignment, sizeof(alignment));
+       new_p = memalign(alignment, def_size);
+       free(new_p);
+    }
+@@ -41,14 +41,14 @@ int main (int argc, char*argv[])
+    {
+       size_t nmemb = 16;
+       size_t size = def_size;
+-      (void) VALGRIND_MAKE_MEM_UNDEFINED(&size, 1);
++      (void) VALGRIND_MAKE_MEM_UNDEFINED(&size, sizeof(size));
+       new_p = memalign(nmemb, size);
+       free(new_p);
+    }
+ 
+    {
+       size_t size = def_size;
+-      (void) VALGRIND_MAKE_MEM_UNDEFINED(&size, 1);
++      (void) VALGRIND_MAKE_MEM_UNDEFINED(&size, sizeof(size));
+       new_p = valloc(size);
+       free (new_p);
+    }
