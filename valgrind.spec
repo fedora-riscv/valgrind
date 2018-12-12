@@ -135,6 +135,10 @@ Patch17: valgrind-3.14.0-wcsncmp.patch
 # Prereq for KDE#386945
 Patch18: valgrind-3.14.0-final_tidyup.patch
 
+# KDE#386945 Bogus memcheck errors on ppc64(le) when using strcmp
+# See also patches 10 to 16 (yes, there are this many...)
+Patch19: valgrind-3.14.0-ppc64-ldbrx.patch
+
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -285,6 +289,7 @@ Valgrind User Manual for details.
 %patch16 -p1
 %patch17 -p1
 %patch18 -p1
+%patch19 -p1
 
 %build
 CC=gcc
@@ -521,6 +526,7 @@ fi
 %changelog
 * Wed Dec 12 2018 Mark Wielaard <mjw@fedoraproject.org>
 - Add valgrind-3.14.0-final_tidyup.patch
+- Add valgrind-3.14.0-ppc64-ldbrx.patch
 
 * Sat Dec  1 2018 Mark Wielaard <mjw@fedoraproject.org> - 3.14.0.5
 - Add valgrind-3.14.0-wcsncmp.patch (#1645971)
