@@ -145,6 +145,9 @@ Patch23: valgrind-3.14.0-ppc64-lxvb16x.patch
 Patch24: valgrind-3.14.0-set_AV_CR6.patch
 Patch25: valgrind-3.14.0-undef_malloc_args.patch
 
+# KDE#401822 none/tests/ppc64/jm-vmx fails and produces assembler warnings
+Patch26: valgrind-3.14.0-jm-vmx-constraints.patch
+
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -302,6 +305,7 @@ Valgrind User Manual for details.
 %patch23 -p1
 %patch24 -p1
 %patch25 -p1
+%patch26 -p1
 
 %build
 CC=gcc
@@ -545,6 +549,7 @@ fi
 - Add valgrind-3.14.0-ppc64-lxvb16x.patch
 - Add valgrind-3.14.0-set_AV_CR6.patch
 - Add valgrind-3.14.0-undef_malloc_args.patch
+- Add valgrind-3.14.0-jm-vmx-constraints.patch
 
 * Sat Dec  1 2018 Mark Wielaard <mjw@fedoraproject.org> - 3.14.0.5
 - Add valgrind-3.14.0-wcsncmp.patch (#1645971)
