@@ -1,0 +1,24 @@
+commit 43fe4bc236d667257eeebfb4f6bcbe2b92aea455
+Author: Mark Wielaard <mark@klomp.org>
+Date:   Fri Dec 14 14:32:27 2018 +0100
+
+    arm64: Fix PTRACE_TRACEME memcheck/tests/linux/getregset.vgtest testcase.
+    
+    The sys_ptrace post didn't mark the thread as being in traceme mode.
+    This occassionally would make the memcheck/tests/linux/getregset.vgtest
+    testcase fail. With this patch it reliably passes.
+
+diff --git a/coregrind/m_syswrap/syswrap-arm64-linux.c b/coregrind/m_syswrap/syswrap-arm64-linux.c
+index 9ef54b4..650f5b9 100644
+--- a/coregrind/m_syswrap/syswrap-arm64-linux.c
++++ b/coregrind/m_syswrap/syswrap-arm64-linux.c
+@@ -499,6 +499,9 @@ PRE(sys_ptrace)
+ POST(sys_ptrace)
+ {
+    switch (ARG1) {
++   case VKI_PTRACE_TRACEME:
++         ML_(linux_POST_traceme)(tid);
++         break;
+    case VKI_PTRACE_PEEKTEXT:
+    case VKI_PTRACE_PEEKDATA:
+    case VKI_PTRACE_PEEKUSR:

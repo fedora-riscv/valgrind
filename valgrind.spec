@@ -154,6 +154,9 @@ Patch27: valgrind-3.14.0-sigkill.patch
 # KDE#402048 Implement minimal ptrace support for ppc64[le]-linux.
 Patch28: valgrind-3.14.0-ppc64-ptrace.patch
 
+# commit 43fe4bc23 arm64: Fix PTRACE_TRACEME
+Patch29: valgrind-3.14.0-arm64-ptrace-traceme.patch
+
 
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -315,6 +318,7 @@ Valgrind User Manual for details.
 %patch26 -p1
 %patch27 -p1
 %patch28 -p1
+%patch29 -p1
 
 %build
 CC=gcc
@@ -549,6 +553,9 @@ fi
 %endif
 
 %changelog
+* Fri Dec 14 2018 Mark Wielaard <mjw@fedoraproject.org>
+- Add valgrind-3.14.0-arm64-ptrace-traceme.patch
+
 * Wed Dec 12 2018 Mark Wielaard <mjw@fedoraproject.org> - 3.14.0-6
 - Add valgrind-3.14.0-final_tidyup.patch
 - Add valgrind-3.14.0-ppc64-ldbrx.patch
