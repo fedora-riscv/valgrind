@@ -1,0 +1,12 @@
+diff --git a/memcheck/mc_translate.c b/memcheck/mc_translate.c
+index c24db91..1e770b3 100644
+--- a/memcheck/mc_translate.c
++++ b/memcheck/mc_translate.c
+@@ -8022,6 +8022,7 @@ static inline void noteTmpUsesIn ( /*MOD*/HowUsed* useEnv,
+       use info. */
+    switch (at->tag) {
+       case Iex_GSPTR:
++      case Iex_VECRET:
+       case Iex_Const:
+          return;
+       case Iex_RdTmp: {

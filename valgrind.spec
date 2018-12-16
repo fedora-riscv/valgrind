@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.14.0
-Release: 6%{?dist}
+Release: 7%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -157,6 +157,8 @@ Patch28: valgrind-3.14.0-ppc64-ptrace.patch
 # commit 43fe4bc23 arm64: Fix PTRACE_TRACEME
 Patch29: valgrind-3.14.0-arm64-ptrace-traceme.patch
 
+# KDE#402134 - assert fail mc_translate.c (noteTmpUsesIn) Iex_VECRET on arm64
+Patch30: valgrind-3.14.0-mc_translate-vecret.patch
 
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -319,6 +321,7 @@ Valgrind User Manual for details.
 %patch27 -p1
 %patch28 -p1
 %patch29 -p1
+%patch30 -p1
 
 %build
 CC=gcc
@@ -553,8 +556,9 @@ fi
 %endif
 
 %changelog
-* Fri Dec 14 2018 Mark Wielaard <mjw@fedoraproject.org>
+* Fri Dec 14 2018 Mark Wielaard <mjw@fedoraproject.org> - 3.14.0-7
 - Add valgrind-3.14.0-arm64-ptrace-traceme.patch
+- Add valgrind-3.14.0-mc_translate-vecret.patch
 
 * Wed Dec 12 2018 Mark Wielaard <mjw@fedoraproject.org> - 3.14.0-6
 - Add valgrind-3.14.0-final_tidyup.patch
