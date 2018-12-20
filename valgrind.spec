@@ -477,7 +477,7 @@ echo ===============TESTING===================
 # Make sure test failures show up in build.log
 # Gather up the diffs (at most the first 20 lines for each one)
 MAX_LINES=20
-diff_files=`find . -name '*.diff' | sort`
+diff_files=`find */tests -name '*.diff*' | sort`
 if [ z"$diff_files" = z ] ; then
    echo "Congratulations, all tests passed!" >> diffs
 else
@@ -558,6 +558,7 @@ fi
 %changelog
 * Thu Dec 20 2018 Mark Wielaard <mjw@fedoraproject.org>
 - Update valgrind-3.14.0-jm-vmx-constraints.patch for ppc64.
+- Show all diff files in check, not just the main/default one.
 
 * Fri Dec 14 2018 Mark Wielaard <mjw@fedoraproject.org> - 3.14.0-7
 - Add valgrind-3.14.0-arm64-ptrace-traceme.patch
