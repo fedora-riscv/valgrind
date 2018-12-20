@@ -556,6 +556,9 @@ fi
 %endif
 
 %changelog
+* Thu Dec 20 2018 Mark Wielaard <mjw@fedoraproject.org>
+- Update valgrind-3.14.0-jm-vmx-constraints.patch for ppc64.
+
 * Fri Dec 14 2018 Mark Wielaard <mjw@fedoraproject.org> - 3.14.0-7
 - Add valgrind-3.14.0-arm64-ptrace-traceme.patch
 - Add valgrind-3.14.0-mc_translate-vecret.patch
