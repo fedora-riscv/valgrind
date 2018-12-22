@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.14.0
-Release: 7%{?dist}
+Release: 8%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -556,7 +556,7 @@ fi
 %endif
 
 %changelog
-* Thu Dec 20 2018 Mark Wielaard <mjw@fedoraproject.org>
+* Thu Dec 20 2018 Mark Wielaard <mjw@fedoraproject.org> - 3.14.0-8
 - Update valgrind-3.14.0-jm-vmx-constraints.patch for ppc64.
 - Show all diff files in check, not just the main/default one.
 
