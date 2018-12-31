@@ -1,0 +1,299 @@
+From cee6817c2f4637f859829c7caeac168ccbb74850 Mon Sep 17 00:00:00 2001
+From: Mark Wielaard <mark@klomp.org>
+Date: Sun, 23 Dec 2018 13:29:27 +0100
+Subject: [PATCH] Also test memcheck/tests/vbit-test on any secondary arch.
+
+If we are building a secondary arch then also build and run ther
+memcheck vbit-test for that architecture.
+---
+ memcheck/tests/vbit-test/Makefile.am              | 20 ++++++++++++++++++++
+ memcheck/tests/vbit-test/vbit-test-sec.stderr.exp |  0
+ memcheck/tests/vbit-test/vbit-test-sec.vgtest     |  3 +++
+ 3 files changed, 23 insertions(+)
+ create mode 100644 memcheck/tests/vbit-test/vbit-test-sec.stderr.exp
+ create mode 100644 memcheck/tests/vbit-test/vbit-test-sec.vgtest
+
+diff --git a/memcheck/tests/vbit-test/Makefile.am b/memcheck/tests/vbit-test/Makefile.am
+index 371a71b..124e82e 100644
+--- a/memcheck/tests/vbit-test/Makefile.am
++++ b/memcheck/tests/vbit-test/Makefile.am
+@@ -17,6 +17,10 @@ noinst_HEADERS = vtest.h vbits.h
+ 
+ noinst_PROGRAMS = vbit-test
+ 
++if VGCONF_HAVE_PLATFORM_SEC
++noinst_PROGRAMS += vbit-test-sec
++endif
++
+ if VGCONF_OS_IS_DARWIN
+ noinst_DSYMS = $(noinst_PROGRAMS)
+ endif
+@@ -41,3 +45,19 @@ vbit_test_CFLAGS       = $(AM_CFLAGS_PRI)
+ vbit_test_DEPENDENCIES = 
+ vbit_test_LDADD        = $(top_builddir)/VEX/libvex-@VGCONF_ARCH_PRI@-@VGCONF_OS@.a
+ vbit_test_LDFLAGS      = $(AM_CFLAGS_PRI) @LIB_UBSAN@
++
++if VGCONF_HAVE_PLATFORM_SEC
++vbit_test_sec_SOURCES      = $(SOURCES)
++vbit_test_sec_CPPFLAGS     = $(AM_CPPFLAGS_SEC) \
++                             $(AM_CPPFLAGS_@VGCONF_PLATFORM_SEC_CAPS@) \
++                             -I$(top_srcdir)/include  \
++                             -I$(top_srcdir)/memcheck \
++                             -I$(top_srcdir)/VEX/pub
++vbit_test_sec_CFLAGS       = $(AM_CFLAGS_SEC) \
++                             $(AM_CFLAGS_@VGCONF_PLATFORM_SEC_CAPS@)
++vbit_test_sec_DEPENDENCIES = 
++vbit_test_sec_LDADD        = $(top_builddir)/VEX/libvex-@VGCONF_ARCH_SEC@-@VGCONF_OS@.a \
++                              $(TOOL_LDADD_@VGCONF_PLATFORM_SEC_CAPS@)
++vbit_test_sec_LDFLAGS      = $(AM_CFLAGS_SEC) @LIB_UBSAN@ \
++                             $(TOOL_LDFLAGS_@VGCONF_PLATFORM_SEC_CAPS@)
++endif
+diff --git a/memcheck/tests/vbit-test/vbit-test-sec.stderr.exp b/memcheck/tests/vbit-test/vbit-test-sec.stderr.exp
+new file mode 100644
+index 0000000..e69de29
+diff --git a/memcheck/tests/vbit-test/vbit-test-sec.vgtest b/memcheck/tests/vbit-test/vbit-test-sec.vgtest
+new file mode 100644
+index 0000000..2d3c938
+--- /dev/null
++++ b/memcheck/tests/vbit-test/vbit-test-sec.vgtest
+@@ -0,0 +1,3 @@
++prog: vbit-test-sec
++prereq: test -x vbit-test-sec
++vgopts: -q --expensive-definedness-checks=yes
+-- 
+1.8.3.1
+
+diff -ur valgrind-3.14.0.orig/memcheck/tests/vbit-test/Makefile.in valgrind-3.14.0/memcheck/tests/vbit-test/Makefile.in
+--- valgrind-3.14.0.orig/memcheck/tests/vbit-test/Makefile.in	2018-12-23 21:08:18.816768360 +0100
++++ valgrind-3.14.0/memcheck/tests/vbit-test/Makefile.in	2018-12-23 21:09:07.239704508 +0100
+@@ -108,7 +108,8 @@
+ # bionic which is bad because we are not linking with it and the Android
+ # linker will panic.
+ @VGCONF_PLATVARIANT_IS_ANDROID_TRUE@am__append_5 = -nostdlib
+-noinst_PROGRAMS = vbit-test$(EXEEXT)
++noinst_PROGRAMS = vbit-test$(EXEEXT) $(am__EXEEXT_1)
++@VGCONF_HAVE_PLATFORM_SEC_TRUE@am__append_6 = vbit-test-sec
+ subdir = memcheck/tests/vbit-test
+ ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
+ am__aclocal_m4_deps = $(top_srcdir)/configure.ac
+@@ -120,6 +121,7 @@
+ CONFIG_HEADER = $(top_builddir)/config.h
+ CONFIG_CLEAN_FILES =
+ CONFIG_CLEAN_VPATH_FILES =
++@VGCONF_HAVE_PLATFORM_SEC_TRUE@am__EXEEXT_1 = vbit-test-sec$(EXEEXT)
+ PROGRAMS = $(noinst_PROGRAMS)
+ am__objects_1 = vbit_test-main.$(OBJEXT) vbit_test-unary.$(OBJEXT) \
+ 	vbit_test-binary.$(OBJEXT) vbit_test-ternary.$(OBJEXT) \
+@@ -130,6 +132,19 @@
+ vbit_test_OBJECTS = $(am_vbit_test_OBJECTS)
+ vbit_test_LINK = $(CCLD) $(vbit_test_CFLAGS) $(CFLAGS) \
+ 	$(vbit_test_LDFLAGS) $(LDFLAGS) -o $@
++am__vbit_test_sec_SOURCES_DIST = main.c unary.c binary.c ternary.c \
++	qernary.c util.c vbits.c irops.c valgrind.c
++am__objects_2 = vbit_test_sec-main.$(OBJEXT) \
++	vbit_test_sec-unary.$(OBJEXT) vbit_test_sec-binary.$(OBJEXT) \
++	vbit_test_sec-ternary.$(OBJEXT) \
++	vbit_test_sec-qernary.$(OBJEXT) vbit_test_sec-util.$(OBJEXT) \
++	vbit_test_sec-vbits.$(OBJEXT) vbit_test_sec-irops.$(OBJEXT) \
++	vbit_test_sec-valgrind.$(OBJEXT)
++@VGCONF_HAVE_PLATFORM_SEC_TRUE@am_vbit_test_sec_OBJECTS =  \
++@VGCONF_HAVE_PLATFORM_SEC_TRUE@	$(am__objects_2)
++vbit_test_sec_OBJECTS = $(am_vbit_test_sec_OBJECTS)
++vbit_test_sec_LINK = $(CCLD) $(vbit_test_sec_CFLAGS) $(CFLAGS) \
++	$(vbit_test_sec_LDFLAGS) $(LDFLAGS) -o $@
+ SCRIPTS = $(dist_noinst_SCRIPTS)
+ AM_V_P = $(am__v_P_@AM_V@)
+ am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
+@@ -163,7 +178,7 @@
+ am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
+ am__v_CCLD_0 = @echo "  CCLD    " $@;
+ am__v_CCLD_1 = 
+-DIST_SOURCES = $(vbit_test_SOURCES)
++DIST_SOURCES = $(vbit_test_SOURCES) $(am__vbit_test_sec_SOURCES_DIST)
+ am__can_run_installinfo = \
+   case $$AM_UPDATE_INFO_DIR in \
+     n|no|NO) false;; \
+@@ -600,6 +615,23 @@
+ vbit_test_DEPENDENCIES = 
+ vbit_test_LDADD = $(top_builddir)/VEX/libvex-@VGCONF_ARCH_PRI@-@VGCONF_OS@.a
+ vbit_test_LDFLAGS = $(AM_CFLAGS_PRI) @LIB_UBSAN@
++@VGCONF_HAVE_PLATFORM_SEC_TRUE@vbit_test_sec_SOURCES = $(SOURCES)
++@VGCONF_HAVE_PLATFORM_SEC_TRUE@vbit_test_sec_CPPFLAGS = $(AM_CPPFLAGS_SEC) \
++@VGCONF_HAVE_PLATFORM_SEC_TRUE@                             $(AM_CPPFLAGS_@VGCONF_PLATFORM_SEC_CAPS@) \
++@VGCONF_HAVE_PLATFORM_SEC_TRUE@                             -I$(top_srcdir)/include  \
++@VGCONF_HAVE_PLATFORM_SEC_TRUE@                             -I$(top_srcdir)/memcheck \
++@VGCONF_HAVE_PLATFORM_SEC_TRUE@                             -I$(top_srcdir)/VEX/pub
++
++@VGCONF_HAVE_PLATFORM_SEC_TRUE@vbit_test_sec_CFLAGS = $(AM_CFLAGS_SEC) \
++@VGCONF_HAVE_PLATFORM_SEC_TRUE@                             $(AM_CFLAGS_@VGCONF_PLATFORM_SEC_CAPS@)
++
++@VGCONF_HAVE_PLATFORM_SEC_TRUE@vbit_test_sec_DEPENDENCIES = 
++@VGCONF_HAVE_PLATFORM_SEC_TRUE@vbit_test_sec_LDADD = $(top_builddir)/VEX/libvex-@VGCONF_ARCH_SEC@-@VGCONF_OS@.a \
++@VGCONF_HAVE_PLATFORM_SEC_TRUE@                              $(TOOL_LDADD_@VGCONF_PLATFORM_SEC_CAPS@)
++
++@VGCONF_HAVE_PLATFORM_SEC_TRUE@vbit_test_sec_LDFLAGS = $(AM_CFLAGS_SEC) @LIB_UBSAN@ \
++@VGCONF_HAVE_PLATFORM_SEC_TRUE@                             $(TOOL_LDFLAGS_@VGCONF_PLATFORM_SEC_CAPS@)
++
+ all: all-am
+ 
+ .SUFFIXES:
+@@ -642,6 +674,10 @@
+ 	@rm -f vbit-test$(EXEEXT)
+ 	$(AM_V_CCLD)$(vbit_test_LINK) $(vbit_test_OBJECTS) $(vbit_test_LDADD) $(LIBS)
+ 
++vbit-test-sec$(EXEEXT): $(vbit_test_sec_OBJECTS) $(vbit_test_sec_DEPENDENCIES) $(EXTRA_vbit_test_sec_DEPENDENCIES) 
++	@rm -f vbit-test-sec$(EXEEXT)
++	$(AM_V_CCLD)$(vbit_test_sec_LINK) $(vbit_test_sec_OBJECTS) $(vbit_test_sec_LDADD) $(LIBS)
++
+ mostlyclean-compile:
+ 	-rm -f *.$(OBJEXT)
+ 
+@@ -657,6 +693,15 @@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/vbit_test-util.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/vbit_test-valgrind.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/vbit_test-vbits.Po@am__quote@
++@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/vbit_test_sec-binary.Po@am__quote@
++@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/vbit_test_sec-irops.Po@am__quote@
++@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/vbit_test_sec-main.Po@am__quote@
++@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/vbit_test_sec-qernary.Po@am__quote@
++@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/vbit_test_sec-ternary.Po@am__quote@
++@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/vbit_test_sec-unary.Po@am__quote@
++@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/vbit_test_sec-util.Po@am__quote@
++@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/vbit_test_sec-valgrind.Po@am__quote@
++@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/vbit_test_sec-vbits.Po@am__quote@
+ 
+ .c.o:
+ @am__fastdepCC_TRUE@	$(AM_V_CC)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.o$$||'`;\
+@@ -799,6 +844,132 @@
+ @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='valgrind.c' object='vbit_test-valgrind.obj' libtool=no @AMDEPBACKSLASH@
+ @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+ @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(vbit_test_CPPFLAGS) $(CPPFLAGS) $(vbit_test_CFLAGS) $(CFLAGS) -c -o vbit_test-valgrind.obj `if test -f 'valgrind.c'; then $(CYGPATH_W) 'valgrind.c'; else $(CYGPATH_W) '$(srcdir)/valgrind.c'; fi`
++
++vbit_test_sec-main.o: main.c
++@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(vbit_test_sec_CPPFLAGS) $(CPPFLAGS) $(vbit_test_sec_CFLAGS) $(CFLAGS) -MT vbit_test_sec-main.o -MD -MP -MF $(DEPDIR)/vbit_test_sec-main.Tpo -c -o vbit_test_sec-main.o `test -f 'main.c' || echo '$(srcdir)/'`main.c
++@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/vbit_test_sec-main.Tpo $(DEPDIR)/vbit_test_sec-main.Po
++@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='main.c' object='vbit_test_sec-main.o' libtool=no @AMDEPBACKSLASH@
++@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
++@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(vbit_test_sec_CPPFLAGS) $(CPPFLAGS) $(vbit_test_sec_CFLAGS) $(CFLAGS) -c -o vbit_test_sec-main.o `test -f 'main.c' || echo '$(srcdir)/'`main.c
++
++vbit_test_sec-main.obj: main.c
++@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(vbit_test_sec_CPPFLAGS) $(CPPFLAGS) $(vbit_test_sec_CFLAGS) $(CFLAGS) -MT vbit_test_sec-main.obj -MD -MP -MF $(DEPDIR)/vbit_test_sec-main.Tpo -c -o vbit_test_sec-main.obj `if test -f 'main.c'; then $(CYGPATH_W) 'main.c'; else $(CYGPATH_W) '$(srcdir)/main.c'; fi`
++@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/vbit_test_sec-main.Tpo $(DEPDIR)/vbit_test_sec-main.Po
++@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='main.c' object='vbit_test_sec-main.obj' libtool=no @AMDEPBACKSLASH@
++@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
++@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(vbit_test_sec_CPPFLAGS) $(CPPFLAGS) $(vbit_test_sec_CFLAGS) $(CFLAGS) -c -o vbit_test_sec-main.obj `if test -f 'main.c'; then $(CYGPATH_W) 'main.c'; else $(CYGPATH_W) '$(srcdir)/main.c'; fi`
++
++vbit_test_sec-unary.o: unary.c
++@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(vbit_test_sec_CPPFLAGS) $(CPPFLAGS) $(vbit_test_sec_CFLAGS) $(CFLAGS) -MT vbit_test_sec-unary.o -MD -MP -MF $(DEPDIR)/vbit_test_sec-unary.Tpo -c -o vbit_test_sec-unary.o `test -f 'unary.c' || echo '$(srcdir)/'`unary.c
++@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/vbit_test_sec-unary.Tpo $(DEPDIR)/vbit_test_sec-unary.Po
++@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='unary.c' object='vbit_test_sec-unary.o' libtool=no @AMDEPBACKSLASH@
++@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
++@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(vbit_test_sec_CPPFLAGS) $(CPPFLAGS) $(vbit_test_sec_CFLAGS) $(CFLAGS) -c -o vbit_test_sec-unary.o `test -f 'unary.c' || echo '$(srcdir)/'`unary.c
++
++vbit_test_sec-unary.obj: unary.c
++@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(vbit_test_sec_CPPFLAGS) $(CPPFLAGS) $(vbit_test_sec_CFLAGS) $(CFLAGS) -MT vbit_test_sec-unary.obj -MD -MP -MF $(DEPDIR)/vbit_test_sec-unary.Tpo -c -o vbit_test_sec-unary.obj `if test -f 'unary.c'; then $(CYGPATH_W) 'unary.c'; else $(CYGPATH_W) '$(srcdir)/unary.c'; fi`
++@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/vbit_test_sec-unary.Tpo $(DEPDIR)/vbit_test_sec-unary.Po
++@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='unary.c' object='vbit_test_sec-unary.obj' libtool=no @AMDEPBACKSLASH@
++@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
++@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(vbit_test_sec_CPPFLAGS) $(CPPFLAGS) $(vbit_test_sec_CFLAGS) $(CFLAGS) -c -o vbit_test_sec-unary.obj `if test -f 'unary.c'; then $(CYGPATH_W) 'unary.c'; else $(CYGPATH_W) '$(srcdir)/unary.c'; fi`
++
++vbit_test_sec-binary.o: binary.c
++@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(vbit_test_sec_CPPFLAGS) $(CPPFLAGS) $(vbit_test_sec_CFLAGS) $(CFLAGS) -MT vbit_test_sec-binary.o -MD -MP -MF $(DEPDIR)/vbit_test_sec-binary.Tpo -c -o vbit_test_sec-binary.o `test -f 'binary.c' || echo '$(srcdir)/'`binary.c
++@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/vbit_test_sec-binary.Tpo $(DEPDIR)/vbit_test_sec-binary.Po
++@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='binary.c' object='vbit_test_sec-binary.o' libtool=no @AMDEPBACKSLASH@
++@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
++@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(vbit_test_sec_CPPFLAGS) $(CPPFLAGS) $(vbit_test_sec_CFLAGS) $(CFLAGS) -c -o vbit_test_sec-binary.o `test -f 'binary.c' || echo '$(srcdir)/'`binary.c
++
++vbit_test_sec-binary.obj: binary.c
++@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(vbit_test_sec_CPPFLAGS) $(CPPFLAGS) $(vbit_test_sec_CFLAGS) $(CFLAGS) -MT vbit_test_sec-binary.obj -MD -MP -MF $(DEPDIR)/vbit_test_sec-binary.Tpo -c -o vbit_test_sec-binary.obj `if test -f 'binary.c'; then $(CYGPATH_W) 'binary.c'; else $(CYGPATH_W) '$(srcdir)/binary.c'; fi`
++@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/vbit_test_sec-binary.Tpo $(DEPDIR)/vbit_test_sec-binary.Po
++@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='binary.c' object='vbit_test_sec-binary.obj' libtool=no @AMDEPBACKSLASH@
++@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
++@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(vbit_test_sec_CPPFLAGS) $(CPPFLAGS) $(vbit_test_sec_CFLAGS) $(CFLAGS) -c -o vbit_test_sec-binary.obj `if test -f 'binary.c'; then $(CYGPATH_W) 'binary.c'; else $(CYGPATH_W) '$(srcdir)/binary.c'; fi`
++
++vbit_test_sec-ternary.o: ternary.c
++@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(vbit_test_sec_CPPFLAGS) $(CPPFLAGS) $(vbit_test_sec_CFLAGS) $(CFLAGS) -MT vbit_test_sec-ternary.o -MD -MP -MF $(DEPDIR)/vbit_test_sec-ternary.Tpo -c -o vbit_test_sec-ternary.o `test -f 'ternary.c' || echo '$(srcdir)/'`ternary.c
++@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/vbit_test_sec-ternary.Tpo $(DEPDIR)/vbit_test_sec-ternary.Po
++@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='ternary.c' object='vbit_test_sec-ternary.o' libtool=no @AMDEPBACKSLASH@
++@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
++@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(vbit_test_sec_CPPFLAGS) $(CPPFLAGS) $(vbit_test_sec_CFLAGS) $(CFLAGS) -c -o vbit_test_sec-ternary.o `test -f 'ternary.c' || echo '$(srcdir)/'`ternary.c
++
++vbit_test_sec-ternary.obj: ternary.c
++@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(vbit_test_sec_CPPFLAGS) $(CPPFLAGS) $(vbit_test_sec_CFLAGS) $(CFLAGS) -MT vbit_test_sec-ternary.obj -MD -MP -MF $(DEPDIR)/vbit_test_sec-ternary.Tpo -c -o vbit_test_sec-ternary.obj `if test -f 'ternary.c'; then $(CYGPATH_W) 'ternary.c'; else $(CYGPATH_W) '$(srcdir)/ternary.c'; fi`
++@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/vbit_test_sec-ternary.Tpo $(DEPDIR)/vbit_test_sec-ternary.Po
++@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='ternary.c' object='vbit_test_sec-ternary.obj' libtool=no @AMDEPBACKSLASH@
++@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
++@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(vbit_test_sec_CPPFLAGS) $(CPPFLAGS) $(vbit_test_sec_CFLAGS) $(CFLAGS) -c -o vbit_test_sec-ternary.obj `if test -f 'ternary.c'; then $(CYGPATH_W) 'ternary.c'; else $(CYGPATH_W) '$(srcdir)/ternary.c'; fi`
++
++vbit_test_sec-qernary.o: qernary.c
++@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(vbit_test_sec_CPPFLAGS) $(CPPFLAGS) $(vbit_test_sec_CFLAGS) $(CFLAGS) -MT vbit_test_sec-qernary.o -MD -MP -MF $(DEPDIR)/vbit_test_sec-qernary.Tpo -c -o vbit_test_sec-qernary.o `test -f 'qernary.c' || echo '$(srcdir)/'`qernary.c
++@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/vbit_test_sec-qernary.Tpo $(DEPDIR)/vbit_test_sec-qernary.Po
++@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='qernary.c' object='vbit_test_sec-qernary.o' libtool=no @AMDEPBACKSLASH@
++@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
++@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(vbit_test_sec_CPPFLAGS) $(CPPFLAGS) $(vbit_test_sec_CFLAGS) $(CFLAGS) -c -o vbit_test_sec-qernary.o `test -f 'qernary.c' || echo '$(srcdir)/'`qernary.c
++
++vbit_test_sec-qernary.obj: qernary.c
++@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(vbit_test_sec_CPPFLAGS) $(CPPFLAGS) $(vbit_test_sec_CFLAGS) $(CFLAGS) -MT vbit_test_sec-qernary.obj -MD -MP -MF $(DEPDIR)/vbit_test_sec-qernary.Tpo -c -o vbit_test_sec-qernary.obj `if test -f 'qernary.c'; then $(CYGPATH_W) 'qernary.c'; else $(CYGPATH_W) '$(srcdir)/qernary.c'; fi`
++@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/vbit_test_sec-qernary.Tpo $(DEPDIR)/vbit_test_sec-qernary.Po
++@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='qernary.c' object='vbit_test_sec-qernary.obj' libtool=no @AMDEPBACKSLASH@
++@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
++@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(vbit_test_sec_CPPFLAGS) $(CPPFLAGS) $(vbit_test_sec_CFLAGS) $(CFLAGS) -c -o vbit_test_sec-qernary.obj `if test -f 'qernary.c'; then $(CYGPATH_W) 'qernary.c'; else $(CYGPATH_W) '$(srcdir)/qernary.c'; fi`
++
++vbit_test_sec-util.o: util.c
++@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(vbit_test_sec_CPPFLAGS) $(CPPFLAGS) $(vbit_test_sec_CFLAGS) $(CFLAGS) -MT vbit_test_sec-util.o -MD -MP -MF $(DEPDIR)/vbit_test_sec-util.Tpo -c -o vbit_test_sec-util.o `test -f 'util.c' || echo '$(srcdir)/'`util.c
++@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/vbit_test_sec-util.Tpo $(DEPDIR)/vbit_test_sec-util.Po
++@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='util.c' object='vbit_test_sec-util.o' libtool=no @AMDEPBACKSLASH@
++@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
++@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(vbit_test_sec_CPPFLAGS) $(CPPFLAGS) $(vbit_test_sec_CFLAGS) $(CFLAGS) -c -o vbit_test_sec-util.o `test -f 'util.c' || echo '$(srcdir)/'`util.c
++
++vbit_test_sec-util.obj: util.c
++@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(vbit_test_sec_CPPFLAGS) $(CPPFLAGS) $(vbit_test_sec_CFLAGS) $(CFLAGS) -MT vbit_test_sec-util.obj -MD -MP -MF $(DEPDIR)/vbit_test_sec-util.Tpo -c -o vbit_test_sec-util.obj `if test -f 'util.c'; then $(CYGPATH_W) 'util.c'; else $(CYGPATH_W) '$(srcdir)/util.c'; fi`
++@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/vbit_test_sec-util.Tpo $(DEPDIR)/vbit_test_sec-util.Po
++@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='util.c' object='vbit_test_sec-util.obj' libtool=no @AMDEPBACKSLASH@
++@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
++@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(vbit_test_sec_CPPFLAGS) $(CPPFLAGS) $(vbit_test_sec_CFLAGS) $(CFLAGS) -c -o vbit_test_sec-util.obj `if test -f 'util.c'; then $(CYGPATH_W) 'util.c'; else $(CYGPATH_W) '$(srcdir)/util.c'; fi`
++
++vbit_test_sec-vbits.o: vbits.c
++@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(vbit_test_sec_CPPFLAGS) $(CPPFLAGS) $(vbit_test_sec_CFLAGS) $(CFLAGS) -MT vbit_test_sec-vbits.o -MD -MP -MF $(DEPDIR)/vbit_test_sec-vbits.Tpo -c -o vbit_test_sec-vbits.o `test -f 'vbits.c' || echo '$(srcdir)/'`vbits.c
++@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/vbit_test_sec-vbits.Tpo $(DEPDIR)/vbit_test_sec-vbits.Po
++@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='vbits.c' object='vbit_test_sec-vbits.o' libtool=no @AMDEPBACKSLASH@
++@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
++@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(vbit_test_sec_CPPFLAGS) $(CPPFLAGS) $(vbit_test_sec_CFLAGS) $(CFLAGS) -c -o vbit_test_sec-vbits.o `test -f 'vbits.c' || echo '$(srcdir)/'`vbits.c
++
++vbit_test_sec-vbits.obj: vbits.c
++@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(vbit_test_sec_CPPFLAGS) $(CPPFLAGS) $(vbit_test_sec_CFLAGS) $(CFLAGS) -MT vbit_test_sec-vbits.obj -MD -MP -MF $(DEPDIR)/vbit_test_sec-vbits.Tpo -c -o vbit_test_sec-vbits.obj `if test -f 'vbits.c'; then $(CYGPATH_W) 'vbits.c'; else $(CYGPATH_W) '$(srcdir)/vbits.c'; fi`
++@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/vbit_test_sec-vbits.Tpo $(DEPDIR)/vbit_test_sec-vbits.Po
++@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='vbits.c' object='vbit_test_sec-vbits.obj' libtool=no @AMDEPBACKSLASH@
++@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
++@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(vbit_test_sec_CPPFLAGS) $(CPPFLAGS) $(vbit_test_sec_CFLAGS) $(CFLAGS) -c -o vbit_test_sec-vbits.obj `if test -f 'vbits.c'; then $(CYGPATH_W) 'vbits.c'; else $(CYGPATH_W) '$(srcdir)/vbits.c'; fi`
++
++vbit_test_sec-irops.o: irops.c
++@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(vbit_test_sec_CPPFLAGS) $(CPPFLAGS) $(vbit_test_sec_CFLAGS) $(CFLAGS) -MT vbit_test_sec-irops.o -MD -MP -MF $(DEPDIR)/vbit_test_sec-irops.Tpo -c -o vbit_test_sec-irops.o `test -f 'irops.c' || echo '$(srcdir)/'`irops.c
++@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/vbit_test_sec-irops.Tpo $(DEPDIR)/vbit_test_sec-irops.Po
++@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='irops.c' object='vbit_test_sec-irops.o' libtool=no @AMDEPBACKSLASH@
++@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
++@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(vbit_test_sec_CPPFLAGS) $(CPPFLAGS) $(vbit_test_sec_CFLAGS) $(CFLAGS) -c -o vbit_test_sec-irops.o `test -f 'irops.c' || echo '$(srcdir)/'`irops.c
++
++vbit_test_sec-irops.obj: irops.c
++@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(vbit_test_sec_CPPFLAGS) $(CPPFLAGS) $(vbit_test_sec_CFLAGS) $(CFLAGS) -MT vbit_test_sec-irops.obj -MD -MP -MF $(DEPDIR)/vbit_test_sec-irops.Tpo -c -o vbit_test_sec-irops.obj `if test -f 'irops.c'; then $(CYGPATH_W) 'irops.c'; else $(CYGPATH_W) '$(srcdir)/irops.c'; fi`
++@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/vbit_test_sec-irops.Tpo $(DEPDIR)/vbit_test_sec-irops.Po
++@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='irops.c' object='vbit_test_sec-irops.obj' libtool=no @AMDEPBACKSLASH@
++@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
++@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(vbit_test_sec_CPPFLAGS) $(CPPFLAGS) $(vbit_test_sec_CFLAGS) $(CFLAGS) -c -o vbit_test_sec-irops.obj `if test -f 'irops.c'; then $(CYGPATH_W) 'irops.c'; else $(CYGPATH_W) '$(srcdir)/irops.c'; fi`
++
++vbit_test_sec-valgrind.o: valgrind.c
++@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(vbit_test_sec_CPPFLAGS) $(CPPFLAGS) $(vbit_test_sec_CFLAGS) $(CFLAGS) -MT vbit_test_sec-valgrind.o -MD -MP -MF $(DEPDIR)/vbit_test_sec-valgrind.Tpo -c -o vbit_test_sec-valgrind.o `test -f 'valgrind.c' || echo '$(srcdir)/'`valgrind.c
++@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/vbit_test_sec-valgrind.Tpo $(DEPDIR)/vbit_test_sec-valgrind.Po
++@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='valgrind.c' object='vbit_test_sec-valgrind.o' libtool=no @AMDEPBACKSLASH@
++@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
++@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(vbit_test_sec_CPPFLAGS) $(CPPFLAGS) $(vbit_test_sec_CFLAGS) $(CFLAGS) -c -o vbit_test_sec-valgrind.o `test -f 'valgrind.c' || echo '$(srcdir)/'`valgrind.c
++
++vbit_test_sec-valgrind.obj: valgrind.c
++@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(vbit_test_sec_CPPFLAGS) $(CPPFLAGS) $(vbit_test_sec_CFLAGS) $(CFLAGS) -MT vbit_test_sec-valgrind.obj -MD -MP -MF $(DEPDIR)/vbit_test_sec-valgrind.Tpo -c -o vbit_test_sec-valgrind.obj `if test -f 'valgrind.c'; then $(CYGPATH_W) 'valgrind.c'; else $(CYGPATH_W) '$(srcdir)/valgrind.c'; fi`
++@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/vbit_test_sec-valgrind.Tpo $(DEPDIR)/vbit_test_sec-valgrind.Po
++@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='valgrind.c' object='vbit_test_sec-valgrind.obj' libtool=no @AMDEPBACKSLASH@
++@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
++@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(vbit_test_sec_CPPFLAGS) $(CPPFLAGS) $(vbit_test_sec_CFLAGS) $(CFLAGS) -c -o vbit_test_sec-valgrind.obj `if test -f 'valgrind.c'; then $(CYGPATH_W) 'valgrind.c'; else $(CYGPATH_W) '$(srcdir)/valgrind.c'; fi`
+ install-pkgincludeHEADERS: $(pkginclude_HEADERS)
+ 	@$(NORMAL_INSTALL)
+ 	@list='$(pkginclude_HEADERS)'; test -n "$(pkgincludedir)" || list=; \

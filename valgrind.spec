@@ -160,6 +160,10 @@ Patch29: valgrind-3.14.0-arm64-ptrace-traceme.patch
 # KDE#402134 - assert fail mc_translate.c (noteTmpUsesIn) Iex_VECRET on arm64
 Patch30: valgrind-3.14.0-mc_translate-vecret.patch
 
+# KDE#402481 vbit-test fails on x86 for Iop_CmpEQ64 iselInt64Expr Sar64
+Patch31: valgrind-3.14.0-vbit-test-sec.patch
+Patch32: valgrind-3.14.0-x86-Iop_Sar64.patch
+
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
 BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
@@ -322,6 +326,8 @@ Valgrind User Manual for details.
 %patch28 -p1
 %patch29 -p1
 %patch30 -p1
+%patch31 -p1
+%patch32 -p1
 
 %build
 CC=gcc
@@ -556,6 +562,10 @@ fi
 %endif
 
 %changelog
+* Mon Dec 31 2018 Mark Wielaard <mjw@fedoraproject.org>
+- Add valgrind-3.14.0-vbit-test-sec.patch
+- Add valgrind-3.14.0-x86-Iop_Sar64.patch
+
 * Thu Dec 20 2018 Mark Wielaard <mjw@fedoraproject.org> - 3.14.0-8
 - Update valgrind-3.14.0-jm-vmx-constraints.patch for ppc64.
 - Show all diff files in check, not just the main/default one.
