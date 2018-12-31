@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.14.0
-Release: 8%{?dist}
+Release: 9%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -163,6 +163,10 @@ Patch30: valgrind-3.14.0-mc_translate-vecret.patch
 # KDE#402481 vbit-test fails on x86 for Iop_CmpEQ64 iselInt64Expr Sar64
 Patch31: valgrind-3.14.0-vbit-test-sec.patch
 Patch32: valgrind-3.14.0-x86-Iop_Sar64.patch
+
+# KDE#402519 POWER 3.0 addex instruction incorrectly implemented
+Patch33: valgrind-3.14.0-power9-addex.patch
+
 
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -328,6 +332,7 @@ Valgrind User Manual for details.
 %patch30 -p1
 %patch31 -p1
 %patch32 -p1
+%patch33 -p1
 
 %build
 CC=gcc
@@ -562,9 +567,10 @@ fi
 %endif
 
 %changelog
-* Mon Dec 31 2018 Mark Wielaard <mjw@fedoraproject.org>
+* Mon Dec 31 2018 Mark Wielaard <mjw@fedoraproject.org> - 3.14.0-9
 - Add valgrind-3.14.0-vbit-test-sec.patch
 - Add valgrind-3.14.0-x86-Iop_Sar64.patch
+- Add valgrind-3.14.0-power9-addex.patch
 
 * Thu Dec 20 2018 Mark Wielaard <mjw@fedoraproject.org> - 3.14.0-8
 - Update valgrind-3.14.0-jm-vmx-constraints.patch for ppc64.
