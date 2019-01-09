@@ -167,6 +167,9 @@ Patch32: valgrind-3.14.0-x86-Iop_Sar64.patch
 # KDE#402519 POWER 3.0 addex instruction incorrectly implemented
 Patch33: valgrind-3.14.0-power9-addex.patch
 
+# KDE#402480  Do not use %rsp in clobber list
+Patch34: valgrind-3.14.0-rsp-clobber.patch
+
 
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -333,6 +336,7 @@ Valgrind User Manual for details.
 %patch31 -p1
 %patch32 -p1
 %patch33 -p1
+%patch34 -p1
 
 %build
 CC=gcc
@@ -567,6 +571,9 @@ fi
 %endif
 
 %changelog
+* Wed Jan  9 2019 Mark Wielaard <mjw@fedoraproject.org>
+- Add valgrind-3.14.0-rsp-clobber.patch
+
 * Mon Dec 31 2018 Mark Wielaard <mjw@fedoraproject.org> - 3.14.0-9
 - Add valgrind-3.14.0-vbit-test-sec.patch
 - Add valgrind-3.14.0-x86-Iop_Sar64.patch
