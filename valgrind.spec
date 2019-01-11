@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.14.0
-Release: 9%{?dist}
+Release: 10%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -169,6 +169,9 @@ Patch33: valgrind-3.14.0-power9-addex.patch
 
 # KDE#402480  Do not use %rsp in clobber list
 Patch34: valgrind-3.14.0-rsp-clobber.patch
+
+# commit 3528f8 Accept DW_TAG_subrange_type with DW_AT_count
+Patch35: valgrind-3.14.0-subrange_type-count.patch
 
 
 %if %{build_multilib}
@@ -337,6 +340,7 @@ Valgrind User Manual for details.
 %patch32 -p1
 %patch33 -p1
 %patch34 -p1
+%patch35 -p1
 
 %build
 CC=gcc
@@ -571,8 +575,9 @@ fi
 %endif
 
 %changelog
-* Wed Jan  9 2019 Mark Wielaard <mjw@fedoraproject.org>
+* Wed Jan  9 2019 Mark Wielaard <mjw@fedoraproject.org> - 3.14.0-10
 - Add valgrind-3.14.0-rsp-clobber.patch
+- Add valgrind-3.14.0-subrange_type-count.patch
 
 * Mon Dec 31 2018 Mark Wielaard <mjw@fedoraproject.org> - 3.14.0-9
 - Add valgrind-3.14.0-vbit-test-sec.patch

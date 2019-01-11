@@ -1,0 +1,43 @@
+commit 3528f84037833a799538a2fc48ed30dd09c77b5e
+Author: Mark Wielaard <mark@klomp.org>
+Date:   Fri Jan 11 21:52:26 2019 +0100
+
+    readdwarf3.c (parse_type_DIE): Accept DW_TAG_subrange_type with DW_AT_count
+    
+    GCC9 generates a subrange_type with a lower_bound and count, but no
+    upper_bound attribute. This simply means the upper bound is lower
+    plus count.
+
+diff --git a/coregrind/m_debuginfo/readdwarf3.c b/coregrind/m_debuginfo/readdwarf3.c
+index e9a3816..1b49ba4 100644
+--- a/coregrind/m_debuginfo/readdwarf3.c
++++ b/coregrind/m_debuginfo/readdwarf3.c
+@@ -3610,6 +3610,7 @@ static void parse_type_DIE ( /*MOD*/XArray* /* of TyEnt */ tyents,
+       Bool have_count = False;
+       Long lower = 0;
+       Long upper = 0;
++      Long count = 0;
+ 
+       switch (parser->language) {
+          case 'C': have_lower = True;  lower = 0; break;
+@@ -3641,7 +3642,7 @@ static void parse_type_DIE ( /*MOD*/XArray* /* of TyEnt */ tyents,
+             have_upper = True;
+          }
+          if (attr == DW_AT_count && cts.szB > 0) {
+-            /*count    = (Long)cts.u.val;*/
++            count    = (Long)cts.u.val;
+             have_count = True;
+          }
+       }
+@@ -3680,6 +3681,11 @@ static void parse_type_DIE ( /*MOD*/XArray* /* of TyEnt */ tyents,
+          boundE.Te.Bound.knownU = False;
+          boundE.Te.Bound.boundL = 0;
+          boundE.Te.Bound.boundU = 0;
++      } else if (have_lower && (!have_upper) && (have_count)) {
++         boundE.Te.Bound.knownL = True;
++         boundE.Te.Bound.knownU = True;
++         boundE.Te.Bound.boundL = lower;
++         boundE.Te.Bound.boundU = lower + count;
+       } else {
+          /* FIXME: handle more cases */
+          goto_bad_DIE;
