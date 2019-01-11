@@ -33,3 +33,31 @@ index 0f9237d..269bd70 100644
  }
  
  __attribute__((noinline))
+commit c512949082c4fc2285a82e102d4212c66e034a31
+Author: Mark Wielaard <mark@klomp.org>
+Date:   Fri Jan 11 20:00:17 2019 +0100
+
+    Bug 402480 Do not use %esp in clobber list.
+    
+    This is the same fix as for amd64-linux, but now for x86-linux.
+
+diff --git a/none/tests/x86-linux/bug345887.c b/none/tests/x86-linux/bug345887.c
+index f2e8a8d..ef21d4e 100644
+--- a/none/tests/x86-linux/bug345887.c
++++ b/none/tests/x86-linux/bug345887.c
+@@ -12,12 +12,14 @@ static void inner(void)
+       "movl $0x105, %%esi\n"
+       "movl $0x106, %%edi\n"
+       // not %ebp as mdb is then not able to reconstruct stack trace
++      // clobbering %esp is really bad, but that is kind of the point
++      // we don't add it to the clobber list since gcc9 warns about that
+       "movl $0x108, %%esp\n"
+       "movl $0x1234, (%%eax)\n"  // should cause SEGV here
+       "ud2"                      // should never get here
+       : // no output registers
+       : // no input registers
+-      : "memory", "%eax", "%ebx", "%ecx", "%edx", "%esi", "%edi", "%esp");
++      : "memory", "%eax", "%ebx", "%ecx", "%edx", "%esi", "%edi");
+ }
+ 
+ __attribute__((noinline))
