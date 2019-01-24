@@ -1,0 +1,32 @@
+commit 467c7c4c9665c0f8b41a4416722a027ebc05df2b
+Author: Andreas Arnez <arnez@linux.ibm.com>
+Date:   Mon Jan 21 14:10:00 2019 +0100
+
+    Bug 403552 s390x: Fix vector facility bit number
+    
+    The wrong bit number was used when checking for the vector facility.  This
+    can result in a fatal emulation error: "Encountered an instruction that
+    requires the vector facility.  That facility is not available on this
+    host."
+    
+    In many cases the wrong facility bit was usually set as well, hence
+    nothing bad happened.  But when running Valgrind within a Qemu/KVM guest,
+    the wrong bit was not (always?) set and the emulation error occurred.
+    
+    This fix simply corrects the vector facility bit number, changing it from
+    128 to 129.
+
+ 
+diff --git a/VEX/pub/libvex_s390x_common.h b/VEX/pub/libvex_s390x_common.h
+index a8a66b96b..8723ee21d 100644
+--- a/VEX/pub/libvex_s390x_common.h
++++ b/VEX/pub/libvex_s390x_common.h
+@@ -103,7 +103,7 @@
+ #define S390_FAC_MSA5    57  // message-security-assist 5
+ #define S390_FAC_TREXE   73  // transactional execution
+ #define S390_FAC_MSA4    77  // message-security-assist 4
+-#define S390_FAC_VX      128 // vector facility
++#define S390_FAC_VX      129 // vector facility
+ 
+ 
+ /*--------------------------------------------------------------*/

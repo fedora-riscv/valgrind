@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.14.0
-Release: 10%{?dist}
+Release: 11%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -173,6 +173,9 @@ Patch34: valgrind-3.14.0-rsp-clobber.patch
 # commit 3528f8 Accept DW_TAG_subrange_type with DW_AT_count
 Patch35: valgrind-3.14.0-subrange_type-count.patch
 
+# KDE#403552 s390x: wrong facility bit checked for vector facility
+Patch36: valgrind-3.14.0-s390x-vec-facility-bit.patch
+
 
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -341,6 +344,7 @@ Valgrind User Manual for details.
 %patch33 -p1
 %patch34 -p1
 %patch35 -p1
+%patch36 -p1
 
 %build
 CC=gcc
@@ -575,6 +579,9 @@ fi
 %endif
 
 %changelog
+* Thu Jan 24 2019 Mark Wielaard <mjw@fedoraproject.org> - 3.14.0-11
+- Add valgrind-3.14.0-s390x-vec-facility-bit.patch.
+
 * Wed Jan  9 2019 Mark Wielaard <mjw@fedoraproject.org> - 3.14.0-10
 - Add valgrind-3.14.0-rsp-clobber.patch
 - Add valgrind-3.14.0-subrange_type-count.patch
