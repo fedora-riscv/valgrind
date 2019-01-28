@@ -7,7 +7,6 @@ Release: 11%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
-Group: Development/Debuggers
 
 # Only necessary for RHEL, will be ignored on Fedora
 
@@ -277,7 +276,6 @@ profiler (callgrind), and a heap profiler (massif).
 
 %package devel
 Summary: Development files for valgrind aware programs
-Group: Development/Debuggers
 Requires: %{?scl_prefix}valgrind = %{epoch}:%{version}-%{release}
 
 %description devel
@@ -286,7 +284,6 @@ Header files and libraries for development of valgrind aware programs.
 %if %{build_tools_devel}
 %package tools-devel
 Summary: Development files for building valgrind tools.
-Group: Development/Debuggers
 Requires: %{?scl_prefix}valgrind-devel = %{epoch}:%{version}-%{release}
 Provides: %{name}-static = %{epoch}:%{version}-%{release}
 
@@ -297,7 +294,6 @@ Header files and libraries for development of valgrind tools.
 %if %{build_openmpi}
 %package openmpi
 Summary: OpenMPI support for valgrind
-Group: Development/Debuggers
 Requires: %{?scl_prefix}valgrind = %{epoch}:%{version}-%{release}
 
 %description openmpi
