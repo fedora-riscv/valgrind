@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.14.0
-Release: 11%{?dist}
+Release: 12%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -575,6 +575,9 @@ fi
 %endif
 
 %changelog
+* Sun Feb 03 2019 Fedora Release Engineering <releng@fedoraproject.org> - 1:3.14.0-12
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_30_Mass_Rebuild
+
 * Thu Jan 24 2019 Mark Wielaard <mjw@fedoraproject.org> - 3.14.0-11
 - Add valgrind-3.14.0-s390x-vec-facility-bit.patch.
 
