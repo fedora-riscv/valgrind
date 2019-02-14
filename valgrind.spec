@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.14.0
-Release: 12%{?dist}
+Release: 13%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -575,6 +575,9 @@ fi
 %endif
 
 %changelog
+* Thu Feb 14 2019 Orion Poplawski <orion@nwra.com> - 1:3.14.0-13
+- Rebuild for openmpi 3.1.3
+
 * Sun Feb 03 2019 Fedora Release Engineering <releng@fedoraproject.org> - 1:3.14.0-12
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_30_Mass_Rebuild
 
