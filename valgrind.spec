@@ -175,6 +175,9 @@ Patch35: valgrind-3.14.0-subrange_type-count.patch
 # KDE#403552 s390x: wrong facility bit checked for vector facility
 Patch36: valgrind-3.14.0-s390x-vec-facility-bit.patch
 
+# KDE#404054 powerpc subfe x, x, x initializes x to 0 or -1 based on CA
+Patch37: valgrind-3.14.0-ppc-subfe.patch
+
 
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -341,6 +344,7 @@ Valgrind User Manual for details.
 %patch34 -p1
 %patch35 -p1
 %patch36 -p1
+%patch37 -p1
 
 %build
 CC=gcc
@@ -575,6 +579,9 @@ fi
 %endif
 
 %changelog
+* Thu Feb 21 2019 Mark Wielaard <mjw@fedoraproject.org> - 3.14.0-14
+- Add valgrind-3.14.0-ppc-subfe.patch
+
 * Thu Feb 14 2019 Orion Poplawski <orion@nwra.com> - 1:3.14.0-13
 - Rebuild for openmpi 3.1.3
 

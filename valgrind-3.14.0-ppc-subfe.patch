@@ -1,0 +1,43 @@
+commit 256cf43c5eadb28edb45436aca6fda8ee55eb10e
+Author: Mark Wielaard <mark@klomp.org>
+Date:   Thu Feb 21 17:21:53 2019 +0100
+
+    memcheck powerpc subfe x, x, x initializes x to 0 or -1 based on CA
+    
+    GCC might use subfe x, x, x to initialize x to 0 or -1, based on
+    whether the carry flag is set. This happens in some cases when g++
+    compiles resetting a unique_ptr. The "trick" used by the compiler is
+    that it can AND a pointer with the register x (now 0x0 or 0xffffffff)
+    to set something to NULL or to the given pointer.
+    
+    subfe is implemented as rD = (log not)rA + rB + XER[CA]
+    if we instead implement it as rD = rB - rA - (XER[CA] ^ 1)
+    then memcheck can see that rB and Ra cancel each other out if they
+    are the same.
+    
+    https://bugs.kde.org/show_bug.cgi?id=404054
+
+diff --git a/VEX/priv/guest_ppc_toIR.c b/VEX/priv/guest_ppc_toIR.c
+index e207642..00ae6df 100644
+--- a/VEX/priv/guest_ppc_toIR.c
++++ b/VEX/priv/guest_ppc_toIR.c
+@@ -5361,11 +5361,15 @@ static Bool dis_int_arith ( UInt theInstr )
+              flag_OE ? "o" : "", flag_rC ? ".":"",
+              rD_addr, rA_addr, rB_addr);
+          // rD = (log not)rA + rB + XER[CA]
++         //    ==>
++         // rD = rB - rA - (XER[CA] ^ 1)
+          assign( old_xer_ca, mkWidenFrom32(ty, getXER_CA_32(), False) );
+-         assign( rD, binop( mkSzOp(ty, Iop_Add8),
+-                            unop( mkSzOp(ty, Iop_Not8), mkexpr(rA)),
+-                            binop( mkSzOp(ty, Iop_Add8),
+-                                   mkexpr(rB), mkexpr(old_xer_ca))) );
++         assign( rD, binop( mkSzOp(ty, Iop_Sub8),
++                            binop( mkSzOp(ty, Iop_Sub8),
++                                   mkexpr(rB), mkexpr(rA)),
++                            binop(mkSzOp(ty, Iop_Xor8),
++                                  mkexpr(old_xer_ca),
++                                  mkSzImm(ty, 1))) );
+          set_XER_CA_CA32( ty, PPCG_FLAG_OP_SUBFE,
+                           mkexpr(rD), mkexpr(rA), mkexpr(rB),
+                           mkexpr(old_xer_ca) );
