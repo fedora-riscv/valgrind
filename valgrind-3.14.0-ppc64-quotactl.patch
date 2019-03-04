@@ -1,0 +1,22 @@
+commit 7f74ba249ead48f351676c37d498b17305212123
+Author: Mark Wielaard <mark@klomp.org>
+Date:   Mon Mar 4 17:22:56 2019 +0100
+
+    Bug 405079 - unhandled ppc64le-linux syscall: 131 (quotactl)
+    
+    quotactl is really a "generic" linux syscall that just happened to not
+    have been hooked up for ppc64le. Add it to syswrap-ppc64-linux.c.
+
+diff --git a/coregrind/m_syswrap/syswrap-ppc64-linux.c b/coregrind/m_syswrap/syswrap-ppc64-linux.c
+index 0fdcc8e..eada099 100644
+--- a/coregrind/m_syswrap/syswrap-ppc64-linux.c
++++ b/coregrind/m_syswrap/syswrap-ppc64-linux.c
+@@ -755,7 +755,7 @@ static SyscallTableEntry syscall_table[] = {
+    LINX_(__NR_delete_module,     sys_delete_module),      // 129
+ 
+ // _____(__NR_get_kernel_syms,   sys_get_kernel_syms),    // 130
+-// _____(__NR_quotactl,          sys_quotactl),           // 131
++   LINX_(__NR_quotactl,          sys_quotactl),           // 131
+    GENX_(__NR_getpgid,           sys_getpgid),            // 132
+    GENX_(__NR_fchdir,            sys_fchdir),             // 133
+ // _____(__NR_bdflush,           sys_bdflush),            // 134

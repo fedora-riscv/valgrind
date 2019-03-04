@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.14.0
-Release: 14%{?dist}
+Release: 15%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -178,6 +178,9 @@ Patch36: valgrind-3.14.0-s390x-vec-facility-bit.patch
 # KDE#404054 powerpc subfe x, x, x initializes x to 0 or -1 based on CA
 Patch37: valgrind-3.14.0-ppc-subfe.patch
 
+# KDE#405079 unhandled ppc64le-linux syscall: 131 (quotactl)
+Patch38: valgrind-3.14.0-ppc64-quotactl.patch
+
 
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -345,6 +348,7 @@ Valgrind User Manual for details.
 %patch35 -p1
 %patch36 -p1
 %patch37 -p1
+%patch38 -p1
 
 %build
 CC=gcc
@@ -579,6 +583,9 @@ fi
 %endif
 
 %changelog
+* Mon Mar  4 2019 Mark Wielaard <mjw@fedoraproject.org> - 3.14.0-15
+- Add valgrind-3.14.0-ppc64-quotactl.patch
+
 * Thu Feb 21 2019 Mark Wielaard <mjw@fedoraproject.org> - 3.14.0-14
 - Add valgrind-3.14.0-ppc-subfe.patch
 
