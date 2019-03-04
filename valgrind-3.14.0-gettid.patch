@@ -1,0 +1,55 @@
+commit b46023d525b6e38a096ff4fdf9e6a96c7d7b7d40
+Author: Mark Wielaard <mark@klomp.org>
+Date:   Mon Mar 4 19:47:59 2019 +0100
+
+    Rename gettid() to gettid_sys() in gdbserver_tests.
+    
+    glibc might defined gettid() itself through unistd.h:
+    https://sourceware.org/bugzilla/show_bug.cgi?id=6399
+    
+    Rename to gettid_sys() so we don't clash with the glibc definition.
+
+diff --git a/gdbserver_tests/sleepers.c b/gdbserver_tests/sleepers.c
+index 5ffc6f8..dfda828 100644
+--- a/gdbserver_tests/sleepers.c
++++ b/gdbserver_tests/sleepers.c
+@@ -15,7 +15,7 @@ static int sleepms = 1000; // in each loop, will sleep "sleepms" milliseconds
+ static int burn = 0; // after each sleep, will burn cpu in a tight 'burn' loop 
+ static void setup_sigusr_handler(void); // sigusr1 and 2 sigaction setup.
+ 
+-static pid_t gettid()
++static pid_t gettid_sys()
+ {
+ #ifdef __NR_gettid
+    return syscall(__NR_gettid);
+@@ -27,7 +27,7 @@ static pid_t gettid()
+ static void whoami(char *msg) __attribute__((unused));
+ static void whoami(char *msg)
+ {
+-   fprintf(stderr, "pid %ld Thread %ld %s\n", (long) getpid(), (long) gettid(),
++   fprintf(stderr, "pid %ld Thread %ld %s\n", (long) getpid(), (long) gettid_sys(),
+            msg);
+    fflush(stderr);
+ }
+diff --git a/gdbserver_tests/t.c b/gdbserver_tests/t.c
+index 228d4a4..b3e7a28 100644
+--- a/gdbserver_tests/t.c
++++ b/gdbserver_tests/t.c
+@@ -16,7 +16,7 @@ static int loopmain, loopt1, loopt2;
+ 
+ static double pi = 3.14159265358979323846264338327950288;
+ 
+-static pid_t gettid()
++static pid_t gettid_sys()
+ {
+ #ifdef __NT_gettid
+    return syscall(__NR_gettid);
+@@ -26,7 +26,7 @@ static pid_t gettid()
+ }
+ static void whoami(char *msg)
+ {
+-   printf("pid %ld Thread %ld %s\n", (long) getpid(), (long) gettid(), msg);
++   printf("pid %ld Thread %ld %s\n", (long) getpid(), (long) gettid_sys(), msg);
+    fflush(stdout);
+ }
+ 

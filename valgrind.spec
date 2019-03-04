@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.14.0
-Release: 15%{?dist}
+Release: 16%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -181,6 +181,9 @@ Patch37: valgrind-3.14.0-ppc-subfe.patch
 # KDE#405079 unhandled ppc64le-linux syscall: 131 (quotactl)
 Patch38: valgrind-3.14.0-ppc64-quotactl.patch
 
+# SW#6399 glibc might implement gettid itself, rename to gettid_sys.
+Patch39: valgrind-3.14.0-gettid.patch
+
 
 %if %{build_multilib}
 # Ensure glibc{,-devel} is installed for both multilib arches
@@ -349,6 +352,7 @@ Valgrind User Manual for details.
 %patch36 -p1
 %patch37 -p1
 %patch38 -p1
+%patch39 -p1
 
 %build
 CC=gcc
@@ -583,6 +587,9 @@ fi
 %endif
 
 %changelog
+* Mon Mar  4 2019 Mark Wielaard <mjw@fedoraproject.org> - 3.14.0-16
+- Add valgrind-3.14.0-gettid.patch
+
 * Mon Mar  4 2019 Mark Wielaard <mjw@fedoraproject.org> - 3.14.0-15
 - Add valgrind-3.14.0-ppc64-quotactl.patch
 
