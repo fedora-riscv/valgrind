@@ -14,29 +14,6 @@ URL: http://www.valgrind.org/
 %{?scl:%global is_scl 1}
 %{!?scl:%global is_scl 0}
 
-# Only arches that are supported upstream as multilib and that the distro
-# has multilib builds for should set build_multilib 1. In practice that
-# is only x86_64 and ppc64 (but not in fedora 21 and later, and never
-# for ppc64le or when building for scl).
-%global build_multilib 0
-
-%ifarch x86_64
- %global build_multilib 1
-%endif
-
-%ifarch ppc64
-  %if %{is_scl}
-    %global build_multilib 0
-  %else
-    %if 0%{?rhel}
-      %global build_multilib 1
-    %endif
-    %if 0%{?fedora}
-      %global build_multilib (%fedora < 21)
-    %endif
-  %endif
-%endif
-
 # We never want the openmpi subpackage when building a software collecton.
 # We always want it for fedora.
 # We only want it for older rhel.
@@ -184,11 +161,11 @@ Patch38: valgrind-3.14.0-ppc64-quotactl.patch
 # SW#6399 glibc might implement gettid itself, rename to gettid_sys.
 Patch39: valgrind-3.14.0-gettid.patch
 
+# We want all executables and libraries in libexec instead of lib
+# so they are only available for valgrind usage itself and so the
+# same directory is used independent of arch.
+Patch40: valgrind-3.14.0-pkglibexecdir.patch
 
-%if %{build_multilib}
-# Ensure glibc{,-devel} is installed for both multilib arches
-BuildRequires: /lib/libc.so.6 /usr/lib/libc.so /lib64/libc.so.6 /usr/lib64/libc.so
-%endif
 
 %if 0%{?fedora} >= 15
 BuildRequires: glibc-devel >= 2.14
@@ -239,41 +216,40 @@ ExclusiveArch: %{valgrind_arches}
 %else
 ExclusiveArch: %{ix86} x86_64 ppc ppc64 ppc64le s390x armv7hl aarch64
 %endif
+
+# Define valarch, the architecture name that valgrind uses
+# And only_arch, the configure option to only build for that arch.
 %ifarch %{ix86}
 %define valarch x86
-%define valsecarch %{nil}
+%define only_arch --enable-only32bit
 %endif
 %ifarch x86_64
 %define valarch amd64
-%define valsecarch x86
+%define only_arch --enable-only64bit
 %endif
 %ifarch ppc
 %define valarch ppc32
-%define valsecarch %{nil}
+%define only_arch --enable-only32bit
 %endif
 %ifarch ppc64
-  %define valarch ppc64be
-  %if %{build_multilib}
-    %define valsecarch ppc32
-  %else
-    %define valsecarch %{nil}
-  %endif
+%define valarch ppc64be
+%define only_arch --enable-only64bit
 %endif
 %ifarch ppc64le
 %define valarch ppc64le
-%define valsecarch %{nil}
+%define only_arch --enable-only64bit
 %endif
 %ifarch s390x
 %define valarch s390x
-%define valsecarch %{nil}
+%define only_arch --enable-only64bit
 %endif
 %ifarch armv7hl
 %define valarch arm
-%define valsecarch %{nil}
+%define only_arch --enable-only32bit
 %endif
 %ifarch aarch64
 %define valarch arm64
-%define valsecarch %{nil}
+%define only_arch --enable-only64bit
 %endif
 
 %description
@@ -357,16 +333,10 @@ Valgrind User Manual for details.
 %patch37 -p1
 %patch38 -p1
 %patch39 -p1
+%patch40 -p1
 
 %build
 CC=gcc
-%if %{build_multilib}
-# Ugly hack - libgcc 32-bit package might not be installed
-mkdir -p shared/libgcc/32
-ar r shared/libgcc/32/libgcc_s.a
-ar r shared/libgcc/libgcc_s_32.a
-CC="gcc -B `pwd`/shared/libgcc/"
-%endif
 
 # Some patches (might) touch Makefile.am or configure.ac files.
 # Just always autoreconf so we don't need patches to prebuild files.
@@ -398,6 +368,7 @@ CC="gcc -B `pwd`/shared/libgcc/"
 OPTFLAGS="`echo " %{optflags} " | sed 's/ -m\(64\|3[21]\) / /g;s/ -fexceptions / /g;s/ -fstack-protector\([-a-z]*\) / / g;s/ -Wp,-D_FORTIFY_SOURCE=2 / /g;s/ -O2 / /g;s/ -mcpu=\([a-z0-9]\+\) / /g;s/^ //;s/ $//'`"
 %configure CC="$CC" CFLAGS="$OPTFLAGS" CXXFLAGS="$OPTFLAGS" \
   --with-mpicc=%{mpiccpath} \
+  %{only_arch} \
   GDB=%{_bindir}/gdb
 
 make %{?_smp_mflags}
@@ -440,18 +411,6 @@ ln -s ../openmpi/valgrind/libmpiwrap-%{valarch}-linux.so
 popd
 %endif
 
-%if "%{valsecarch}" != ""
-pushd $RPM_BUILD_ROOT%{_libdir}/valgrind/
-rm -f *-%{valsecarch}-* || :
-for i in *-%{valarch}-*; do
-  j=`echo $i | sed 's/-%{valarch}-/-%{valsecarch}-/'`
-  ln -sf ../../lib/valgrind/$j $j
-done
-popd
-%endif
-
-rm -f $RPM_BUILD_ROOT%{_libdir}/valgrind/*.supp.in
-
 %if %{build_tools_devel}
 %ifarch %{ix86} x86_64
 # To avoid multilib clashes in between i?86 and x86_64,
@@ -478,7 +437,7 @@ rm $RPM_BUILD_ROOT%{_libdir}/valgrind/*.a
 # We don't want debuginfo generated for the vgpreload libraries.
 # Turn off execute bit so they aren't included in the debuginfo.list.
 # We'll turn the execute bit on again in %%files.
-chmod 644 $RPM_BUILD_ROOT%{_libdir}/valgrind/vgpreload*-%{valarch}-*so
+chmod 644 $RPM_BUILD_ROOT%{_libexecdir}/valgrind/vgpreload*-%{valarch}-*so
 
 %check
 # Make sure some info about the system is in the build.log
@@ -539,21 +498,13 @@ echo ===============END TESTING===============
 %doc COPYING NEWS README_*
 %doc docs/installed/html docs/installed/*.pdf
 %{_bindir}/*
-%dir %{_libdir}/valgrind
-# Install everything in the libdir except the .so and .a files.
-# The vgpreload so files might file mode adjustment (see below).
-# The libmpiwrap so files go in the valgrind-openmpi package.
-# The .a archives go into the valgrind-devel package.
-%{_libdir}/valgrind/*[^ao]
+%dir %{_libexecdir}/valgrind
+# Install everything in the libdir except the .so.
+# The vgpreload so files might need file mode adjustment.
+%{_libexecdir}/valgrind/*[^o]
 # Turn on executable bit again for vgpreload libraries.
 # Was disabled in %%install to prevent debuginfo stripping.
-%attr(0755,root,root) %{_libdir}/valgrind/vgpreload*-%{valarch}-*so
-# And install the symlinks to the secarch files if the exist.
-# These are separate from the above because %%attr doesn't work
-# on symlinks.
-%if "%{valsecarch}" != ""
-%{_libdir}/valgrind/vgpreload*-%{valsecarch}-*so
-%endif
+%attr(0755,root,root) %{_libexecdir}/valgrind/vgpreload*-%{valarch}-*so
 %{_mandir}/man1/*
 
 %files devel
@@ -597,6 +548,7 @@ fi
 %changelog
 * Mon Apr  8 2019 Mark Wielaard <mjw@fedoraproject.org>
 - Remove patches to prebuild files and always ./autogen.sh.
+- Only ever build primary arch. Put tools under libexec.
 
 * Mon Mar  4 2019 Mark Wielaard <mjw@fedoraproject.org> - 3.14.0-16
 - Add valgrind-3.14.0-gettid.patch
