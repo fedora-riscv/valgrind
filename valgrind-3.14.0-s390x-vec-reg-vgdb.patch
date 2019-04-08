@@ -391,18 +391,3 @@ index 7bbb2e3..a667f4b 100644
     set_register_cache (regs, num_regs);
     gdbserver_expedite_regs = expedite_regs;
  }
-diff -ru valgrind-3.14.0.orig/coregrind/Makefile.in valgrind-3.14.0/coregrind/Makefile.in
---- valgrind-3.14.0.orig/coregrind/Makefile.in	2018-11-20 17:30:03.075888111 +0100
-+++ valgrind-3.14.0/coregrind/Makefile.in	2018-11-20 17:31:14.999314275 +0100
-@@ -1869,6 +1869,11 @@
- 	m_gdbserver/s390x-linux64-valgrind-s1.xml \
- 	m_gdbserver/s390x-linux64-valgrind-s2.xml \
- 	m_gdbserver/s390x-linux64.xml \
-+	m_gdbserver/s390-vx-valgrind-s1.xml \
-+	m_gdbserver/s390-vx-valgrind-s2.xml \
-+	m_gdbserver/s390-vx.xml \
-+	m_gdbserver/s390x-vx-linux-valgrind.xml \
-+	m_gdbserver/s390x-vx-linux.xml \
- 	m_gdbserver/mips-cp0-valgrind-s1.xml \
- 	m_gdbserver/mips-cp0-valgrind-s2.xml \
- 	m_gdbserver/mips-cp0.xml \

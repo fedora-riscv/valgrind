@@ -220,6 +220,10 @@ BuildRequires: perl-generators
 %endif
 BuildRequires: perl(Getopt::Long)
 
+# We always autoreconf
+BuildRequires: automake
+BuildRequires: autoconf
+
 %{?scl:Requires:%scl_runtime}
 
 # We need to fixup selinux file context when doing a scl build.
@@ -363,6 +367,10 @@ ar r shared/libgcc/32/libgcc_s.a
 ar r shared/libgcc/libgcc_s_32.a
 CC="gcc -B `pwd`/shared/libgcc/"
 %endif
+
+# Some patches (might) touch Makefile.am or configure.ac files.
+# Just always autoreconf so we don't need patches to prebuild files.
+./autogen.sh
 
 # Old openmpi-devel has version depended paths for mpicc.
 %if %{build_openmpi}
@@ -587,6 +595,9 @@ fi
 %endif
 
 %changelog
+* Mon Apr  8 2019 Mark Wielaard <mjw@fedoraproject.org>
+- Remove patches to prebuild files and always ./autogen.sh.
+
 * Mon Mar  4 2019 Mark Wielaard <mjw@fedoraproject.org> - 3.14.0-16
 - Add valgrind-3.14.0-gettid.patch
 

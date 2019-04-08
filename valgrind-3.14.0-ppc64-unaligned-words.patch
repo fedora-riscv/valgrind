@@ -132,17 +132,3 @@ index 0000000..cf32bcf
 +
 +For counts of detected and suppressed errors, rerun with: -v
 +ERROR SUMMARY: 2 errors from 2 contexts (suppressed: 0 from 0)
-diff -ur valgrind-3.14.0.orig/memcheck/tests/Makefile.in valgrind-3.14.0/memcheck/tests/Makefile.in
---- valgrind-3.14.0.orig/memcheck/tests/Makefile.in	2018-12-12 23:17:07.525501080 +0100
-+++ valgrind-3.14.0/memcheck/tests/Makefile.in	2018-12-12 23:18:13.404014757 +0100
-@@ -1546,8 +1546,10 @@
- 	partiallydefinedeq.stdout.exp \
- 	partial_load_ok.vgtest partial_load_ok.stderr.exp \
- 		partial_load_ok.stderr.exp64 \
-+		partial_load_ok.stderr.exp-ppc64 \
- 	partial_load_dflt.vgtest partial_load_dflt.stderr.exp \
- 		partial_load_dflt.stderr.exp64 \
-+		partial_load_dflt.stderr.exp-ppc64 \
- 	partial_load_dflt.stderr.expr-s390x-mvc \
- 	pdb-realloc.stderr.exp pdb-realloc.vgtest \
- 	pdb-realloc2.stderr.exp pdb-realloc2.stdout.exp pdb-realloc2.vgtest \
