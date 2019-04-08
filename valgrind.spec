@@ -2,8 +2,8 @@
 
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
-Version: 3.14.0
-Release: 16%{?dist}
+Version: 3.15.0
+Release: 0.1.RC1%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -68,7 +68,7 @@ URL: http://www.valgrind.org/
 # So those will already have their full symbol table.
 %undefine _include_minidebuginfo
 
-Source0: http://www.valgrind.org/downloads/valgrind-%{version}.tar.bz2
+Source0: ftp://sourceware.org/pub/valgrind/valgrind-%{version}.RC1.tar.bz2
 
 # Needs investigation and pushing upstream
 Patch1: valgrind-3.9.0-cachegrind-improvements.patch
@@ -79,92 +79,10 @@ Patch2: valgrind-3.9.0-helgrind-race-supp.patch
 # Make ld.so supressions slightly less specific.
 Patch3: valgrind-3.9.0-ldso-supp.patch
 
-# KDE#400490 s390x: Fix register allocation for VRs vs FPRs
-Patch4: valgrind-3.14.0-s390x-fix-reg-alloc-vr-vs-fpr.patch
-
-# KDE#400491 s390x: Sign-extend immediate operand of LOCHI and friends
-Patch5: valgrind-3.14.0-s390x-sign-extend-lochi.patch
-
-# KDE#397187 s390x: Add vector register support for vgdb
-Patch6: valgrind-3.14.0-s390x-vec-reg-vgdb.patch
-
-# KDE#385411 s390x: z13 vector floating-point instructions not implemented
-Patch7: valgrind-3.14.0-s390x-vec-float-point-code.patch
-Patch8: valgrind-3.14.0-s390x-vec-float-point-tests.patch
-
-# KDE#401277 More bugs in z13 support
-Patch9: valgrind-3.14.0-s390z-more-z13-fixes.patch
-
-# KDE#386945 Bogus memcheck errors on ppc64(le) when using strcmp
-Patch10: valgrind-3.14.0-get_otrack_shadow_offset_wrk-ppc.patch
-Patch11: valgrind-3.14.0-new-strlen-IROps.patch
-Patch12: valgrind-3.14.0-ppc-instr-new-IROps.patch
-Patch13: valgrind-3.14.0-memcheck-new-IROps.patch
-Patch14: valgrind-3.14.0-ppc-frontend-new-IROps.patch
-Patch15: valgrind-3.14.0-transform-popcount64-ctznat64.patch
-Patch16: valgrind-3.14.0-enable-ppc-Iop_Sar_Shr8.patch
-
-# KDE#401627 memcheck errors with glibc avx2 optimized wcsncmp
-Patch17: valgrind-3.14.0-wcsncmp.patch
-
-# KDE#402006 mark helper regs defined in final_tidyup before freeres_wrapper
-# Prereq for KDE#386945
-Patch18: valgrind-3.14.0-final_tidyup.patch
-
-# KDE#386945 Bogus memcheck errors on ppc64(le) when using strcmp
-# See also patches 10 to 16 (yes, there are this many...)
-Patch19: valgrind-3.14.0-ppc64-ldbrx.patch
-Patch20: valgrind-3.14.0-ppc64-unaligned-words.patch
-Patch21: valgrind-3.14.0-ppc64-lxvd2x.patch
-Patch22: valgrind-3.14.0-ppc64-unaligned-vecs.patch
-Patch23: valgrind-3.14.0-ppc64-lxvb16x.patch
-Patch24: valgrind-3.14.0-set_AV_CR6.patch
-Patch25: valgrind-3.14.0-undef_malloc_args.patch
-
-# KDE#401822 none/tests/ppc64/jm-vmx fails and produces assembler warnings
-Patch26: valgrind-3.14.0-jm-vmx-constraints.patch
-
-# commit 0c701ba2a Fix sigkill.stderr.exp for glibc-2.28.
-Patch27: valgrind-3.14.0-sigkill.patch
-
-# KDE#402048 Implement minimal ptrace support for ppc64[le]-linux.
-Patch28: valgrind-3.14.0-ppc64-ptrace.patch
-
-# commit 43fe4bc23 arm64: Fix PTRACE_TRACEME
-Patch29: valgrind-3.14.0-arm64-ptrace-traceme.patch
-
-# KDE#402134 - assert fail mc_translate.c (noteTmpUsesIn) Iex_VECRET on arm64
-Patch30: valgrind-3.14.0-mc_translate-vecret.patch
-
-# KDE#402481 vbit-test fails on x86 for Iop_CmpEQ64 iselInt64Expr Sar64
-Patch31: valgrind-3.14.0-vbit-test-sec.patch
-Patch32: valgrind-3.14.0-x86-Iop_Sar64.patch
-
-# KDE#402519 POWER 3.0 addex instruction incorrectly implemented
-Patch33: valgrind-3.14.0-power9-addex.patch
-
-# KDE#402480  Do not use %rsp in clobber list
-Patch34: valgrind-3.14.0-rsp-clobber.patch
-
-# commit 3528f8 Accept DW_TAG_subrange_type with DW_AT_count
-Patch35: valgrind-3.14.0-subrange_type-count.patch
-
-# KDE#403552 s390x: wrong facility bit checked for vector facility
-Patch36: valgrind-3.14.0-s390x-vec-facility-bit.patch
-
-# KDE#404054 powerpc subfe x, x, x initializes x to 0 or -1 based on CA
-Patch37: valgrind-3.14.0-ppc-subfe.patch
-
-# KDE#405079 unhandled ppc64le-linux syscall: 131 (quotactl)
-Patch38: valgrind-3.14.0-ppc64-quotactl.patch
-
-# SW#6399 glibc might implement gettid itself, rename to gettid_sys.
-Patch39: valgrind-3.14.0-gettid.patch
-
 # We want all executables and libraries in libexec instead of lib
 # so they are only available for valgrind usage itself and so the
 # same directory is used independent of arch.
-Patch40: valgrind-3.14.0-pkglibexecdir.patch
+Patch4: valgrind-3.15.0-pkglibexecdir.patch
 
 
 %if 0%{?fedora} >= 15
@@ -292,48 +210,12 @@ Valgrind User Manual for details.
 %endif
 
 %prep
-%setup -q -n %{?scl:%{pkg_name}}%{!?scl:%{name}}-%{version}
+%setup -q -n %{?scl:%{pkg_name}}%{!?scl:%{name}}-%{version}.RC1
 
 %patch1 -p1
 %patch2 -p1
 %patch3 -p1
 %patch4 -p1
-%patch5 -p1
-%patch6 -p1
-%patch7 -p1
-%patch8 -p1
-%patch9 -p1
-%patch10 -p1
-%patch11 -p1
-%patch12 -p1
-%patch13 -p1
-%patch14 -p1
-%patch15 -p1
-%patch16 -p1
-%patch17 -p1
-%patch18 -p1
-%patch19 -p1
-%patch20 -p1
-%patch21 -p1
-%patch22 -p1
-%patch23 -p1
-%patch24 -p1
-%patch25 -p1
-%patch26 -p1
-%patch27 -p1
-%patch28 -p1
-%patch29 -p1
-%patch30 -p1
-%patch31 -p1
-%patch32 -p1
-%patch33 -p1
-%patch34 -p1
-%patch35 -p1
-%patch36 -p1
-%patch37 -p1
-%patch38 -p1
-%patch39 -p1
-%patch40 -p1
 
 %build
 CC=gcc
@@ -546,9 +428,11 @@ fi
 %endif
 
 %changelog
-* Mon Apr  8 2019 Mark Wielaard <mjw@fedoraproject.org>
+* Mon Apr  8 2019 Mark Wielaard <mjw@fedoraproject.org> - 3.15.0-0.1.RC1
 - Remove patches to prebuild files and always ./autogen.sh.
 - Only ever build primary arch. Put tools under libexec.
+- Update to upstream 3.15.0-RC1.
+- Drop all upstreamed patches.
 
 * Mon Mar  4 2019 Mark Wielaard <mjw@fedoraproject.org> - 3.14.0-16
 - Add valgrind-3.14.0-gettid.patch
