@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.15.0
-Release: 0.1.RC1%{?dist}
+Release: 0.2.RC1%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -83,6 +83,25 @@ Patch3: valgrind-3.9.0-ldso-supp.patch
 # so they are only available for valgrind usage itself and so the
 # same directory is used independent of arch.
 Patch4: valgrind-3.15.0-pkglibexecdir.patch
+
+# valgrind commit b2d2da64b0de1c4d657b63187967b68606e84711
+# GET_STARTREGS for s390: fix register constraint
+Patch5: valgrind-3.15.0-s390x-get-startregs-constraint.patch
+
+# KDE#406352 RC1 fails cachegrind/callgrind ann tests because of missing a.c
+Patch6: valgrind-3.15.0-missing-a-c.patch
+
+# KDE#406360 memcheck/tests/libstdc++.supp needs more supression variants
+Patch7: valgrind-3.15.0-libstdc++-supp.patch
+
+# KDE#406354 dhat is broken on x86 (32bit)
+Patch8: valgrind-3.15.0-dhat-x86.patch
+
+# KDE#406355 mcsignopass and mcsigpass fails due to a difference in gdb output
+Patch9: valgrind-3.15.0-gdb-output1.patch
+
+# KDE#406357 RC1 fails gdbserver_tests because of gdb output change
+Patch10: valgrind-3.15.0-gdb-output2.patch
 
 
 %if 0%{?fedora} >= 15
@@ -216,6 +235,12 @@ Valgrind User Manual for details.
 %patch2 -p1
 %patch3 -p1
 %patch4 -p1
+%patch5 -p1
+%patch6 -p1
+%patch7 -p1
+%patch8 -p1
+%patch9 -p1
+%patch10 -p1
 
 %build
 CC=gcc
@@ -428,6 +453,14 @@ fi
 %endif
 
 %changelog
+* Tue Apr  9 2019 Mark Wielaard <mjw@fedoraproject.org> - 3.15.0-0.2.RC1
+- Add valgrind-3.15.0-s390x-get-startregs-constraint.patch
+- Add valgrind-3.15.0-missing-a-c.patch
+- Add valgrind-3.15.0-libstdc++-supp.patch
+- Add valgrind-3.15.0-dhat-x86.patch
+- Add valgrind-3.15.0-gdb-output1.patch
+- Add valgrind-3.15.0-gdb-output2.patch
+
 * Mon Apr  8 2019 Mark Wielaard <mjw@fedoraproject.org> - 3.15.0-0.1.RC1
 - Remove patches to prebuild files and always ./autogen.sh.
 - Only ever build primary arch. Put tools under libexec.

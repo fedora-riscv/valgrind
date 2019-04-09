@@ -1,0 +1,123 @@
+From 97df7b924435c5f7f576972dc924f2c29105edb3 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Alexandra=20H=C3=A1jkov=C3=A1?= <ahajkova@redhat.com>
+Date: Tue, 9 Apr 2019 11:09:56 +0200
+Subject: [PATCH] gdbserver_tests: adjust filtering for the new gdb output
+
+mcsigpass and mcsignopass tests fails due to the slightly different
+gdb output. Filter the tests output to make it the same for different
+gdb version. Change mcsigpass and mcsignopass .exp to fit filtered
+.out.
+---
+ gdbserver_tests/filter_gdb              |  1 +
+ gdbserver_tests/mcsignopass.stdoutB.exp | 24 ++++++++++++------------
+ gdbserver_tests/mcsigpass.stdoutB.exp   |  6 +++---
+ 3 files changed, 16 insertions(+), 15 deletions(-)
+
+diff --git a/gdbserver_tests/filter_gdb b/gdbserver_tests/filter_gdb
+index 05bbe4c54..7e6092dd0 100755
+--- a/gdbserver_tests/filter_gdb
++++ b/gdbserver_tests/filter_gdb
+@@ -139,6 +139,7 @@ sed -e '/Remote debugging using/,/vgdb launched process attached/d'
+     -e 's/VgTs_WaitSys) 0x/VgTs_WaitSys)  0x/'                                                        \
+     -e '/Cannot access memory at address 0x......../d'                                                \
+     -e '/\[New Thread/d'                                                                              \
++    -e 's/0x........ in test/test/'                                                                    \
+     -e '/^$/d'                                                                                     |
+ 
+ # remove all the lines telling where the SIGFPE was trapped.
+diff --git a/gdbserver_tests/mcsignopass.stdoutB.exp b/gdbserver_tests/mcsignopass.stdoutB.exp
+index d77f9832a..18c830be6 100644
+--- a/gdbserver_tests/mcsignopass.stdoutB.exp
++++ b/gdbserver_tests/mcsignopass.stdoutB.exp
+@@ -6,54 +6,54 @@ Signal        Stop	Print	Pass to program	Description
+ SIGFPE        Yes	Yes	Yes		Arithmetic exception
+ Continuing.
+ Program received signal SIGSEGV, Segmentation fault.
+-0x........ in test1 () at faultstatus.c:116
++test1 () at faultstatus.c:116
+ 116		*BADADDR = 'x';
+ Continuing.
+ Program received signal SIGSEGV, Segmentation fault.
+-0x........ in test1 () at faultstatus.c:116
++test1 () at faultstatus.c:116
+ 116		*BADADDR = 'x';
+ Continuing.
+ Program received signal SIGSEGV, Segmentation fault.
+-0x........ in test1 () at faultstatus.c:116
++test1 () at faultstatus.c:116
+ 116		*BADADDR = 'x';
+ Continuing.
+ Program received signal SIGSEGV, Segmentation fault.
+-0x........ in test1 () at faultstatus.c:116
++test1 () at faultstatus.c:116
+ 116		*BADADDR = 'x';
+ Continuing.
+ Program received signal SIGSEGV, Segmentation fault.
+-0x........ in test1 () at faultstatus.c:116
++test1 () at faultstatus.c:116
+ 116		*BADADDR = 'x';
+ Continuing.
+ Program received signal SIGSEGV, Segmentation fault.
+-0x........ in test1 () at faultstatus.c:116
++test1 () at faultstatus.c:116
+ 116		*BADADDR = 'x';
+ Continuing.
+ Program received signal SIGSEGV, Segmentation fault.
+-0x........ in test1 () at faultstatus.c:116
++test1 () at faultstatus.c:116
+ 116		*BADADDR = 'x';
+ Continuing.
+ Program received signal SIGSEGV, Segmentation fault.
+-0x........ in test1 () at faultstatus.c:116
++test1 () at faultstatus.c:116
+ 116		*BADADDR = 'x';
+ Continuing.
+ Program received signal SIGSEGV, Segmentation fault.
+-0x........ in test1 () at faultstatus.c:116
++test1 () at faultstatus.c:116
+ 116		*BADADDR = 'x';
+ Continuing.
+ Program received signal SIGSEGV, Segmentation fault.
+-0x........ in test1 () at faultstatus.c:116
++test1 () at faultstatus.c:116
+ 116		*BADADDR = 'x';
+ Continuing.
+ Program received signal SIGSEGV, Segmentation fault.
+-0x........ in test1 () at faultstatus.c:116
++test1 () at faultstatus.c:116
+ 116		*BADADDR = 'x';
+ Signal        Stop	Print	Pass to program	Description
+ SIGSEGV       No	Yes	Yes		Segmentation fault
+ Continuing.
+ Program received signal SIGSEGV, Segmentation fault.
+ Program received signal SIGBUS, Bus error.
+-0x........ in test3 () at faultstatus.c:126
++test3 () at faultstatus.c:126
+ 126		mapping[FILESIZE+10];
+ Continuing.
+ Program received signal SIGFPE, Arithmetic exception.
+diff --git a/gdbserver_tests/mcsigpass.stdoutB.exp b/gdbserver_tests/mcsigpass.stdoutB.exp
+index de6c2634f..680035836 100644
+--- a/gdbserver_tests/mcsigpass.stdoutB.exp
++++ b/gdbserver_tests/mcsigpass.stdoutB.exp
+@@ -1,14 +1,14 @@
+ Continuing.
+ Program received signal SIGSEGV, Segmentation fault.
+-0x........ in test1 () at faultstatus.c:116
++test1 () at faultstatus.c:116
+ 116		*BADADDR = 'x';
+ Continuing.
+ Program received signal SIGSEGV, Segmentation fault.
+-0x........ in test2 () at faultstatus.c:121
++test2 () at faultstatus.c:121
+ 121		mapping[0] = 'x';
+ Continuing.
+ Program received signal SIGBUS, Bus error.
+-0x........ in test3 () at faultstatus.c:126
++test3 () at faultstatus.c:126
+ 126		mapping[FILESIZE+10];
+ Continuing.
+ Program received signal SIGFPE, Arithmetic exception.
+-- 
+2.17.2
+

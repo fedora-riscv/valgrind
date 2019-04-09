@@ -1,0 +1,19 @@
+commit b2d2da64b0de1c4d657b63187967b68606e84711
+Author: Julian Seward <jseward@acm.org>
+Date:   Mon Apr 8 14:16:48 2019 +0200
+
+    GET_STARTREGS for s390: fix register constraint (per comments from Andreas Arnez).
+
+diff --git a/coregrind/m_libcassert.c b/coregrind/m_libcassert.c
+index 6d1cd4c..bb9b92b 100644
+--- a/coregrind/m_libcassert.c
++++ b/coregrind/m_libcassert.c
+@@ -180,7 +180,7 @@
+            "std %%f6, 72(%1);"                            \
+            "std %%f7, 80(%1);"                            \
+            : /* out */   "=r" (ia)                        \
+-           : /* in */    "r" (&block[0])                  \
++           : /* in */    "a" (&block[0])                  \
+            : /* trash */ "memory"                         \
+         );                                                \
+         (srP)->r_pc = ia;                                 \
