@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.15.0
-Release: 0.2.RC1%{?dist}
+Release: 0.3.RC1%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -43,22 +43,17 @@ URL: http://www.valgrind.org/
 # Whether to run the full regtest or only a limited set
 # The full regtest includes gdb_server integration tests
 # and experimental tools.
-# Only run full regtests on x86_64, but not on older rhel
+# Only run full regtests on fedora, but not on older rhel
 # or when creating scl, the gdb_server tests might hang.
-%ifarch x86_64
-  %if %{is_scl}
-    %global run_full_regtest 0
-  %else
-    %if 0%{?fedora}
-      # Current rawhide gdb just crashes
-      %global run_full_regtest 0
-    %endif
-    %if 0%{?rhel}
-      %global run_full_regtest (%rhel >= 7)
-    %endif
-  %endif
-%else
+%if %{is_scl}
   %global run_full_regtest 0
+%else
+  %if 0%{?fedora}
+    %global run_full_regtest 1
+  %endif
+  %if 0%{?rhel}
+    %global run_full_regtest (%rhel >= 7)
+  %endif
 %endif
 
 # Generating minisymtabs doesn't really work for the staticly linked
@@ -102,6 +97,12 @@ Patch9: valgrind-3.15.0-gdb-output1.patch
 
 # KDE#406357 RC1 fails gdbserver_tests because of gdb output change
 Patch10: valgrind-3.15.0-gdb-output2.patch
+
+# KDE#405205 filter_libc: remove the futex syscall error line entirely
+Patch11: valgrind-3.15.0-filter-libc-futex.patch
+
+# KDE#406422 none/tests/amd64-linux/map_32bits.vgtest fails too easily
+Patch12: valgrind-3.15.0-mmap-32bit.patch
 
 
 %if 0%{?fedora} >= 15
@@ -237,10 +238,14 @@ Valgrind User Manual for details.
 %patch4 -p1
 %patch5 -p1
 %patch6 -p1
+# a.c cannot be "newer" than cgout-test
+touch cachegrind/tests/cgout-test
 %patch7 -p1
 %patch8 -p1
 %patch9 -p1
 %patch10 -p1
+%patch11 -p1
+%patch12 -p1
 
 %build
 CC=gcc
@@ -453,6 +458,13 @@ fi
 %endif
 
 %changelog
+* Wed Apr 10 2019 Mark Wielaard <mjw@fedoraproject.org> - 3.15.0-0.3.RC1
+- Enable full regtest on all fedora arches.
+- Make sure that patched a.c is not newer than cgout-test.
+- Update valgrind-3.15.0-gdb-output1.patch to upstream version.
+- Add valgrind-3.15.0-filter-libc-futex.patch.
+- Add valgrind-3.15.0-mmap-32bit.patch.
+
 * Tue Apr  9 2019 Mark Wielaard <mjw@fedoraproject.org> - 3.15.0-0.2.RC1
 - Add valgrind-3.15.0-s390x-get-startregs-constraint.patch
 - Add valgrind-3.15.0-missing-a-c.patch

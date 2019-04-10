@@ -1,0 +1,11 @@
+diff --git a/none/tests/amd64-linux/map_32bits.vgtest b/none/tests/amd64-linux/map_32bits.vgtest
+index 2b7f3a0..2c17854 100644
+--- a/none/tests/amd64-linux/map_32bits.vgtest
++++ b/none/tests/amd64-linux/map_32bits.vgtest
+@@ -1,5 +1,5 @@
+ prog: map_32bits
+ # take a big aspacemgr minaddr, to quickly reach the 2GB limit
+-vgopts: -q --aspace-minaddr=0x7ff60000
++vgopts: -q --aspace-minaddr=0x70000000
+ stderr_filter: filter_stderr
+ 

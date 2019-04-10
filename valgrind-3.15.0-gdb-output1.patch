@@ -1,32 +1,63 @@
-From 97df7b924435c5f7f576972dc924f2c29105edb3 Mon Sep 17 00:00:00 2001
-From: =?UTF-8?q?Alexandra=20H=C3=A1jkov=C3=A1?= <ahajkova@redhat.com>
-Date: Tue, 9 Apr 2019 11:09:56 +0200
-Subject: [PATCH] gdbserver_tests: adjust filtering for the new gdb output
+commit 12addd06445a1685e91ff091867ae27d6eac733f
+Author: Alexandra Hájková <ahajkova@redhat.com>
+Date:   Tue Apr 9 11:09:56 2019 +0200
 
-mcsigpass and mcsignopass tests fails due to the slightly different
-gdb output. Filter the tests output to make it the same for different
-gdb version. Change mcsigpass and mcsignopass .exp to fit filtered
-.out.
----
- gdbserver_tests/filter_gdb              |  1 +
- gdbserver_tests/mcsignopass.stdoutB.exp | 24 ++++++++++++------------
- gdbserver_tests/mcsigpass.stdoutB.exp   |  6 +++---
- 3 files changed, 16 insertions(+), 15 deletions(-)
+    gdbserver_tests: adjust filtering for the new gdb output
+    
+    mcsigpass and mcsignopass tests fails due to the slightly different
+    gdb output. Filter the tests output to make it the same for different
+    gdb version. Change mcsigpass and mcsignopass .exp to fit filtered
+    .out.
+    
+    More generic regexp by Stefan Maksimovic <stefan.maksimovic@rt-rk.com>.
+    
+    https://bugs.kde.org/show_bug.cgi?id=406355
 
 diff --git a/gdbserver_tests/filter_gdb b/gdbserver_tests/filter_gdb
-index 05bbe4c54..7e6092dd0 100755
+index 05bbe4c..947e7bc 100755
 --- a/gdbserver_tests/filter_gdb
 +++ b/gdbserver_tests/filter_gdb
 @@ -139,6 +139,7 @@ sed -e '/Remote debugging using/,/vgdb launched process attached/d'
      -e 's/VgTs_WaitSys) 0x/VgTs_WaitSys)  0x/'                                                        \
      -e '/Cannot access memory at address 0x......../d'                                                \
      -e '/\[New Thread/d'                                                                              \
-+    -e 's/0x........ in test/test/'                                                                    \
++    -e 's/^0x........ in \(\w\+ (\)/\1/'                                                              \
      -e '/^$/d'                                                                                     |
  
  # remove all the lines telling where the SIGFPE was trapped.
+diff --git a/gdbserver_tests/mcbreak.stdoutB.exp b/gdbserver_tests/mcbreak.stdoutB.exp
+index ba526da..7559037 100644
+--- a/gdbserver_tests/mcbreak.stdoutB.exp
++++ b/gdbserver_tests/mcbreak.stdoutB.exp
+@@ -43,11 +43,11 @@ Breakpoint 3, main (argc=1, argv=0x........) at t.c:120
+ Delete all breakpoints? (y or n) [answered Y; input not from terminal]
+ Continuing.
+ Program received signal SIGTRAP, Trace/breakpoint trap.
+-0x........ in make_error (s=0x........ "called from level") at t.c:41
++make_error (s=0x........ "called from level") at t.c:41
+ 41	  if (int_und == 0)
+ 44	     printf ("%s int_und is not zero\n", s);
+ old_pc has changed after step
+ Continuing.
+ Program received signal SIGTRAP, Trace/breakpoint trap.
+-0x........ in make_error (s=0x........ "called from main") at t.c:41
++make_error (s=0x........ "called from main") at t.c:41
+ 41	  if (int_und == 0)
+diff --git a/gdbserver_tests/mcinfcallWSRU.stderrB.exp b/gdbserver_tests/mcinfcallWSRU.stderrB.exp
+index a2f2b87..06dc433 100644
+--- a/gdbserver_tests/mcinfcallWSRU.stderrB.exp
++++ b/gdbserver_tests/mcinfcallWSRU.stderrB.exp
+@@ -14,7 +14,7 @@ Breakpoint 1, sleeper_or_burner (v=0x........) at sleepers.c:74
+ 74	   int i = 0;
+ Continuing.
+ Program received signal SIGTRAP, Trace/breakpoint trap.
+-0x........ in do_burn () at sleepers.c:41
++do_burn () at sleepers.c:41
+ 41	   for (i = 0; i < burn; i++) loopnr++;
+ [Switching to thread 1 (Thread ....)]
+ #0  0x........ in do_burn ()
 diff --git a/gdbserver_tests/mcsignopass.stdoutB.exp b/gdbserver_tests/mcsignopass.stdoutB.exp
-index d77f9832a..18c830be6 100644
+index d77f983..18c830b 100644
 --- a/gdbserver_tests/mcsignopass.stdoutB.exp
 +++ b/gdbserver_tests/mcsignopass.stdoutB.exp
 @@ -6,54 +6,54 @@ Signal        Stop	Print	Pass to program	Description
@@ -97,7 +128,7 @@ index d77f9832a..18c830be6 100644
  Continuing.
  Program received signal SIGFPE, Arithmetic exception.
 diff --git a/gdbserver_tests/mcsigpass.stdoutB.exp b/gdbserver_tests/mcsigpass.stdoutB.exp
-index de6c2634f..680035836 100644
+index de6c263..6800358 100644
 --- a/gdbserver_tests/mcsigpass.stdoutB.exp
 +++ b/gdbserver_tests/mcsigpass.stdoutB.exp
 @@ -1,14 +1,14 @@
@@ -118,6 +149,16 @@ index de6c2634f..680035836 100644
  126		mapping[FILESIZE+10];
  Continuing.
  Program received signal SIGFPE, Arithmetic exception.
--- 
-2.17.2
-
+diff --git a/gdbserver_tests/nlcontrolc.stdoutB.exp b/gdbserver_tests/nlcontrolc.stdoutB.exp
+index e334fd0..e8a5ff8 100644
+--- a/gdbserver_tests/nlcontrolc.stdoutB.exp
++++ b/gdbserver_tests/nlcontrolc.stdoutB.exp
+@@ -9,7 +9,7 @@ $4 = 0
+ changed burning parameters
+ Continuing.
+ Program received signal SIGTRAP, Trace/breakpoint trap.
+-0x........ in do_burn () at sleepers.c:41
++do_burn () at sleepers.c:41
+ 41	   for (i = 0; i < burn; i++) loopnr++;
+ $5 = 0
+ $6 = 0
