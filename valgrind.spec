@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.15.0
-Release: 0.3.RC1%{?dist}
+Release: 0.4.RC2%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -45,11 +45,12 @@ URL: http://www.valgrind.org/
 # and experimental tools.
 # Only run full regtests on fedora, but not on older rhel
 # or when creating scl, the gdb_server tests might hang.
+# Currently gdb on f30 and rawhide is broken.
 %if %{is_scl}
   %global run_full_regtest 0
 %else
   %if 0%{?fedora}
-    %global run_full_regtest 1
+    %global run_full_regtest (%fedora < 30)
   %endif
   %if 0%{?rhel}
     %global run_full_regtest (%rhel >= 7)
@@ -63,7 +64,7 @@ URL: http://www.valgrind.org/
 # So those will already have their full symbol table.
 %undefine _include_minidebuginfo
 
-Source0: ftp://sourceware.org/pub/valgrind/valgrind-%{version}.RC1.tar.bz2
+Source0: ftp://sourceware.org/pub/valgrind/valgrind-%{version}.RC2.tar.bz2
 
 # Needs investigation and pushing upstream
 Patch1: valgrind-3.9.0-cachegrind-improvements.patch
@@ -79,41 +80,14 @@ Patch3: valgrind-3.9.0-ldso-supp.patch
 # same directory is used independent of arch.
 Patch4: valgrind-3.15.0-pkglibexecdir.patch
 
-# valgrind commit b2d2da64b0de1c4d657b63187967b68606e84711
-# GET_STARTREGS for s390: fix register constraint
-Patch5: valgrind-3.15.0-s390x-get-startregs-constraint.patch
-
-# KDE#406352 RC1 fails cachegrind/callgrind ann tests because of missing a.c
-Patch6: valgrind-3.15.0-missing-a-c.patch
-
-# KDE#406360 memcheck/tests/libstdc++.supp needs more supression variants
-Patch7: valgrind-3.15.0-libstdc++-supp.patch
-
-# KDE#406354 dhat is broken on x86 (32bit)
-Patch8: valgrind-3.15.0-dhat-x86.patch
-
-# KDE#406355 mcsignopass and mcsigpass fails due to a difference in gdb output
-Patch9: valgrind-3.15.0-gdb-output1.patch
-
-# KDE#406357 RC1 fails gdbserver_tests because of gdb output change
-Patch10: valgrind-3.15.0-gdb-output2.patch
-
 # KDE#405205 filter_libc: remove the futex syscall error line entirely
-Patch11: valgrind-3.15.0-filter-libc-futex.patch
+Patch5: valgrind-3.15.0-filter-libc-futex.patch
 
 # KDE#406422 none/tests/amd64-linux/map_32bits.vgtest fails too easily
-Patch12: valgrind-3.15.0-mmap-32bit.patch
+Patch6: valgrind-3.15.0-mmap-32bit.patch
 
 
-%if 0%{?fedora} >= 15
-BuildRequires: glibc-devel >= 2.14
-%else
-%if 0%{?rhel} >= 6
-BuildRequires: glibc-devel >= 2.12
-%else
-BuildRequires: glibc-devel >= 2.5
-%endif
-%endif
+BuildRequires: glibc-devel
 
 %if %{build_openmpi}
 BuildRequires: openmpi-devel >= 1.3.3
@@ -230,7 +204,7 @@ Valgrind User Manual for details.
 %endif
 
 %prep
-%setup -q -n %{?scl:%{pkg_name}}%{!?scl:%{name}}-%{version}.RC1
+%setup -q -n %{?scl:%{pkg_name}}%{!?scl:%{name}}-%{version}.RC2
 
 %patch1 -p1
 %patch2 -p1
@@ -238,14 +212,6 @@ Valgrind User Manual for details.
 %patch4 -p1
 %patch5 -p1
 %patch6 -p1
-# a.c cannot be "newer" than cgout-test
-touch cachegrind/tests/cgout-test
-%patch7 -p1
-%patch8 -p1
-%patch9 -p1
-%patch10 -p1
-%patch11 -p1
-%patch12 -p1
 
 %build
 CC=gcc
@@ -327,11 +293,7 @@ popd
 %ifarch %{ix86} x86_64
 # To avoid multilib clashes in between i?86 and x86_64,
 # tweak installed <valgrind/config.h> a little bit.
-for i in HAVE_PTHREAD_CREATE_GLIBC_2_0 HAVE_PTRACE_GETREGS HAVE_AS_AMD64_FXSAVE64 \
-%if 0%{?rhel} == 5
-         HAVE_BUILTIN_ATOMIC HAVE_BUILTIN_ATOMIC_CXX \
-%endif
-         ; do
+for i in HAVE_PTHREAD_CREATE_GLIBC_2_0 HAVE_PTRACE_GETREGS HAVE_AS_AMD64_FXSAVE64; do
   sed -i -e 's,^\(#define '$i' 1\|/\* #undef '$i' \*/\)$,#ifdef __x86_64__\n# define '$i' 1\n#endif,' \
     $RPM_BUILD_ROOT%{_includedir}/valgrind/config.h
 done
@@ -365,7 +327,7 @@ LD_SHOW_AUXV=1 /bin/true
 cat /proc/cpuinfo
 
 # Make sure a basic binary runs. There should be no errors.
-./vg-in-place --error-exitcode=1 /bin/true
+./vg-in-place --error-exitcode=1 /bin/true --help
 
 # Build the test files with the software collection compiler if available.
 %{?scl:PATH=%{_bindir}${PATH:+:${PATH}}}
@@ -458,6 +420,21 @@ fi
 %endif
 
 %changelog
+* Thu Apr 11 2019 Mark Wielaard <mjw@fedoraproject.org> - 3.15.0-0.4.RC2
+- Update to 3.15.0.RC2.
+- Drop upstreamed patches:
+  - valgrind-3.15.0-s390x-get-startregs-constraint.patch
+  - valgrind-3.15.0-missing-a-c.patch
+  - valgrind-3.15.0-libstdc++-supp.patch
+  - valgrind-3.15.0-dhat-x86.patch
+  - valgrind-3.15.0-gdb-output1.patch
+  - valgrind-3.15.0-gdb-output2.patch
+- Update valgrind-3.15.0-mmap-32bit.patch to upstream version.
+- gdb on f30 and rawhide is currently broken, don't run_full_regtest.
+- Any glibc-devel version is.
+- Drop rhel5 special case for tools-devel.
+- Use /bin/true --help as sanity test.
+
 * Wed Apr 10 2019 Mark Wielaard <mjw@fedoraproject.org> - 3.15.0-0.3.RC1
 - Enable full regtest on all fedora arches.
 - Make sure that patched a.c is not newer than cgout-test.

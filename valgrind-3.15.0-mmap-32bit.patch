@@ -1,11 +1,29 @@
+commit 535d2ff4f2f755faa8b1a9e467833eca455bd2d7
+Author: Mark Wielaard <mark@klomp.org>
+Date:   Thu Apr 11 18:06:34 2019 +0200
+
+    none/tests/amd64-linux/map_32bits.vgtest fails too easily
+    
+    On various systems none/tests/amd64-linux/map_32bits.vgtest fails with:
+    first mmap: Cannot allocate memory.
+    
+    The problem is that the --aspace-minaddr is too tight. Newer glibc seem
+    to mmap some memory and so even our first mmap with MMAP_32BIT will fail.
+    
+    The solution is to make a bit more memory < 2GB available.
+    If there is 16MB available the test always seems to succeed without
+    needing too many tries. The original 256K is too low.
+    
+    https://bugs.kde.org/show_bug.cgi?id=406422
+
 diff --git a/none/tests/amd64-linux/map_32bits.vgtest b/none/tests/amd64-linux/map_32bits.vgtest
-index 2b7f3a0..2c17854 100644
+index 2b7f3a0..43011e3 100644
 --- a/none/tests/amd64-linux/map_32bits.vgtest
 +++ b/none/tests/amd64-linux/map_32bits.vgtest
 @@ -1,5 +1,5 @@
  prog: map_32bits
  # take a big aspacemgr minaddr, to quickly reach the 2GB limit
 -vgopts: -q --aspace-minaddr=0x7ff60000
-+vgopts: -q --aspace-minaddr=0x70000000
++vgopts: -q --aspace-minaddr=0x7f000000
  stderr_filter: filter_stderr
  
