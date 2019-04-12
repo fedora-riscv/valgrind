@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.15.0
-Release: 0.4.RC2%{?dist}
+Release: 0.5.RC2%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -16,7 +16,7 @@ URL: http://www.valgrind.org/
 
 # We never want the openmpi subpackage when building a software collecton.
 # We always want it for fedora.
-# We only want it for older rhel.
+# We only want it for older rhel. But not s390x for too old rhel.
 %if %{is_scl}
   %global build_openmpi 0
 %else
@@ -24,7 +24,15 @@ URL: http://www.valgrind.org/
     %global build_openmpi 1
   %endif
   %if 0%{?rhel}
-    %global build_openmpi (%rhel < 8)
+    %if 0%{?rhel} > 7
+      %global build_openmpi 0
+    %else
+      %ifarch s390x
+	%global build_openmpi (%{?rhel} > 6)
+      %else
+	%global build_openmpi 1
+      %endif
+    %endif
   %endif
 %endif
 
@@ -86,11 +94,15 @@ Patch5: valgrind-3.15.0-filter-libc-futex.patch
 # KDE#406422 none/tests/amd64-linux/map_32bits.vgtest fails too easily
 Patch6: valgrind-3.15.0-mmap-32bit.patch
 
+# KDE#398649 s390x z13 support doesn't build with older gcc/binutils
+# Disable z13 support (on rhel6)
+Patch7: valgrind-3.15.0-disable-s390x-z13.patch
+
 
 BuildRequires: glibc-devel
 
 %if %{build_openmpi}
-BuildRequires: openmpi-devel >= 1.3.3
+BuildRequires: openmpi-devel
 %endif
 
 %if %{run_full_regtest}
@@ -122,12 +134,10 @@ BuildRequires: autoconf
 %{?scl:Requires(post): /sbin/restorecon}
 %endif
 
-# Might be defined in redhat-rpm-config
-%if 0%{?valgrind_arches:1}
-ExclusiveArch: %{valgrind_arches}
-%else
+# We could use %%valgrind_arches as defined in redhat-rpm-config
+# But that is really for programs using valgrind, it defines the
+# set of architectures that valgrind works correctly on.
 ExclusiveArch: %{ix86} x86_64 ppc ppc64 ppc64le s390x armv7hl aarch64
-%endif
 
 # Define valarch, the architecture name that valgrind uses
 # And only_arch, the configure option to only build for that arch.
@@ -213,6 +223,12 @@ Valgrind User Manual for details.
 %patch5 -p1
 %patch6 -p1
 
+# Disable s390x z13 support on old rhel, binutils is just too old.
+%if 0%{?rhel} == 6
+%patch7 -p1
+%endif
+
+
 %build
 CC=gcc
 
@@ -250,24 +266,6 @@ OPTFLAGS="`echo " %{optflags} " | sed 's/ -m\(64\|3[21]\) / /g;s/ -fexceptions /
   GDB=%{_bindir}/gdb
 
 make %{?_smp_mflags}
-
-# Ensure there are no unexpected file descriptors open,
-# the testsuite otherwise fails.
-cat > close_fds.c <<EOF
-#include <stdlib.h>
-#include <unistd.h>
-int main (int argc, char *const argv[])
-{
-  int i, j = sysconf (_SC_OPEN_MAX);
-  if (j < 0)
-    exit (1);
-  for (i = 3; i < j; ++i)
-    close (i);
-  execvp (argv[1], argv + 1);
-  exit (1);
-}
-EOF
-gcc $RPM_OPT_FLAGS -o close_fds close_fds.c
 
 %install
 rm -rf $RPM_BUILD_ROOT
@@ -341,15 +339,15 @@ export PYTHONCOERCECLOCALE=0
 
 echo ===============TESTING===================
 %if %{run_full_regtest}
-  ./close_fds make regtest || :
+  make regtest || :
 %else
-  ./close_fds make nonexp-regtest || :
+  make nonexp-regtest || :
 %endif
 
 # Make sure test failures show up in build.log
 # Gather up the diffs (at most the first 20 lines for each one)
 MAX_LINES=20
-diff_files=`find */tests -name '*.diff*' | sort`
+diff_files=`find gdbserver_tests */tests -name '*.diff*' | sort`
 if [ z"$diff_files" = z ] ; then
    echo "Congratulations, all tests passed!" >> diffs
 else
@@ -420,6 +418,13 @@ fi
 %endif
 
 %changelog
+* Thu Apr 12 2019 Mark Wielaard <mjw@fedoraproject.org> - 3.15.0-0.5.RC2
+- No openmpi support on old s390x rhel.
+- Disable s390x z13 support on rhel6 (too old binutils).
+- Use an explicit ExclusiveArch, don't rely on %%valgrind_arches.
+- Drop close_fds, it is no longer needed.
+- Include any gdbserver_tests diffs for failing regtest.
+
 * Thu Apr 11 2019 Mark Wielaard <mjw@fedoraproject.org> - 3.15.0-0.4.RC2
 - Update to 3.15.0.RC2.
 - Drop upstreamed patches:
