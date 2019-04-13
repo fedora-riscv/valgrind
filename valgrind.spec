@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.15.0
-Release: 0.5.RC2%{?dist}
+Release: 0.6.RC2%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -230,7 +230,6 @@ Valgrind User Manual for details.
 
 
 %build
-CC=gcc
 
 # Some patches (might) touch Makefile.am or configure.ac files.
 # Just always autoreconf so we don't need patches to prebuild files.
@@ -249,18 +248,31 @@ CC=gcc
 %define mpiccpath /bin/false
 %endif
 
-# Filter out some flags that cause lots of valgrind test failures.
-# Also filter away -O2, valgrind adds it wherever suitable, but
-# not for tests which should be -O0, as they aren't meant to be
-# compiled with -O2 unless explicitely requested. Same for any -mcpu flag.
-# Ideally we will change this to only be done for the non-primary build
-# and the test suite. Also disable strict symbol checks because the
-# vg_preload library will use hidden/undefined symbols from glibc
-# like __libc_freeres.
-%undefine _hardened_build
+# Filter out "hardening" flags that don't make sense for valgrind.
+# -fstack-protector just cannot work (valgrind would have to implement
+# its own version since it doesn't link with glibc and handles stack
+# setup itself).
+#
+# -Wl,-z,now doesn't make sense for static linked tools
+# and would prevent using the vgpreload libraries on binaries that
+# don't link themselves against libraries (like pthread) which symbols
+# are needed (but only if the inferior itself would use them).
+#
+# -O2 doesn't work for the vgpreload libraries either. They are meant
+# to not be optimized to show precisely what happened. valgrind adds
+# -O2 itself wherever suitable.
+#
+# Also disable strict symbol checks because the # vg_preload library
+# will use hidden/undefined symbols from glibc like __libc_freeres.
 %undefine _strict_symbol_defs_build
-OPTFLAGS="`echo " %{optflags} " | sed 's/ -m\(64\|3[21]\) / /g;s/ -fexceptions / /g;s/ -fstack-protector\([-a-z]*\) / / g;s/ -Wp,-D_FORTIFY_SOURCE=2 / /g;s/ -O2 / /g;s/ -mcpu=\([a-z0-9]\+\) / /g;s/^ //;s/ $//'`"
-%configure CC="$CC" CFLAGS="$OPTFLAGS" CXXFLAGS="$OPTFLAGS" \
+
+CFLAGS="`echo " %{optflags} " | sed 's/ -fstack-protector\([-a-z]*\) / / g;s/ -O2 / /g;'`"
+export CFLAGS
+
+LDFLAGS="`echo " %{build_ldflags} " | sed 's/ -Wl,-z,now / / g;'`"
+export LDFLAGS
+
+%configure \
   --with-mpicc=%{mpiccpath} \
   %{only_arch} \
   GDB=%{_bindir}/gdb
@@ -418,7 +430,11 @@ fi
 %endif
 
 %changelog
-* Thu Apr 12 2019 Mark Wielaard <mjw@fedoraproject.org> - 3.15.0-0.5.RC2
+* Sat Apr 13 2019 Mark Wielaard <mjw@fedoraproject.org> - 3.15.0-0.6.RC2
+- Pass through most (hardening) flags, except -O2, -fstack-protector
+  and -Wl,-z,now.
+
+* Fri Apr 12 2019 Mark Wielaard <mjw@fedoraproject.org> - 3.15.0-0.5.RC2
 - No openmpi support on old s390x rhel.
 - Disable s390x z13 support on rhel6 (too old binutils).
 - Use an explicit ExclusiveArch, don't rely on %%valgrind_arches.
