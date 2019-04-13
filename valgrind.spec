@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.15.0
-Release: 0.6.RC2%{?dist}
+Release: 0.7.RC2%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -97,6 +97,9 @@ Patch6: valgrind-3.15.0-mmap-32bit.patch
 # KDE#398649 s390x z13 support doesn't build with older gcc/binutils
 # Disable z13 support (on rhel6)
 Patch7: valgrind-3.15.0-disable-s390x-z13.patch
+
+# Add some stack-protector
+Patch8: valgrind-3.15.0-some-stack-protector.patch
 
 
 BuildRequires: glibc-devel
@@ -227,6 +230,8 @@ Valgrind User Manual for details.
 %if 0%{?rhel} == 6
 %patch7 -p1
 %endif
+
+%patch8 -p1
 
 
 %build
@@ -430,6 +435,9 @@ fi
 %endif
 
 %changelog
+* Sun Apr 14 2019 Mark Wielaard <mjw@fedoraproject.org> - 3.15.0-0.7.RC2
+- Add valgrind-3.15.0-some-stack-protector.patch
+
 * Sat Apr 13 2019 Mark Wielaard <mjw@fedoraproject.org> - 3.15.0-0.6.RC2
 - Pass through most (hardening) flags, except -O2, -fstack-protector
   and -Wl,-z,now.
