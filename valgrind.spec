@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.15.0
-Release: 0.7.RC2%{?dist}
+Release: 0.8.RC2%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -101,6 +101,8 @@ Patch7: valgrind-3.15.0-disable-s390x-z13.patch
 # Add some stack-protector
 Patch8: valgrind-3.15.0-some-stack-protector.patch
 
+# KDE#406465 arm64 selector fails on "t0 = <expr>" where <expr> type Ity_F16.
+Patch9: valgrind-3.15.0-arm64-Ity_F16.patch
 
 BuildRequires: glibc-devel
 
@@ -231,7 +233,12 @@ Valgrind User Manual for details.
 %patch7 -p1
 %endif
 
+# Old rhel gcc doesn't have -fstack-protector-strong.
+%if 0%{?fedora} || 0%{?rhel} >= 7
 %patch8 -p1
+%endif
+
+%patch9 -p1
 
 
 %build
@@ -274,7 +281,15 @@ Valgrind User Manual for details.
 CFLAGS="`echo " %{optflags} " | sed 's/ -fstack-protector\([-a-z]*\) / / g;s/ -O2 / /g;'`"
 export CFLAGS
 
-LDFLAGS="`echo " %{build_ldflags} " | sed 's/ -Wl,-z,now / / g;'`"
+# Older Fedora/RHEL only had __global_ldflags.
+# Even older didn't even have that (so we don't need to scrub them).
+%if 0%{?build_ldflags:1}
+LDFLAGS="`echo " %{build_ldflags} "    | sed 's/ -Wl,-z,now / / g;'`"
+%else
+%if 0%{?__global_ldflags:1}
+LDFLAGS="`echo " %{__global_ldflags} " | sed 's/ -Wl,-z,now / / g;'`"
+%endif
+%endif
 export LDFLAGS
 
 %configure \
@@ -435,6 +450,11 @@ fi
 %endif
 
 %changelog
+* Sun Apr 14 2019 Mark Wielaard <mjw@fedoraproject.org> - 3.15.0-0.8.RC2
+- Adding of stack-protector flag should only be done with newer gcc.
+- Older rpm macros didn't provide build_ldflags.
+- Add valgrind-3.15.0-arm64-Ity_F16.patch
+
 * Sun Apr 14 2019 Mark Wielaard <mjw@fedoraproject.org> - 3.15.0-0.7.RC2
 - Add valgrind-3.15.0-some-stack-protector.patch
 

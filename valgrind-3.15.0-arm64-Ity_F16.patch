@@ -1,0 +1,34 @@
+commit 270037da8b508954f0f7d703a0bebf5364eec548
+Author: Julian Seward <jseward@acm.org>
+Date:   Sat Apr 13 12:34:06 2019 +0200
+
+    Bug 406465 - arm64 instruction selector fails on "t0 = <expr>" where <expr> has type Ity_F16.
+
+diff --git a/VEX/priv/host_arm64_isel.c b/VEX/priv/host_arm64_isel.c
+index 49d0f0b..b2ab742 100644
+--- a/VEX/priv/host_arm64_isel.c
++++ b/VEX/priv/host_arm64_isel.c
+@@ -3391,6 +3391,10 @@ static HReg iselF16Expr_wrk ( ISelEnv* env, IRExpr* e )
+    vassert(e);
+    vassert(ty == Ity_F16);
+ 
++   if (e->tag == Iex_RdTmp) {
++      return lookupIRTemp(env, e->Iex.RdTmp.tmp);
++   }
++
+    if (e->tag == Iex_Get) {
+       Int offs = e->Iex.Get.offset;
+       if (offs >= 0 && offs < 8192 && 0 == (offs & 1)) {
+@@ -3706,6 +3710,12 @@ static void iselStmt ( ISelEnv* env, IRStmt* stmt )
+          addInstr(env, ARM64Instr_VMov(8/*yes, really*/, dst, src));
+          return;
+       }
++      if (ty == Ity_F16) {
++         HReg src = iselF16Expr(env, stmt->Ist.WrTmp.data);
++         HReg dst = lookupIRTemp(env, tmp);
++         addInstr(env, ARM64Instr_VMov(8/*yes, really*/, dst, src));
++         return;
++      }
+       if (ty == Ity_V128) {
+          HReg src = iselV128Expr(env, stmt->Ist.WrTmp.data);
+          HReg dst = lookupIRTemp(env, tmp);
