@@ -263,7 +263,8 @@ Valgrind User Manual for details.
 # Filter out "hardening" flags that don't make sense for valgrind.
 # -fstack-protector just cannot work (valgrind would have to implement
 # its own version since it doesn't link with glibc and handles stack
-# setup itself).
+# setup itself). We patch some flags back in just for those helper
+# programs where it does make sense.
 #
 # -Wl,-z,now doesn't make sense for static linked tools
 # and would prevent using the vgpreload libraries on binaries that
@@ -274,11 +275,20 @@ Valgrind User Manual for details.
 # to not be optimized to show precisely what happened. valgrind adds
 # -O2 itself wherever suitable.
 #
-# Also disable strict symbol checks because the # vg_preload library
+# On ppc64[be] -fexceptions is troublesome.
+# It might cause an undefined reference to `_Unwind_Resume'
+# in libcoregrind-ppc64be-linux.a(libcoregrind_ppc64be_linux_a-readelf.o):
+# In function `read_elf_symtab__ppc64be_linux.
+#
+# Also disable strict symbol checks because the vg_preload library
 # will use hidden/undefined symbols from glibc like __libc_freeres.
 %undefine _strict_symbol_defs_build
 
+%ifarch ppc64
+CFLAGS="`echo " %{optflags} " | sed 's/ -fstack-protector\([-a-z]*\) / / g;s/ -O2 / /g;s/ -fexceptions / /g;'`"
+%else
 CFLAGS="`echo " %{optflags} " | sed 's/ -fstack-protector\([-a-z]*\) / / g;s/ -O2 / /g;'`"
+%endif
 export CFLAGS
 
 # Older Fedora/RHEL only had __global_ldflags.
@@ -450,6 +460,9 @@ fi
 %endif
 
 %changelog
+* Tue Apr 16 2019 Mark Wielaard <mjw@fedoraproject.org>
+- On ppc64[be] -fexceptions is troublesome.
+
 * Sun Apr 14 2019 Mark Wielaard <mjw@fedoraproject.org> - 3.15.0-0.8.RC2
 - Adding of stack-protector flag should only be done with newer gcc.
 - Older rpm macros didn't provide build_ldflags.
