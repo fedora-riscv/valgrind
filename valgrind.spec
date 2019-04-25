@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.15.0
-Release: 1%{?dist}
+Release: 2%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -93,6 +93,9 @@ Patch5: valgrind-3.15.0-disable-s390x-z13.patch
 
 # Add some stack-protector
 Patch6: valgrind-3.15.0-some-stack-protector.patch
+
+# KDE#406561  mcinfcallWSRU gdbserver_test fails on ppc64
+Patch7: valgrind-3.15.0-ppc64-filter_gdb.patch
 
 BuildRequires: glibc-devel
 
@@ -226,6 +229,7 @@ Valgrind User Manual for details.
 %patch6 -p1
 %endif
 
+%patch7 -p1
 
 %build
 
@@ -446,8 +450,9 @@ fi
 %endif
 
 %changelog
-* Thu Apr 25 2019 Mark Wielaard <mjw@fedoraproject.org>
+* Thu Apr 25 2019 Mark Wielaard <mjw@fedoraproject.org> - 3.15.0-2
 - gdb has been fixed on fedora, run full regtests again.
+- Add valgrind-3.15.0-ppc64-filter_gdb.patch
 
 * Tue Apr 16 2019 Mark Wielaard <mjw@fedoraproject.org> - 3.15.0-1
 - On ppc64[be] -fexceptions is troublesome.
