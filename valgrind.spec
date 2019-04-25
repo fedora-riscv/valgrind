@@ -53,12 +53,11 @@ URL: http://www.valgrind.org/
 # and experimental tools.
 # Only run full regtests on fedora, but not on older rhel
 # or when creating scl, the gdb_server tests might hang.
-# Currently gdb on f30 and rawhide is broken.
 %if %{is_scl}
   %global run_full_regtest 0
 %else
   %if 0%{?fedora}
-    %global run_full_regtest (%fedora < 30)
+    %global run_full_regtest 1
   %endif
   %if 0%{?rhel}
     %global run_full_regtest (%rhel >= 7)
@@ -447,6 +446,9 @@ fi
 %endif
 
 %changelog
+* Thu Apr 25 2019 Mark Wielaard <mjw@fedoraproject.org>
+- gdb has been fixed on fedora, run full regtests again.
+
 * Tue Apr 16 2019 Mark Wielaard <mjw@fedoraproject.org> - 3.15.0-1
 - On ppc64[be] -fexceptions is troublesome.
 - valgrind-3.15.0 final
