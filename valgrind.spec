@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.15.0
-Release: 2%{?dist}
+Release: 3%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -96,6 +96,9 @@ Patch6: valgrind-3.15.0-some-stack-protector.patch
 
 # KDE#406561  mcinfcallWSRU gdbserver_test fails on ppc64
 Patch7: valgrind-3.15.0-ppc64-filter_gdb.patch
+
+# KDE#407218 Add support for the copy_file_range syscall
+Patch8: valgrind-3.15.0-copy_file_range.patch
 
 BuildRequires: glibc-devel
 
@@ -230,6 +233,7 @@ Valgrind User Manual for details.
 %endif
 
 %patch7 -p1
+%patch8 -p1
 
 %build
 
@@ -450,6 +454,9 @@ fi
 %endif
 
 %changelog
+* Sun May  5 2019 Mark Wielaard <mjw@fedoraproject.org> - 3.15.0-3
+- Add valgrind-3.15.0-copy_file_range.patch
+
 * Thu Apr 25 2019 Mark Wielaard <mjw@fedoraproject.org> - 3.15.0-2
 - gdb has been fixed on fedora, run full regtests again.
 - Add valgrind-3.15.0-ppc64-filter_gdb.patch
