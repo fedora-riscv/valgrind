@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.15.0
-Release: 3%{?dist}
+Release: 4%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -99,6 +99,9 @@ Patch7: valgrind-3.15.0-ppc64-filter_gdb.patch
 
 # KDE#407218 Add support for the copy_file_range syscall
 Patch8: valgrind-3.15.0-copy_file_range.patch
+
+# KDE#407307 Intercept stpcpy also in ld.so for arm64
+Patch9: valgrind-3.15.0-arm64-ld-stpcpy.patch
 
 BuildRequires: glibc-devel
 
@@ -234,6 +237,7 @@ Valgrind User Manual for details.
 
 %patch7 -p1
 %patch8 -p1
+%patch9 -p1
 
 %build
 
@@ -454,6 +458,9 @@ fi
 %endif
 
 %changelog
+* Tue May  7 2019 Mark Wielaard <mjw@fedoraproject.org> - 3.15.0-4
+- Add valgrind-3.15.0-arm64-ld-stpcpy.patch
+
 * Sun May  5 2019 Mark Wielaard <mjw@fedoraproject.org> - 3.15.0-3
 - Add valgrind-3.15.0-copy_file_range.patch
 
