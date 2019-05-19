@@ -103,6 +103,12 @@ Patch8: valgrind-3.15.0-copy_file_range.patch
 # KDE#407307 Intercept stpcpy also in ld.so for arm64
 Patch9: valgrind-3.15.0-arm64-ld-stpcpy.patch
 
+# commit 59784c aarch64 (arm64) isn't a supported architecture for exp-sgcheck.
+Patch10: valgrind-3.15.0-exp-sgcheck-no-aarch64.patch
+
+# commit 917e42 Make memcheck/tests/arm64-linux/scalar work under root
+Patch11: valgrind-3.15.0-scalar-arm64.patch
+
 BuildRequires: glibc-devel
 
 %if %{build_openmpi}
@@ -238,6 +244,8 @@ Valgrind User Manual for details.
 %patch7 -p1
 %patch8 -p1
 %patch9 -p1
+%patch10 -p1
+%patch11 -p1
 
 %build
 
@@ -458,6 +466,10 @@ fi
 %endif
 
 %changelog
+* Sun May 17 2019 Mark Wielaard <mjw@fedoraproject.org>
+- Add valgrind-3.15.0-exp-sgcheck-no-aarch64.patch
+- Add valgrind-3.15.0-scalar-arm64.patch
+
 * Tue May  7 2019 Mark Wielaard <mjw@fedoraproject.org> - 3.15.0-4
 - Add valgrind-3.15.0-arm64-ld-stpcpy.patch
 
