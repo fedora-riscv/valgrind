@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.15.0
-Release: 4%{?dist}
+Release: 5%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -470,7 +470,7 @@ fi
 %endif
 
 %changelog
-* Mon May 20 2019 Mark Wielaard <mjw@fedoraproject.org>
+* Mon May 20 2019 Mark Wielaard <mjw@fedoraproject.org> - 3.15.0-5
 - Add valgrind-3.15.0-exp-sgcheck-no-aarch64.patch
 - Add valgrind-3.15.0-scalar-arm64.patch
 - Add valgrind-3.15.0-scalar-x86.patch
