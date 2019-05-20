@@ -109,6 +109,9 @@ Patch10: valgrind-3.15.0-exp-sgcheck-no-aarch64.patch
 # commit 917e42 Make memcheck/tests/arm64-linux/scalar work under root
 Patch11: valgrind-3.15.0-scalar-arm64.patch
 
+# commit abc09f Make memcheck/tests/x86-linux/scalar test work under root.
+Patch12: valgrind-3.15.0-scalar-x86.patch
+
 BuildRequires: glibc-devel
 
 %if %{build_openmpi}
@@ -246,6 +249,7 @@ Valgrind User Manual for details.
 %patch9 -p1
 %patch10 -p1
 %patch11 -p1
+%patch12 -p1
 
 %build
 
@@ -466,9 +470,10 @@ fi
 %endif
 
 %changelog
-* Sun May 17 2019 Mark Wielaard <mjw@fedoraproject.org>
+* Mon May 20 2019 Mark Wielaard <mjw@fedoraproject.org>
 - Add valgrind-3.15.0-exp-sgcheck-no-aarch64.patch
 - Add valgrind-3.15.0-scalar-arm64.patch
+- Add valgrind-3.15.0-scalar-x86.patch
 
 * Tue May  7 2019 Mark Wielaard <mjw@fedoraproject.org> - 3.15.0-4
 - Add valgrind-3.15.0-arm64-ld-stpcpy.patch
