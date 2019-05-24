@@ -309,3 +309,66 @@ index 9f1bdab..9ba0665 100644
     LINXY(__NR_statx,             sys_statx),            // 397
  };
  
+commit c212b72a63e43be323a4e028bbdbe8b023c22be8
+Author: Mark Wielaard <mark@klomp.org>
+Date:   Wed May 15 21:30:00 2019 +0200
+
+    Explicitly make testcase variable for sys-copy_file_range undefined.
+    
+    On some systems an extra warning could occur when a variable in
+    the memcheck/tests/linux/sys-copy_file_range testcase was undefined,
+    but (accidentially) pointed to known bad memory. Fix by defining the
+    variable as 0, but then marking it explicitly undefined using memcheck
+    VALGRIND_MAKE_MEM_UNDEFINED.
+    
+    Followup for https://bugs.kde.org/show_bug.cgi?id=407218
+
+diff --git a/memcheck/tests/linux/sys-copy_file_range.c b/memcheck/tests/linux/sys-copy_file_range.c
+index 83981c6..589399c 100644
+--- a/memcheck/tests/linux/sys-copy_file_range.c
++++ b/memcheck/tests/linux/sys-copy_file_range.c
+@@ -3,8 +3,8 @@
+ #include <stdio.h>
+ #include <stdlib.h>
+ #include <sys/stat.h>
+-#include <sys/syscall.h>
+ #include <unistd.h>
++#include "../../memcheck.h"
+ 
+ int main(int argc, char **argv)
+ {
+@@ -51,7 +51,7 @@ int main(int argc, char **argv)
+     /* Check valgrind will produce expected warnings for the
+        various wrong arguments. */
+     do {
+-        void *t;
++        void *t = 0; VALGRIND_MAKE_MEM_UNDEFINED (&t, sizeof (void *));
+         void *z = (void *) -1;
+ 
+         ret = copy_file_range(fd_in, t, fd_out, NULL, len, 0);
+commit 033d013bebeb3471c0da47060deb9a5771e6c913
+Author: Mark Wielaard <mark@klomp.org>
+Date:   Fri May 24 21:51:31 2019 +0200
+
+    Fix memcheck/tests/linux/sys-copy_file_range open call (mode).
+    
+    sys-copy_file_range.c calls open with O_CREAT flag and so must provide
+    a mode argument. valgrind memcheck actually caught this ommission on
+    some arches (fedora rawhide i686 specifically).
+    
+    This is a small additional fixup for
+    https://bugs.kde.org/show_bug.cgi?id=407218
+
+diff --git a/memcheck/tests/linux/sys-copy_file_range.c b/memcheck/tests/linux/sys-copy_file_range.c
+index 589399c..3022fa1 100644
+--- a/memcheck/tests/linux/sys-copy_file_range.c
++++ b/memcheck/tests/linux/sys-copy_file_range.c
+@@ -12,7 +12,7 @@ int main(int argc, char **argv)
+     struct stat stat;
+     loff_t len, ret;
+ 
+-    fd_in = open("copy_file_range_source", O_CREAT | O_RDWR);
++    fd_in = open("copy_file_range_source", O_CREAT | O_RDWR, 0644);
+     if (fd_in == -1) {
+         perror("open copy_file_range_source");
+         exit(EXIT_FAILURE);

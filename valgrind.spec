@@ -478,6 +478,9 @@ fi
 %endif
 
 %changelog
+* Fri May 24 2019 Mark Wielaard <mjw@fedoraproject.org>
+- Update valgrind-3.15.0-copy_file_range.patch.
+
 * Fri May 24 2019 Mark Wielaard <mjw@fedoraproject.org> - 3.15.0-7
 - Update valgrind-3.15.0-some-stack-protector.patch to include getoff.
 - Add valgrind-3.15.0-some-Wl-z-now.patch
