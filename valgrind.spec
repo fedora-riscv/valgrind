@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.15.0
-Release: 5%{?dist}
+Release: 6%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -111,6 +111,9 @@ Patch11: valgrind-3.15.0-scalar-arm64.patch
 
 # commit abc09f Make memcheck/tests/x86-linux/scalar test work under root.
 Patch12: valgrind-3.15.0-scalar-x86.patch
+
+# KDE#407764 s390x: drd fails on z13 due to function wrapping issue
+Patch13: valgrind-3.15.0-s390x-wrap-drd.patch
 
 BuildRequires: glibc-devel
 
@@ -250,6 +253,7 @@ Valgrind User Manual for details.
 %patch10 -p1
 %patch11 -p1
 %patch12 -p1
+%patch13 -p1
 
 %build
 
@@ -470,6 +474,9 @@ fi
 %endif
 
 %changelog
+* Fri May 24 2019 Mark Wielaard <mjw@fedoraproject.org> - 3.15.0-6
+- Add valgrind-3.15.0-s390x-wrap-drd.patch
+
 * Mon May 20 2019 Mark Wielaard <mjw@fedoraproject.org> - 3.15.0-5
 - Add valgrind-3.15.0-exp-sgcheck-no-aarch64.patch
 - Add valgrind-3.15.0-scalar-arm64.patch
