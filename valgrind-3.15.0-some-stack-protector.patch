@@ -1,11 +1,11 @@
-commit 24f3e6699f0eed42cb2e0acf511ffb7e96efebe7
+commit b73fb7a614e1b5d60af23fb0752b5cead995e02e
 Author: Mark Wielaard <mark@klomp.org>
 Date:   Sun Apr 14 00:30:05 2019 +0200
 
     Remove no-stack-protector, add stack-protector-strong to some.
 
 diff --git a/auxprogs/Makefile.am b/auxprogs/Makefile.am
-index 56cc5efc7..bed7b7ba3 100644
+index 56cc5ef..1b7842b 100644
 --- a/auxprogs/Makefile.am
 +++ b/auxprogs/Makefile.am
 @@ -30,7 +30,7 @@ bin_PROGRAMS = valgrind-listener valgrind-di-server
@@ -26,8 +26,17 @@ index 56cc5efc7..bed7b7ba3 100644
  valgrind_di_server_CCASFLAGS = $(AM_CCASFLAGS_PRI)
  valgrind_di_server_LDFLAGS   = $(AM_CFLAGS_PRI)
  if VGCONF_PLATVARIANT_IS_ANDROID
+@@ -84,7 +84,7 @@ endif
+ 
+ getoff_@VGCONF_ARCH_PRI@_@VGCONF_OS@_SOURCES   = getoff.c
+ getoff_@VGCONF_ARCH_PRI@_@VGCONF_OS@_CPPFLAGS  = $(AM_CPPFLAGS_@VGCONF_PLATFORM_PRI_CAPS@)
+-getoff_@VGCONF_ARCH_PRI@_@VGCONF_OS@_CFLAGS    = $(AM_CFLAGS_@VGCONF_PLATFORM_PRI_CAPS@)
++getoff_@VGCONF_ARCH_PRI@_@VGCONF_OS@_CFLAGS    = $(AM_CFLAGS_@VGCONF_PLATFORM_PRI_CAPS@) -fstack-protector-strong
+ getoff_@VGCONF_ARCH_PRI@_@VGCONF_OS@_CCASFLAGS = $(AM_CCASFLAGS_PRI)
+ getoff_@VGCONF_ARCH_PRI@_@VGCONF_OS@_LDFLAGS   = $(AM_CFLAGS_PRI) @LIB_UBSAN@
+ if HAVE_DLINFO_RTLD_DI_TLS_MODID
 diff --git a/cachegrind/Makefile.am b/cachegrind/Makefile.am
-index f8447a17c..f57274118 100644
+index f8447a1..f572741 100644
 --- a/cachegrind/Makefile.am
 +++ b/cachegrind/Makefile.am
 @@ -25,7 +25,7 @@ bin_PROGRAMS = cg_merge
@@ -40,7 +49,7 @@ index f8447a17c..f57274118 100644
  cg_merge_LDFLAGS   = $(AM_CFLAGS_PRI)
  # If there is no secondary platform, and the platforms include x86-darwin,
 diff --git a/configure.ac b/configure.ac
-index f8c798bf3..ccc8f52db 100755
+index f8c798b..ccc8f52 100755
 --- a/configure.ac
 +++ b/configure.ac
 @@ -2188,24 +2188,24 @@ AC_LANG(C)
@@ -86,7 +95,7 @@ index f8c798bf3..ccc8f52db 100755
  
  # does this compiler support -finline-functions ?
 diff --git a/coregrind/Makefile.am b/coregrind/Makefile.am
-index 94030fdb0..3c732100e 100644
+index 94030fd..3c73210 100644
 --- a/coregrind/Makefile.am
 +++ b/coregrind/Makefile.am
 @@ -55,7 +55,7 @@ AR = ${LTO_AR}

@@ -474,6 +474,9 @@ fi
 %endif
 
 %changelog
+* Fri May 24 2019 Mark Wielaard <mjw@fedoraproject.org>
+- Update valgrind-3.15.0-some-stack-protector.patch to include getoff.
+
 * Fri May 24 2019 Mark Wielaard <mjw@fedoraproject.org> - 3.15.0-6
 - Add valgrind-3.15.0-s390x-wrap-drd.patch
 
