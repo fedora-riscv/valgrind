@@ -260,7 +260,12 @@ Valgrind User Manual for details.
 %patch11 -p1
 %patch12 -p1
 %patch13 -p1
+
+# This depends on patch6, old rhel gcc doesn't have -fstack-protector-strong.
+%if 0%{?fedora} || 0%{?rhel} >= 7
 %patch14 -p1
+%endif
+
 %patch15 -p1
 
 %build
