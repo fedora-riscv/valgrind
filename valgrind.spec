@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.15.0
-Release: 8%{?dist}
+Release: 9%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -120,6 +120,9 @@ Patch14: valgrind-3.15.0-some-Wl-z-now.patch
 
 # KDE#408009 Expose rdrand and f16c even on avx if host cpu supports them
 Patch15: valgrind-3.15.0-avx-rdrand-f16c.patch
+
+# KDE#408091 Missing pkey syscalls
+Patch16: valgrind-3.15.0-pkey.patch
 
 BuildRequires: glibc-devel
 
@@ -267,6 +270,7 @@ Valgrind User Manual for details.
 %endif
 
 %patch15 -p1
+%patch16 -p1
 
 %build
 
@@ -487,6 +491,9 @@ fi
 %endif
 
 %changelog
+* Wed May 29 2019 Mark Wielaard <mjw@fedoraproject.org> - 3.15.0-9
+- Add valgrind-3.15.0-pkey.patch
+
 * Tue May 28 2019 Mark Wielaard <mjw@fedoraproject.org> - 3.15.0-8
 - Update valgrind-3.15.0-copy_file_range.patch.
 - Add valgrind-3.15.0-avx-rdrand-f16c.patch.
