@@ -127,6 +127,9 @@ Patch16: valgrind-3.15.0-pkey.patch
 # KDE#408414 Add support for preadv2 and pwritev2 syscalls
 Patch17: valgrind-3.15.0-preadv2-pwritev2.patch
 
+# Upstream commit 9616e9bc9a1950f70ab1abd1c6ca9abc3f26eb7f
+Patch18: valgrind-3.15.0-arm-membarrier.patch
+
 BuildRequires: glibc-devel
 
 %if %{build_openmpi}
@@ -275,6 +278,7 @@ Valgrind User Manual for details.
 %patch15 -p1
 %patch16 -p1
 %patch17 -p1
+%patch18 -p1
 
 %build
 
@@ -497,6 +501,7 @@ fi
 %changelog
 * Mon Aug  5 2019 Mark Wielaard <mjw@fedoraproject.org> - 3.15.0-11
 - Add valgrind-3.15.0-preadv2-pwritev2.patch
+- Add valgrind-3.15.0-arm-membarrier.patch
 
 * Sat Jul 27 2019 Fedora Release Engineering <releng@fedoraproject.org> - 1:3.15.0-10
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_31_Mass_Rebuild
