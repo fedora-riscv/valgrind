@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.15.0
-Release: 10%{?dist}
+Release: 11%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -123,6 +123,9 @@ Patch15: valgrind-3.15.0-avx-rdrand-f16c.patch
 
 # KDE#408091 Missing pkey syscalls
 Patch16: valgrind-3.15.0-pkey.patch
+
+# KDE#408414 Add support for preadv2 and pwritev2 syscalls
+Patch17: valgrind-3.15.0-preadv2-pwritev2.patch
 
 BuildRequires: glibc-devel
 
@@ -271,6 +274,7 @@ Valgrind User Manual for details.
 
 %patch15 -p1
 %patch16 -p1
+%patch17 -p1
 
 %build
 
@@ -491,6 +495,9 @@ fi
 %endif
 
 %changelog
+* Mon Aug  5 2019 Mark Wielaard <mjw@fedoraproject.org> - 3.15.0-11
+- Add valgrind-3.15.0-preadv2-pwritev2.patch
+
 * Sat Jul 27 2019 Fedora Release Engineering <releng@fedoraproject.org> - 1:3.15.0-10
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_31_Mass_Rebuild
 
