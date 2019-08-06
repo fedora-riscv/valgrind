@@ -601,31 +601,6 @@ index 8aa2ba67f..162550fd7 100644
           else
              return s390_emit_MLGR(buf, r1, R0);
  
-diff --git a/VEX/priv/host_s390_isel.c b/VEX/priv/host_s390_isel.c
-index 9141b7bff..30e5c7620 100644
---- a/VEX/priv/host_s390_isel.c
-+++ b/VEX/priv/host_s390_isel.c
-@@ -1018,6 +1018,8 @@ s390_isel_int128_expr_wrk(HReg *dst_hi, HReg *dst_lo, ISelEnv *env,
-          goto do_multiply64;
- 
-       case Iop_MullS64:
-+         if (!(env->hwcaps & VEX_HWCAPS_S390X_MI2))
-+            goto irreducible;
-          is_signed_multiply = True;
-          goto do_multiply64;
- 
-@@ -1125,7 +1127,10 @@ s390_isel_int128_expr_wrk(HReg *dst_hi, HReg *dst_lo, ISelEnv *env,
-       }
-    }
- 
--   vpanic("s390_isel_int128_expr");
-+   /* We get here if no pattern matched. */
-+ irreducible:
-+   ppIRExpr(expr);
-+   vpanic("s390_isel_int128_expr: cannot reduce tree");
- }
- 
- 
 diff --git a/VEX/priv/main_main.c b/VEX/priv/main_main.c
 index 97c0bacd6..3cfe8c1cb 100644
 --- a/VEX/priv/main_main.c
