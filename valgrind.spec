@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.15.0
-Release: 11%{?dist}
+Release: 12%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -132,6 +132,9 @@ Patch18: valgrind-3.15.0-arm-membarrier.patch
 
 # KDE#404406 s390x: z14 miscellaneous instructions not implemented
 Patch19: valgrind-3.15.0-z14-misc.patch
+
+# KDE#405201 Incorrect size of struct vki_siginfo on 64-bit Linux architectures
+Patch20: valgrind-3.15.0-ptrace-siginfo.patch
 
 BuildRequires: glibc-devel
 
@@ -287,6 +290,8 @@ Valgrind User Manual for details.
 %if 0%{?fedora} || 0%{?rhel} >= 7
 %patch19 -p1
 %endif
+
+%patch20 -p1
 
 %build
 
@@ -507,6 +512,9 @@ fi
 %endif
 
 %changelog
+* Mon Sep 23 2019 Mark Wielaard <mjw@fedoraproject.org> - 3.15.0-12
+- Add valgrind-3.15.0-ptrace-siginfo.patch
+
 * Mon Aug  5 2019 Mark Wielaard <mjw@fedoraproject.org> - 3.15.0-11
 - Add valgrind-3.15.0-preadv2-pwritev2.patch
 - Add valgrind-3.15.0-arm-membarrier.patch
