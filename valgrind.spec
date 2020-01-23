@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.15.0
-Release: 12%{?dist}
+Release: 13%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -135,6 +135,9 @@ Patch19: valgrind-3.15.0-z14-misc.patch
 
 # KDE#405201 Incorrect size of struct vki_siginfo on 64-bit Linux architectures
 Patch20: valgrind-3.15.0-ptrace-siginfo.patch
+
+# RHBZ#1794482 guest_s390_defs.h:291: multiple definition of `s390x_vec_op_t'
+Patch21: valgrind-3.15.0-gcc-10-typedef-enum.patch
 
 BuildRequires: glibc-devel
 
@@ -292,6 +295,7 @@ Valgrind User Manual for details.
 %endif
 
 %patch20 -p1
+%patch21 -p1
 
 %build
 
@@ -512,6 +516,9 @@ fi
 %endif
 
 %changelog
+* Thu Jan 23 2020 Mark Wielaard <mjw@fedoraproject.org> - 3.15.0-13
+- Add valgrind-3.15.0-gcc-10-typedef-enum.patch
+
 * Mon Sep 23 2019 Mark Wielaard <mjw@fedoraproject.org> - 3.15.0-12
 - Add valgrind-3.15.0-ptrace-siginfo.patch
 
