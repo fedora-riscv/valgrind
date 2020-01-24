@@ -1,0 +1,20 @@
+diff --git a/none/tests/x86/incdec_alt.c b/none/tests/x86/incdec_alt.c
+index 2db324275..b8ff5c07e 100644
+--- a/none/tests/x86/incdec_alt.c
++++ b/none/tests/x86/incdec_alt.c
+@@ -8,6 +8,7 @@ int r1,r2,r3,r4,r5,r6,r7,r8,a1,a2;
+ 
+ extern void foo ( void );
+ asm("\n"
++".text\n"
+ VG_SYM(foo) ":\n"
+ "\tpushl $0\n"
+ "\tpopfl\n"
+@@ -49,6 +50,7 @@ VG_SYM(foo) ":\n"
+ "\tpopl " VG_SYM(r8) "\n"
+ 
+ "\tret\n"
++".previous\n"
+ );
+ 
+ int main ( void )

@@ -139,6 +139,9 @@ Patch20: valgrind-3.15.0-ptrace-siginfo.patch
 # RHBZ#1794482 guest_s390_defs.h:291: multiple definition of `s390x_vec_op_t'
 Patch21: valgrind-3.15.0-gcc-10-typedef-enum.patch
 
+# GCC10 build error bad asm on i686
+Patch22: valgrind-3.15.0-gcc-10-i686-asm-test.patch
+
 BuildRequires: glibc-devel
 
 %if %{build_openmpi}
@@ -296,6 +299,7 @@ Valgrind User Manual for details.
 
 %patch20 -p1
 %patch21 -p1
+%patch22 -p1
 
 %build
 
@@ -516,6 +520,9 @@ fi
 %endif
 
 %changelog
+* Fri Jan 24 2020 Mark Wielaard <mjw@fedoraproject.org>
+- Add valgrind-3.15.0-gcc-10-i686-asm-test.patch
+
 * Thu Jan 23 2020 Mark Wielaard <mjw@fedoraproject.org> - 3.15.0-13
 - Add valgrind-3.15.0-gcc-10-typedef-enum.patch
 
