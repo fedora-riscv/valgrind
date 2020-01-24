@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.15.0
-Release: 13%{?dist}
+Release: 14%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -140,7 +140,11 @@ Patch20: valgrind-3.15.0-ptrace-siginfo.patch
 Patch21: valgrind-3.15.0-gcc-10-typedef-enum.patch
 
 # GCC10 build error bad asm on i686
+# Upstream commit 2dab3249867615055a680cad7fccb22411587579
 Patch22: valgrind-3.15.0-gcc-10-i686-asm-test.patch
+
+# KDE#416667 gcc10 ppc64le impossible constraint in 'asm' in test_isa
+Patch23: valgrind-3.15.0-gcc10-ppc64-asm-constraints.patch
 
 BuildRequires: glibc-devel
 
@@ -300,6 +304,7 @@ Valgrind User Manual for details.
 %patch20 -p1
 %patch21 -p1
 %patch22 -p1
+%patch23 -p1
 
 %build
 
@@ -520,8 +525,9 @@ fi
 %endif
 
 %changelog
-* Fri Jan 24 2020 Mark Wielaard <mjw@fedoraproject.org>
+* Fri Jan 24 2020 Mark Wielaard <mjw@fedoraproject.org> 3.15.0-14
 - Add valgrind-3.15.0-gcc-10-i686-asm-test.patch
+- Add valgrind-3.15.0-gcc10-ppc64-asm-constraints.patch
 
 * Thu Jan 23 2020 Mark Wielaard <mjw@fedoraproject.org> - 3.15.0-13
 - Add valgrind-3.15.0-gcc-10-typedef-enum.patch
