@@ -301,7 +301,11 @@ Valgrind User Manual for details.
 %patch19 -p1
 %endif
 
+# KDE#416760 Assertion 'VG_IS_16_ALIGNED(sizeof(struct rt_sigframe))' failed
+%ifnarch ppc64 ppc64le
 %patch20 -p1
+%endif
+
 %patch21 -p1
 %patch22 -p1
 %patch23 -p1
@@ -525,7 +529,10 @@ fi
 %endif
 
 %changelog
-* Fri Jan 24 2020 Mark Wielaard <mjw@fedoraproject.org> 3.15.0-14
+* Wed Jan 29 2020 Mark Wielaard <mjw@fedoraproject.org>
+- Don't use valgrind-3.15.0-ptrace-siginfo.patch on ppc64[le]
+
+* Fri Jan 24 2020 Mark Wielaard <mjw@fedoraproject.org> - 3.15.0-14
 - Add valgrind-3.15.0-gcc-10-i686-asm-test.patch
 - Add valgrind-3.15.0-gcc10-ppc64-asm-constraints.patch
 
