@@ -1,0 +1,436 @@
+diff --git a/README.s390 b/README.s390
+index ac9485a62..7df386ef4 100644
+--- a/README.s390
++++ b/README.s390
+@@ -11,7 +11,10 @@ Limitations
+ -----------
+ - 31-bit client programs are not supported.
+ - Hexadecimal floating point is not supported.
+-- Transactional memory is not supported.
++- Transactional memory is not supported. The transactional-execution
++  facility is masked off from HWCAP.
++- FP signalling is not accurate. E.g., the "compare and signal"
++  instructions behave like their non-signalling counterparts.
+ - memcheck, cachegrind, drd, helgrind, massif, lackey, and none are
+   supported. 
+ - On machine models predating z10, cachegrind will assume a z10 cache
+@@ -21,8 +24,6 @@ Limitations
+ - Some gcc versions use mvc to copy 4/8 byte values. This will affect
+   certain debug messages. For example, memcheck will complain about
+   4 one-byte reads/writes instead of just a single read/write.
+-- The transactional-execution facility is not supported; it is masked
+-  off from HWCAP.
+ 
+ 
+ Hardware facilities
+diff --git a/VEX/priv/guest_s390_toIR.c b/VEX/priv/guest_s390_toIR.c
+index a8f0d3a07..1f626f722 100644
+--- a/VEX/priv/guest_s390_toIR.c
++++ b/VEX/priv/guest_s390_toIR.c
+@@ -1204,6 +1204,16 @@ get_dpr_dw0(UInt archreg)
+    return IRExpr_Get(fpr_dw0_offset(archreg), Ity_D64);
+ }
+ 
++/* Read a float of given type from an fpr. */
++static IRExpr *
++get_fpr_float(UInt archreg, IRType type)
++{
++   if (type == Ity_F128)
++      return get_fpr_pair(archreg);
++   else
++      return IRExpr_Get(fpr_offset(archreg), type);
++}
++
+ /*------------------------------------------------------------*/
+ /*--- gpr registers                                        ---*/
+ /*------------------------------------------------------------*/
+@@ -14055,94 +14065,102 @@ s390_irgen_AXBR(UChar r1, UChar r2)
+    return "axbr";
+ }
+ 
++/* Helper for "compare" insns CEBR, CDBR, CXBR, and their signalling
++   counterparts. */
+ static const HChar *
+-s390_irgen_CEBR(UChar r1, UChar r2)
++s390_irgen_CxBR(const HChar *mnem, UChar r1, UChar r2, IRType type, IROp cmp_op)
+ {
+-   IRTemp op1 = newTemp(Ity_F32);
+-   IRTemp op2 = newTemp(Ity_F32);
++   IRTemp op1 = newTemp(type);
++   IRTemp op2 = newTemp(type);
+    IRTemp cc_vex  = newTemp(Ity_I32);
+    IRTemp cc_s390 = newTemp(Ity_I32);
+ 
+-   assign(op1, get_fpr_w0(r1));
+-   assign(op2, get_fpr_w0(r2));
+-   assign(cc_vex, binop(Iop_CmpF32, mkexpr(op1), mkexpr(op2)));
++   assign(op1, get_fpr_float(r1, type));
++   assign(op2, get_fpr_float(r2, type));
++   assign(cc_vex, binop(cmp_op, mkexpr(op1), mkexpr(op2)));
+ 
+    assign(cc_s390, convert_vex_bfpcc_to_s390(cc_vex));
+    s390_cc_thunk_put1(S390_CC_OP_SET, cc_s390, False);
++   return mnem;
++}
++
++static const HChar *
++s390_irgen_CEBR(UChar r1, UChar r2)
++{
++   return s390_irgen_CxBR("cebr", r1, r2, Ity_F32, Iop_CmpF32);
++}
+ 
+-   return "cebr";
++static const HChar *
++s390_irgen_KEBR(UChar r1, UChar r2)
++{
++   return s390_irgen_CxBR("kebr", r1, r2, Ity_F32, Iop_CmpF32);
+ }
+ 
+ static const HChar *
+ s390_irgen_CDBR(UChar r1, UChar r2)
+ {
+-   IRTemp op1 = newTemp(Ity_F64);
+-   IRTemp op2 = newTemp(Ity_F64);
+-   IRTemp cc_vex  = newTemp(Ity_I32);
+-   IRTemp cc_s390 = newTemp(Ity_I32);
++   return s390_irgen_CxBR("cdbr", r1, r2, Ity_F64, Iop_CmpF64);
++}
+ 
+-   assign(op1, get_fpr_dw0(r1));
+-   assign(op2, get_fpr_dw0(r2));
+-   assign(cc_vex, binop(Iop_CmpF64, mkexpr(op1), mkexpr(op2)));
++static const HChar *
++s390_irgen_KDBR(UChar r1, UChar r2)
++{
++   return s390_irgen_CxBR("kdbr", r1, r2, Ity_F64, Iop_CmpF64);
++}
+ 
+-   assign(cc_s390, convert_vex_bfpcc_to_s390(cc_vex));
+-   s390_cc_thunk_put1(S390_CC_OP_SET, cc_s390, False);
++static const HChar *
++s390_irgen_CXBR(UChar r1, UChar r2)
++{
++   return s390_irgen_CxBR("cxbr", r1, r2, Ity_F128, Iop_CmpF128);
++}
+ 
+-   return "cdbr";
++static const HChar *
++s390_irgen_KXBR(UChar r1, UChar r2)
++{
++   return s390_irgen_CxBR("kxbr", r1, r2, Ity_F128, Iop_CmpF128);
+ }
+ 
++/* Helper for "compare" insns CEB, CDB, and their signalling counterparts. */
+ static const HChar *
+-s390_irgen_CXBR(UChar r1, UChar r2)
++s390_irgen_CxB(const HChar *mnem, UChar r1, IRTemp op2addr, IRType type, IROp cmp_op)
+ {
+-   IRTemp op1 = newTemp(Ity_F128);
+-   IRTemp op2 = newTemp(Ity_F128);
++   IRTemp op1 = newTemp(type);
++   IRTemp op2 = newTemp(type);
+    IRTemp cc_vex  = newTemp(Ity_I32);
+    IRTemp cc_s390 = newTemp(Ity_I32);
+ 
+-   assign(op1, get_fpr_pair(r1));
+-   assign(op2, get_fpr_pair(r2));
+-   assign(cc_vex, binop(Iop_CmpF128, mkexpr(op1), mkexpr(op2)));
++   assign(op1, get_fpr_float(r1, type));
++   assign(op2, load(type, mkexpr(op2addr)));
++   assign(cc_vex,  binop(cmp_op, mkexpr(op1), mkexpr(op2)));
+ 
+    assign(cc_s390, convert_vex_bfpcc_to_s390(cc_vex));
+    s390_cc_thunk_put1(S390_CC_OP_SET, cc_s390, False);
+-
+-   return "cxbr";
++   return mnem;
+ }
+ 
+ static const HChar *
+ s390_irgen_CEB(UChar r1, IRTemp op2addr)
+ {
+-   IRTemp op1 = newTemp(Ity_F32);
+-   IRTemp op2 = newTemp(Ity_F32);
+-   IRTemp cc_vex  = newTemp(Ity_I32);
+-   IRTemp cc_s390 = newTemp(Ity_I32);
+-
+-   assign(op1, get_fpr_w0(r1));
+-   assign(op2, load(Ity_F32, mkexpr(op2addr)));
+-   assign(cc_vex,  binop(Iop_CmpF32, mkexpr(op1), mkexpr(op2)));
+-
+-   assign(cc_s390, convert_vex_bfpcc_to_s390(cc_vex));
+-   s390_cc_thunk_put1(S390_CC_OP_SET, cc_s390, False);
++   return s390_irgen_CxB("ceb", r1, op2addr, Ity_F32, Iop_CmpF32);
++}
+ 
+-   return "ceb";
++static const HChar *
++s390_irgen_KEB(UChar r1, IRTemp op2addr)
++{
++   return s390_irgen_CxB("keb", r1, op2addr, Ity_F32, Iop_CmpF32);
++   return "keb";
+ }
+ 
+ static const HChar *
+ s390_irgen_CDB(UChar r1, IRTemp op2addr)
+ {
+-   IRTemp op1 = newTemp(Ity_F64);
+-   IRTemp op2 = newTemp(Ity_F64);
+-   IRTemp cc_vex  = newTemp(Ity_I32);
+-   IRTemp cc_s390 = newTemp(Ity_I32);
+-
+-   assign(op1, get_fpr_dw0(r1));
+-   assign(op2, load(Ity_F64, mkexpr(op2addr)));
+-   assign(cc_vex, binop(Iop_CmpF64, mkexpr(op1), mkexpr(op2)));
+-
+-   assign(cc_s390, convert_vex_bfpcc_to_s390(cc_vex));
+-   s390_cc_thunk_put1(S390_CC_OP_SET, cc_s390, False);
++   return s390_irgen_CxB("cdb", r1, op2addr, Ity_F64, Iop_CmpF64);
++}
+ 
+-   return "cdb";
++static const HChar *
++s390_irgen_KDB(UChar r1, IRTemp op2addr)
++{
++   return s390_irgen_CxB("kdb", r1, op2addr, Ity_F64, Iop_CmpF64);
+ }
+ 
+ static const HChar *
+@@ -19270,7 +19288,8 @@ s390_decode_4byte_and_irgen(const UChar *bytes)
+    case 0xb306: s390_format_RRE_FF(s390_irgen_LXEBR, RRE_r1(ovl),
+                                    RRE_r2(ovl));  goto ok;
+    case 0xb307: /* MXDBR */ goto unimplemented;
+-   case 0xb308: /* KEBR */ goto unimplemented;
++   case 0xb308: s390_format_RRE_FF(s390_irgen_KEBR, RRE_r1(ovl),
++                                   RRE_r2(ovl));  goto ok;
+    case 0xb309: s390_format_RRE_FF(s390_irgen_CEBR, RRE_r1(ovl),
+                                    RRE_r2(ovl));  goto ok;
+    case 0xb30a: s390_format_RRE_FF(s390_irgen_AEBR, RRE_r1(ovl),
+@@ -19300,7 +19319,8 @@ s390_decode_4byte_and_irgen(const UChar *bytes)
+                                    RRE_r2(ovl));  goto ok;
+    case 0xb317: s390_format_RRE_FF(s390_irgen_MEEBR, RRE_r1(ovl),
+                                    RRE_r2(ovl));  goto ok;
+-   case 0xb318: /* KDBR */ goto unimplemented;
++   case 0xb318: s390_format_RRE_FF(s390_irgen_KDBR, RRE_r1(ovl),
++                                   RRE_r2(ovl));  goto ok;
+    case 0xb319: s390_format_RRE_FF(s390_irgen_CDBR, RRE_r1(ovl),
+                                    RRE_r2(ovl));  goto ok;
+    case 0xb31a: s390_format_RRE_FF(s390_irgen_ADBR, RRE_r1(ovl),
+@@ -19351,7 +19371,8 @@ s390_decode_4byte_and_irgen(const UChar *bytes)
+    case 0xb347: s390_format_RRF_UUFF(s390_irgen_FIXBRA, RRF2_m3(ovl),
+                                      RRF2_m4(ovl), RRF2_r1(ovl),
+                                      RRF2_r2(ovl));  goto ok;
+-   case 0xb348: /* KXBR */ goto unimplemented;
++   case 0xb348: s390_format_RRE_FF(s390_irgen_KXBR, RRE_r1(ovl),
++                                   RRE_r2(ovl));  goto ok;
+    case 0xb349: s390_format_RRE_FF(s390_irgen_CXBR, RRE_r1(ovl),
+                                    RRE_r2(ovl));  goto ok;
+    case 0xb34a: s390_format_RRE_FF(s390_irgen_AXBR, RRE_r1(ovl),
+@@ -21408,7 +21429,9 @@ s390_decode_6byte_and_irgen(const UChar *bytes)
+                                                 RXE_x2(ovl), RXE_b2(ovl),
+                                                 RXE_d2(ovl));  goto ok;
+    case 0xed0000000007ULL: /* MXDB */ goto unimplemented;
+-   case 0xed0000000008ULL: /* KEB */ goto unimplemented;
++   case 0xed0000000008ULL: s390_format_RXE_FRRD(s390_irgen_KEB, RXE_r1(ovl),
++                                                RXE_x2(ovl), RXE_b2(ovl),
++                                                RXE_d2(ovl));  goto ok;
+    case 0xed0000000009ULL: s390_format_RXE_FRRD(s390_irgen_CEB, RXE_r1(ovl),
+                                                 RXE_x2(ovl), RXE_b2(ovl),
+                                                 RXE_d2(ovl));  goto ok;
+@@ -21448,7 +21471,9 @@ s390_decode_6byte_and_irgen(const UChar *bytes)
+    case 0xed0000000017ULL: s390_format_RXE_FRRD(s390_irgen_MEEB, RXE_r1(ovl),
+                                                 RXE_x2(ovl), RXE_b2(ovl),
+                                                 RXE_d2(ovl));  goto ok;
+-   case 0xed0000000018ULL: /* KDB */ goto unimplemented;
++   case 0xed0000000018ULL: s390_format_RXE_FRRD(s390_irgen_KDB, RXE_r1(ovl),
++                                                RXE_x2(ovl), RXE_b2(ovl),
++                                                RXE_d2(ovl));  goto ok;
+    case 0xed0000000019ULL: s390_format_RXE_FRRD(s390_irgen_CDB, RXE_r1(ovl),
+                                                 RXE_x2(ovl), RXE_b2(ovl),
+                                                 RXE_d2(ovl));  goto ok;
+diff --git a/none/tests/s390x/bfp-4.c b/none/tests/s390x/bfp-4.c
+index c2d88818c..645421294 100644
+--- a/none/tests/s390x/bfp-4.c
++++ b/none/tests/s390x/bfp-4.c
+@@ -1,61 +1,77 @@
+ #include <stdio.h>
+ 
+-/* Test BFP comparison for  32/64-bit. */
++#define TEST_CxBR(insn, fmt, v1, v2)            \
++   do {                                         \
++   int cc;                                      \
++                                                \
++   __asm__ volatile(insn " %[r1],%[r2]\n\t"                             \
++                    "ipm   %[psw]\n\t"                                  \
++                    "srl   %[psw],28\n\t"                               \
++                    : [psw]"=d"(cc) : [r1]"f"(v1), [r2]"f"(v2) : "cc"); \
++   if (cc == 0)                                                         \
++      printf(insn ":  " fmt " == " fmt "\n", v1, v2);                   \
++   else if (cc == 1)                                                    \
++      printf(insn ":  " fmt " < " fmt "\n", v1, v2);                    \
++   else if (cc == 2)                                                    \
++      printf(insn ":  " fmt " > " fmt "\n", v1, v2);                    \
++   else                                                                 \
++      printf(insn ":  " fmt " ?? " fmt "\n", v1, v2);                   \
++   } while (0)
+ 
+-void cebr(float v1, float v2)
++/* Test BFP comparison for 32/64/128-bit. */
++
++void cebr(float a, float b)
++{
++   TEST_CxBR("cebr", "%g", a, b);
++}
++
++void cdbr(double a, double b)
++{
++   TEST_CxBR("cdbr", "%g", a, b);
++}
++
++void cxbr(long double a, long double b)
+ {
+-   int cc;
++   TEST_CxBR("cxbr", "%Lg", a, b);
++}
+ 
+-   __asm__ volatile("cebr %[r1],%[r2]\n\t"
+-                    "ipm   %[psw]\n\t"
+-                    "srl   %[psw],28\n\t"
+-                    : [psw]"=d"(cc) : [r1]"f"(v1), [r2]"f"(v2) : "cc");
+-   if (cc == 0)
+-      printf("cfebr:  %f == %f\n", v1, v2);
+-   if (cc == 1)
+-      printf("cfebr:  %f < %f\n", v1, v2);
+-   if (cc == 2)
+-      printf("cfebr:  %f > %f\n", v1, v2);
++void kebr(float a, float b)
++{
++   TEST_CxBR("kebr", "%g", a, b);
+ }
+ 
+-void cdbr(double v1, double v2)
++void kdbr(double a, double b)
+ {
+-   int cc;
++   TEST_CxBR("kdbr", "%g", a, b);
++}
+ 
+-   __asm__ volatile("cdbr %[r1],%[r2]\n\t"
+-                    "ipm   %[psw]\n\t"
+-                    "srl   %[psw],28\n\t"
+-                    : [psw]"=d"(cc) : [r1]"f"(v1), [r2]"f"(v2) : "cc");
+-   if (cc == 0)
+-      printf("cdebr:  %f == %f\n", v1, v2);
+-   if (cc == 1)
+-      printf("cdebr:  %f < %f\n", v1, v2);
+-   if (cc == 2)
+-      printf("cdebr:  %f > %f\n", v1, v2);
++void kxbr(long double a, long double b)
++{
++   TEST_CxBR("kxbr", "%Lg", a, b);
++}
++
++void do_compare(float a, float b)
++{
++   cebr(a, b);
++   kebr(a, b);
++   cdbr((double) a, (double) b);
++   kdbr((double) a, (double) b);
++   cxbr((long double) a, (long double) b);
++   kxbr((long double) a, (long double) b);
+ }
+ 
+ int main(void)
+ {
+-   float f1, f2;
+-   float d1, d2;
+-
+-   // compare 4 bytes
+-   f1 = 3.14f;
+-   f2 = f1;
+-   cebr(f1, f2);
+-   f2 = f1 + 10.;
+-   cebr(f1, f2);
+-   f2 = f1 - 100.;
+-   cebr(f1, f2);
+-
+-   // compare 8 bytes
+-   d1 = 2.78;
+-   d2 = d1;
+-   cdbr(d1, d2);
+-   d2 = d1 + 10.;
+-   cdbr(d1, d2);
+-   d2 = d1 - 100.;
+-   cdbr(d1, d2);
++   float inf = 1.f / 0.;
++   float neg_inf = -1.f / 0.;
+ 
++   do_compare(3.14f, 3.14f);
++   do_compare(-2.78f, 2.78f);
++   do_compare(inf, inf);
++   do_compare(inf, neg_inf);
++   do_compare(neg_inf, neg_inf);
++   do_compare(inf, 1.f);
++   do_compare(neg_inf, -1.f);
++   do_compare(1.f / inf, -1.f / inf);
+    return 0;
+ }
+diff --git a/none/tests/s390x/bfp-4.stdout.exp b/none/tests/s390x/bfp-4.stdout.exp
+index eff136654..027b1587a 100644
+--- a/none/tests/s390x/bfp-4.stdout.exp
++++ b/none/tests/s390x/bfp-4.stdout.exp
+@@ -1,6 +1,48 @@
+-cfebr:  3.140000 == 3.140000
+-cfebr:  3.140000 < 13.140000
+-cfebr:  3.140000 > -96.860001
+-cdebr:  2.780000 == 2.780000
+-cdebr:  2.780000 < 12.780000
+-cdebr:  2.780000 > -97.220001
++cebr:  3.14 == 3.14
++kebr:  3.14 == 3.14
++cdbr:  3.14 == 3.14
++kdbr:  3.14 == 3.14
++cxbr:  3.14 == 3.14
++kxbr:  3.14 == 3.14
++cebr:  -2.78 < 2.78
++kebr:  -2.78 < 2.78
++cdbr:  -2.78 < 2.78
++kdbr:  -2.78 < 2.78
++cxbr:  -2.78 < 2.78
++kxbr:  -2.78 < 2.78
++cebr:  inf == inf
++kebr:  inf == inf
++cdbr:  inf == inf
++kdbr:  inf == inf
++cxbr:  inf == inf
++kxbr:  inf == inf
++cebr:  inf > -inf
++kebr:  inf > -inf
++cdbr:  inf > -inf
++kdbr:  inf > -inf
++cxbr:  inf > -inf
++kxbr:  inf > -inf
++cebr:  -inf == -inf
++kebr:  -inf == -inf
++cdbr:  -inf == -inf
++kdbr:  -inf == -inf
++cxbr:  -inf == -inf
++kxbr:  -inf == -inf
++cebr:  inf > 1
++kebr:  inf > 1
++cdbr:  inf > 1
++kdbr:  inf > 1
++cxbr:  inf > 1
++kxbr:  inf > 1
++cebr:  -inf < -1
++kebr:  -inf < -1
++cdbr:  -inf < -1
++kdbr:  -inf < -1
++cxbr:  -inf < -1
++kxbr:  -inf < -1
++cebr:  0 == -0
++kebr:  0 == -0
++cdbr:  0 == -0
++kdbr:  0 == -0
++cxbr:  0 == -0
++kxbr:  0 == -0

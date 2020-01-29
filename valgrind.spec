@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.15.0
-Release: 14%{?dist}
+Release: 15%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -145,6 +145,9 @@ Patch22: valgrind-3.15.0-gcc-10-i686-asm-test.patch
 
 # KDE#416667 gcc10 ppc64le impossible constraint in 'asm' in test_isa
 Patch23: valgrind-3.15.0-gcc10-ppc64-asm-constraints.patch
+
+# KDE#416301 s390x: "compare and signal" not supported
+Patch24: valgrind-3.15.0-s390x-compare-and-signal.patch
 
 BuildRequires: glibc-devel
 
@@ -309,6 +312,7 @@ Valgrind User Manual for details.
 %patch21 -p1
 %patch22 -p1
 %patch23 -p1
+%patch24 -p1
 
 %build
 
@@ -529,8 +533,9 @@ fi
 %endif
 
 %changelog
-* Wed Jan 29 2020 Mark Wielaard <mjw@fedoraproject.org>
+* Wed Jan 29 2020 Mark Wielaard <mjw@fedoraproject.org> - 3.15.0-15
 - Don't use valgrind-3.15.0-ptrace-siginfo.patch on ppc64[le]
+- Add valgrind-3.15.0-s390x-compare-and-signal.patch
 
 * Fri Jan 24 2020 Mark Wielaard <mjw@fedoraproject.org> - 3.15.0-14
 - Add valgrind-3.15.0-gcc-10-i686-asm-test.patch
