@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.15.0
-Release: 16%{?dist}
+Release: 17%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -151,6 +151,9 @@ Patch24: valgrind-3.15.0-s390x-compare-and-signal.patch
 
 # KDE#417452 s390_insn_store_emit: dst->tag for HRcVec128
 Patch25: valgrind-3.15.0-s390x-HRcVec128.patch
+
+# KDE#417578 - Add suppressions for glibc DTV leaks
+Patch26: valgrind-3.15.0-glibc-dtv-supp.patch
 
 BuildRequires: glibc-devel
 
@@ -317,6 +320,7 @@ Valgrind User Manual for details.
 %patch23 -p1
 %patch24 -p1
 %patch25 -p1
+%patch26 -p1
 
 %build
 
@@ -537,6 +541,9 @@ fi
 %endif
 
 %changelog
+* Thu Feb 13 2020 Mark Wielaard <mjw@fedoraproject.org> - 3.15.0-17
+- Add valgrind-3.15.0-glibc-dtv-supp.patch
+
 * Wed Jan 29 2020 Mark Wielaard <mjw@fedoraproject.org> - 3.15.0-16
 - Add valgrind-3.15.0-s390x-HRcVec128.patch
 
