@@ -1,0 +1,20 @@
+---
+ coregrind/m_sigframe/sigframe-ppc64-linux.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/coregrind/m_sigframe/sigframe-ppc64-linux.c b/coregrind/m_sigframe/
+sigframe-ppc64-linux.c
+index 0406f3c..b54c4e0 100644
+--- a/coregrind/m_sigframe/sigframe-ppc64-linux.c
++++ b/coregrind/m_sigframe/sigframe-ppc64-linux.c
+@@ -112,7 +112,7 @@ struct rt_sigframe {
+    vki_siginfo_t         info;
+    struct vg_sig_private priv;
+    UChar                 abigap[288];   // unused
+-};
++} __attribute__ ((aligned (16)));
+ 
+ #define SET_SIGNAL_LR(zztst, zzval)                          \
+    do { tst->arch.vex.guest_LR = (zzval);                    \
+-- 
+2.7.4
