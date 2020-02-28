@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.15.0
-Release: 18%{?dist}
+Release: 19%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -158,6 +158,9 @@ Patch26: valgrind-3.15.0-glibc-dtv-supp.patch
 # KDE#416760 Assertion 'VG_IS_16_ALIGNED(sizeof(struct rt_sigframe))' failed
 # KDE#417427 commit to fix vki_siginfo_t definition created errors on PPC64
 Patch27: valgrind-3.15.0-ppc64-sigframe.patch
+
+# KDE#416753 new 32bit time syscalls for 2038+
+Patch28: valgrind-3.15.0-time64.patch
 
 BuildRequires: glibc-devel
 
@@ -322,6 +325,7 @@ Valgrind User Manual for details.
 %patch25 -p1
 %patch26 -p1
 %patch27 -p1
+%patch28 -p1
 
 %build
 
@@ -542,6 +546,9 @@ fi
 %endif
 
 %changelog
+* Fri Feb 28 2020 Mark Wielaard <mjw@fedoraproject.org> - 3.15.0-19
+- Add valgrind-3.15.0-time64.patch
+
 * Fri Feb 14 2020 Mark Wielaard <mjw@fedoraproject.org> - 3.15.0-18
 - Add valgrind-3.15.0-ppc64-sigframe.patch
 
