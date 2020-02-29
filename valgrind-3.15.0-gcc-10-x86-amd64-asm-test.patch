@@ -1,0 +1,644 @@
+commit fe6805efc1b6db0cfa5f1cd5fb1854775cbfa31a
+Author: Mark Wielaard <mark@klomp.org>
+Date:   Sat Jan 25 18:34:58 2020 +0100
+
+    x86 and amd64 tests: Use .text and .previous around all top-level asm.
+    
+    GCC10 defaults to -fno-common which exposes some latent bugs in
+    some of the top-level asm code in various .c test files. Some of the
+    tests started to segfault (even if not run under valgrind). Such code
+    needs to be wrapped inside a .text and a .previous asm statement to
+    make sure the code is generated in the .text code section and to
+    make sure the compiler doesn't lose track of the section currently
+    being used to generate data or code in. Without it code might be
+    generated inside a data section or the other way around.
+
+diff --git a/memcheck/tests/amd64/shr_edx.c b/memcheck/tests/amd64/shr_edx.c
+index f8746afff..bed289471 100644
+--- a/memcheck/tests/amd64/shr_edx.c
++++ b/memcheck/tests/amd64/shr_edx.c
+@@ -8,6 +8,7 @@ ULong result;
+ 
+ extern void shrl32_with_0x10 ( void );
+ asm("\n"
++".text\n"
+ "shrl32_with_0x10:\n"
+ "\tpushq %rdx\n"
+ "\tmovq data, %rdx\n"
+@@ -20,6 +21,7 @@ asm("\n"
+ "\tshrl32_with_0x10_jump:\n"
+ "\tmov $0xdeaddead, %edx\n"
+ "\tjmp shrl32_with_0x10_cont\n"
++".previous\n"
+ );
+ 
+ 
+diff --git a/none/tests/amd64/fxtract.c b/none/tests/amd64/fxtract.c
+index 4dff2a1f9..f4dfd36df 100644
+--- a/none/tests/amd64/fxtract.c
++++ b/none/tests/amd64/fxtract.c
+@@ -6,6 +6,7 @@ double arg, res1, res2;
+ 
+ extern void do_fxtract ( void );
+ asm("\n"
++".text\n"
+ ".global do_fxtract\n"
+ "do_fxtract:\n"
+ "\tfinit\n"
+@@ -13,7 +14,8 @@ asm("\n"
+ "\tfxtract\n"
+ "\tfstpl res1\n"
+ "\tfstpl res2\n"
+-"\tret"
++"\tret\n"
++".previous\n"
+ );
+ 
+ void try ( double x )
+diff --git a/none/tests/amd64/jrcxz.c b/none/tests/amd64/jrcxz.c
+index dad088f08..4d70734c2 100644
+--- a/none/tests/amd64/jrcxz.c
++++ b/none/tests/amd64/jrcxz.c
+@@ -8,6 +8,7 @@ ULong arg64, res64;
+ 
+ extern void foo64 ( void );
+ asm("\n"
++".text\n"
+ "foo64:\n"
+ "\tpushq %rcx\n"
+ 
+@@ -25,6 +26,7 @@ asm("\n"
+ 
+ "\tpopq %rcx\n"
+ "\tret\n"
++".previous\n"
+ );
+ 
+ 
+@@ -32,6 +34,7 @@ UInt arg32, res32;
+ 
+ extern void foo32 ( void );
+ asm("\n"
++".text\n"
+ "foo32:\n"
+ "\tpushq %rcx\n"
+ 
+@@ -49,6 +52,7 @@ asm("\n"
+ 
+ "\tpopq %rcx\n"
+ "\tret\n"
++".previous\n"
+ );
+ 
+ 
+diff --git a/none/tests/amd64/looper.c b/none/tests/amd64/looper.c
+index cb7f5cbea..586464242 100644
+--- a/none/tests/amd64/looper.c
++++ b/none/tests/amd64/looper.c
+@@ -22,6 +22,7 @@ asm("\n"
+ "\tmovq %rax, res\n"
+ "\tpopq %rcx\n"
+ "\tret\n"
++".previous\n"
+ );
+ 
+ extern void loop_ne ( void );
+@@ -42,6 +43,7 @@ asm("\n"
+ "\tmovq %rax, res\n"
+ "\tpopq %rcx\n"
+ "\tret\n"
++".previous\n"
+ );
+ 
+ extern void loop_e ( void );
+@@ -66,6 +68,7 @@ asm("\n"
+ "\tmovq %rax, res\n"
+ "\tpopq %rcx\n"
+ "\tret\n"
++".previous\n"
+ );
+ 
+ int main ( void )
+diff --git a/none/tests/amd64/sbbmisc.c b/none/tests/amd64/sbbmisc.c
+index dd70efadc..1024bfd57 100644
+--- a/none/tests/amd64/sbbmisc.c
++++ b/none/tests/amd64/sbbmisc.c
+@@ -9,6 +9,7 @@ int in_l, out_l1, out_l2;
+ 
+ extern void sbb_ib_al ( void );
+ asm("\n"
++".text\n"
+ VG_SYM(sbb_ib_al) ":\n"
+ 
+ #ifndef VGP_amd64_darwin
+@@ -37,11 +38,13 @@ VG_SYM(sbb_ib_al) ":\n"
+ #endif
+ 
+ "\tretq\n"
++".previous\n"
+ );
+ 
+ 
+ extern void sbb_iw_ax ( void );
+ asm("\n"
++".text\n"
+ VG_SYM(sbb_iw_ax) ":\n"
+ 
+ #ifndef VGP_amd64_darwin
+@@ -69,11 +72,13 @@ VG_SYM(sbb_iw_ax) ":\n"
+ #endif
+ 
+ "\tretq\n"
++".previous\n"
+ );
+ 
+ 
+ extern void sbb_il_eax ( void );
+ asm("\n"
++".text\n"
+ VG_SYM(sbb_il_eax) ":\n"
+ 
+ #ifndef VGP_amd64_darwin
+@@ -101,11 +106,13 @@ VG_SYM(sbb_il_eax) ":\n"
+ #endif
+ 
+ "\tretq\n"
++".previous\n"
+ );
+ 
+ 
+ extern void sbb_eb_gb ( void );
+ asm("\n"
++".text\n"
+ VG_SYM(sbb_eb_gb) ":\n"
+ 
+ #ifndef VGP_amd64_darwin
+@@ -135,11 +142,13 @@ VG_SYM(sbb_eb_gb) ":\n"
+ #endif
+ 
+ "\tretq\n"
++".previous\n"
+ );
+ 
+ 
+ extern void sbb_eb_gb_2 ( void );
+ asm("\n"
++".text\n"
+ VG_SYM(sbb_eb_gb_2) ":\n"
+ "\tpushq %rcx\n"
+ 
+@@ -173,11 +182,13 @@ VG_SYM(sbb_eb_gb_2) ":\n"
+ 
+ "\tpopq %rcx\n"
+ "\tretq\n"
++".previous\n"
+ );
+ 
+ 
+ extern void adc_eb_gb ( void );
+ asm("\n"
++".text\n"
+ VG_SYM(adc_eb_gb) ":\n"
+ 
+ #ifndef VGP_amd64_darwin
+@@ -207,11 +218,13 @@ VG_SYM(adc_eb_gb) ":\n"
+ #endif
+ 
+ "\tretq\n"
++".previous\n"
+ );
+ 
+ 
+ extern void adc_eb_gb_2 ( void );
+ asm("\n"
++".text\n"
+ VG_SYM(adc_eb_gb_2) ":\n"
+ "\tpushq %rcx\n"
+ 
+@@ -245,10 +258,12 @@ VG_SYM(adc_eb_gb_2) ":\n"
+ 
+ "\tpopq %rcx\n"
+ "\tretq\n"
++".previous\n"
+ );
+ 
+ extern void adc_ib_al ( void );
+ asm("\n"
++".text\n"
+ VG_SYM(adc_ib_al) ":\n"
+ 
+ #ifndef VGP_amd64_darwin
+@@ -276,11 +291,13 @@ VG_SYM(adc_ib_al) ":\n"
+ #endif
+ 
+ "\tretq\n"
++".previous\n"
+ );
+ 
+ 
+ extern void adc_iw_ax ( void );
+ asm("\n"
++".text\n"
+ VG_SYM(adc_iw_ax) ":\n"
+ 
+ #ifndef VGP_amd64_darwin
+@@ -308,11 +325,13 @@ VG_SYM(adc_iw_ax) ":\n"
+ #endif
+ 
+ "\tretq\n"
++".previous\n"
+ );
+ 
+ 
+ extern void adc_il_eax ( void );
+ asm("\n"
++".text\n"
+ VG_SYM(adc_il_eax) ":\n"
+ 
+ #ifndef VGP_amd64_darwin
+@@ -340,6 +359,7 @@ VG_SYM(adc_il_eax) ":\n"
+ #endif
+ 
+ "\tretq\n"
++".previous\n"
+ );
+ 
+ 
+diff --git a/none/tests/amd64/shrld.c b/none/tests/amd64/shrld.c
+index ca9d699e2..d77cfbdc9 100644
+--- a/none/tests/amd64/shrld.c
++++ b/none/tests/amd64/shrld.c
+@@ -30,6 +30,7 @@ ULong flags_out;
+ 
+ extern void shld64 ( void );
+ asm("\n"
++".text\n"
+ "shld64:\n"
+ "\tpushq %rsi\n"
+ "\tpushq %r11\n"
+@@ -47,10 +48,12 @@ asm("\n"
+ "\tpopq %r11\n"
+ "\tpopq %rsi\n"
+ "\tret\n"
++".previous\n"
+ );
+ 
+ extern void shld32 ( void );
+ asm("\n"
++".text\n"
+ "shld32:\n"
+ "\tpushq %rsi\n"
+ "\tpushq %r11\n"
+@@ -68,10 +71,12 @@ asm("\n"
+ "\tpopq %r11\n"
+ "\tpopq %rsi\n"
+ "\tret\n"
++".previous\n"
+ );
+ 
+ extern void shld16 ( void );
+ asm("\n"
++".text\n"
+ "shld16:\n"
+ "\tpushq %rsi\n"
+ "\tpushq %r11\n"
+@@ -89,11 +94,13 @@ asm("\n"
+ "\tpopq %r11\n"
+ "\tpopq %rsi\n"
+ "\tret\n"
++".previous\n"
+ );
+ 
+ 
+ extern void shrd64 ( void );
+ asm("\n"
++".text\n"
+ "shrd64:\n"
+ "\tpushq %rsi\n"
+ "\tpushq %r11\n"
+@@ -111,10 +118,12 @@ asm("\n"
+ "\tpopq %r11\n"
+ "\tpopq %rsi\n"
+ "\tret\n"
++".previous\n"
+ );
+ 
+ extern void shrd32 ( void );
+ asm("\n"
++".text\n"
+ "shrd32:\n"
+ "\tpushq %rsi\n"
+ "\tpushq %r11\n"
+@@ -132,10 +141,12 @@ asm("\n"
+ "\tpopq %r11\n"
+ "\tpopq %rsi\n"
+ "\tret\n"
++".previous\n"
+ );
+ 
+ extern void shrd16 ( void );
+ asm("\n"
++".text\n"
+ "shrd16:\n"
+ "\tpushq %rsi\n"
+ "\tpushq %r11\n"
+@@ -153,6 +164,7 @@ asm("\n"
+ "\tpopq %r11\n"
+ "\tpopq %rsi\n"
+ "\tret\n"
++".previous\n"
+ );
+ 
+ 
+diff --git a/none/tests/amd64/slahf-amd64.c b/none/tests/amd64/slahf-amd64.c
+index 31857ecba..361b6791b 100644
+--- a/none/tests/amd64/slahf-amd64.c
++++ b/none/tests/amd64/slahf-amd64.c
+@@ -5,6 +5,7 @@ typedef unsigned long long int ULong;
+ 
+ extern ULong lahf_1 ( void );
+ asm("\n"
++".text\n"
+ "lahf_1:\n"
+ "\tpushq $0\n"
+ "\tpopfq\n"
+@@ -13,10 +14,12 @@ asm("\n"
+ "\tsubq %rax, %rdx\n"
+ "\t.byte 0x9F\n" /* lahf */
+ "\tret\n"
++".previous\n"
+ );
+ 
+ extern ULong lahf_0 ( void );
+ asm("\n"
++".text\n"
+ "lahf_0:\n"
+ "\tpushq $0\n"
+ "\tpopfq\n"
+@@ -25,16 +28,19 @@ asm("\n"
+ "\tsubq %rax, %rdx\n"
+ "\t.byte 0x9F\n" /* lahf */
+ "\tret\n"
++".previous\n"
+ );
+ 
+ extern ULong sahf_then_lahf ( ULong );
+ asm("\n"
++".text\n"
+ "sahf_then_lahf:\n"
+ "\tmovq %rdi, %rax\n"
+ "\t.byte 0x9E\n" /* sahf */
+ "\tmovabsq $0, %rax\n"
+ "\t.byte 0x9F\n" /* lahf */
+ "\tret\n"
++".previous\n"
+ );
+ 
+ int main ( void )
+diff --git a/none/tests/x86/cmpxchg8b.c b/none/tests/x86/cmpxchg8b.c
+index 3588840a8..9ca56afa6 100644
+--- a/none/tests/x86/cmpxchg8b.c
++++ b/none/tests/x86/cmpxchg8b.c
+@@ -14,6 +14,7 @@ UInt zout;
+ 
+ extern void foo ( void );
+ asm("\n"
++    ".text\n"
+     VG_SYM(foo) ":\n"
+     "\tpushl %eax\n"
+     "\tpushl %ebx\n"
+@@ -40,6 +41,7 @@ asm("\n"
+     "\tpopl %ebx\n"
+     "\tpopl %eax\n"
+     "\tret\n"
++    ".previous\n"
+     );
+ 
+ int main ( void )
+diff --git a/none/tests/x86/fxtract.c b/none/tests/x86/fxtract.c
+index 235cda72c..f8c9bc41a 100644
+--- a/none/tests/x86/fxtract.c
++++ b/none/tests/x86/fxtract.c
+@@ -6,13 +6,15 @@ double arg, res1, res2;
+ 
+ extern void do_fxtract ( void );
+ asm("\n"
++".text\n"
+ VG_SYM(do_fxtract) ":\n"
+ "\tfinit\n"
+ "\tfldl " VG_SYM(arg) "\n"
+ "\tfxtract\n"
+ "\tfstpl " VG_SYM(res1) "\n"
+ "\tfstpl " VG_SYM(res2) "\n"
+-"\tret"
++"\tret\n"
++".previous\n"
+ );
+ 
+ void try ( double x )
+diff --git a/none/tests/x86/lahf.c b/none/tests/x86/lahf.c
+index fc09352ac..a04c10da9 100644
+--- a/none/tests/x86/lahf.c
++++ b/none/tests/x86/lahf.c
+@@ -3,6 +3,7 @@
+ 
+ extern int foo_1 ( void );
+ asm("\n"
++".text\n"
+ VG_SYM(foo_1) ":\n"
+ "\tpushl $0\n"
+ "\tpopfl\n"
+@@ -11,10 +12,12 @@ VG_SYM(foo_1) ":\n"
+ "\tsubl %eax, %edx\n"
+ "\tlahf\n"
+ "\tret\n"
++".previous\n"
+ );
+ 
+ extern int foo_0 ( void );
+ asm("\n"
++".text\n"
+ VG_SYM(foo_0) ":\n"
+ "\tpushl $0\n"
+ "\tpopfl\n"
+@@ -23,6 +26,7 @@ VG_SYM(foo_0) ":\n"
+ "\tsubl %eax, %edx\n"
+ "\tlahf\n"
+ "\tret\n"
++".previous\n"
+ );
+ 
+ int main ( void )
+diff --git a/none/tests/x86/looper.c b/none/tests/x86/looper.c
+index 60554ec76..7f7ace8ad 100644
+--- a/none/tests/x86/looper.c
++++ b/none/tests/x86/looper.c
+@@ -21,6 +21,7 @@ VG_SYM(loop_plain) ":\n"
+ "\tmovl %eax, " VG_SYM(res) "\n"
+ "\tpopl %ecx\n"
+ "\tret\n"
++".previous\n"
+ );
+ 
+ extern void loop_ne ( void );
+@@ -40,6 +41,7 @@ VG_SYM(loop_ne) ":\n"
+ "\tmovl %eax, " VG_SYM(res) "\n"
+ "\tpopl %ecx\n"
+ "\tret\n"
++".previous\n"
+ );
+ 
+ extern void loop_e ( void );
+@@ -63,6 +65,7 @@ VG_SYM(loop_e) ":\n"
+ "\tmovl %eax, " VG_SYM(res) "\n"
+ "\tpopl %ecx\n"
+ "\tret\n"
++".previous\n"
+ );
+ 
+ int main ( void )
+diff --git a/none/tests/x86/sbbmisc.c b/none/tests/x86/sbbmisc.c
+index 322d6e17d..7c4585d95 100644
+--- a/none/tests/x86/sbbmisc.c
++++ b/none/tests/x86/sbbmisc.c
+@@ -9,6 +9,7 @@ int in_l, out_l1, out_l2;
+ 
+ extern void sbb_ib_al ( void );
+ asm("\n"
++".text\n"
+ VG_SYM(sbb_ib_al) ":\n"
+ 
+ "\tmovb " VG_SYM(in_b) ", %al\n"
+@@ -22,11 +23,13 @@ VG_SYM(sbb_ib_al) ":\n"
+ "\tmovb %al, " VG_SYM(out_b2) "\n"
+ 
+ "\tret\n"
++".previous\n"
+ );
+ 
+ 
+ extern void sbb_iw_ax ( void );
+ asm("\n"
++".text\n"
+ VG_SYM(sbb_iw_ax) ":\n"
+ 
+ "\tmovw " VG_SYM(in_w) ", %ax\n"
+@@ -40,11 +43,13 @@ VG_SYM(sbb_iw_ax) ":\n"
+ "\tmovw %ax, " VG_SYM(out_w2) "\n"
+ 
+ "\tret\n"
++".previous\n"
+ );
+ 
+ 
+ extern void sbb_il_eax ( void );
+ asm("\n"
++".text\n"
+ VG_SYM(sbb_il_eax) ":\n"
+ 
+ "\tmovl " VG_SYM(in_l) ", %eax\n"
+@@ -58,11 +63,13 @@ VG_SYM(sbb_il_eax) ":\n"
+ "\tmovl %eax, " VG_SYM(out_l2) "\n"
+ 
+ "\tret\n"
++".previous\n"
+ );
+ 
+ 
+ extern void sbb_eb_gb ( void );
+ asm("\n"
++".text\n"
+ VG_SYM(sbb_eb_gb) ":\n"
+ 
+ "\tmovb " VG_SYM(in_b) ", %al\n"
+@@ -76,11 +83,13 @@ VG_SYM(sbb_eb_gb) ":\n"
+ "\tmovb %al, " VG_SYM(out_b2) "\n"
+ 
+ "\tret\n"
++".previous\n"
+ );
+ 
+ 
+ extern void sbb_eb_gb_2 ( void );
+ asm("\n"
++".text\n"
+ VG_SYM(sbb_eb_gb_2) ":\n"
+ "\tpushl %ecx\n"
+ 
+@@ -98,11 +107,13 @@ VG_SYM(sbb_eb_gb_2) ":\n"
+ 
+ "\tpopl %ecx\n"
+ "\tret\n"
++".previous\n"
+ );
+ 
+ 
+ extern void adc_eb_gb ( void );
+ asm("\n"
++".text\n"
+ VG_SYM(adc_eb_gb) ":\n"
+ 
+ "\tmovb " VG_SYM(in_b) ", %al\n"
+@@ -116,11 +127,13 @@ VG_SYM(adc_eb_gb) ":\n"
+ "\tmovb %al, " VG_SYM(out_b2) "\n"
+ 
+ "\tret\n"
++".previous\n"
+ );
+ 
+ 
+ extern void adc_eb_gb_2 ( void );
+ asm("\n"
++".text\n"
+ VG_SYM(adc_eb_gb_2) ":\n"
+ "\tpushl %ecx\n"
+ 
+@@ -138,10 +151,12 @@ VG_SYM(adc_eb_gb_2) ":\n"
+ 
+ "\tpopl %ecx\n"
+ "\tret\n"
++".previous\n"
+ );
+ 
+ extern void adc_ib_al ( void );
+ asm("\n"
++".text\n"
+ VG_SYM(adc_ib_al) ":\n"
+ 
+ "\tmovb " VG_SYM(in_b) ", %al\n"
+@@ -155,11 +170,13 @@ VG_SYM(adc_ib_al) ":\n"
+ "\tmovb %al, " VG_SYM(out_b2) "\n"
+ 
+ "\tret\n"
++".previous\n"
+ );
+ 
+ 
+ extern void adc_iw_ax ( void );
+ asm("\n"
++".text\n"
+ VG_SYM(adc_iw_ax) ":\n"
+ 
+ "\tmovw " VG_SYM(in_w) ", %ax\n"
+@@ -173,11 +190,13 @@ VG_SYM(adc_iw_ax) ":\n"
+ "\tmovw %ax, " VG_SYM(out_w2) "\n"
+ 
+ "\tret\n"
++".previous\n"
+ );
+ 
+ 
+ extern void adc_il_eax ( void );
+ asm("\n"
++".text\n"
+ VG_SYM(adc_il_eax) ":\n"
+ 
+ "\tmovl " VG_SYM(in_l) ", %eax\n"
+@@ -191,6 +210,7 @@ VG_SYM(adc_il_eax) ":\n"
+ "\tmovl %eax, " VG_SYM(out_l2) "\n"
+ 
+ "\tret\n"
++".previous\n"
+ );
+ 
+ 
