@@ -165,6 +165,9 @@ Patch28: valgrind-3.15.0-time64.patch
 # Upstream commit 2d040ce2c7fd328b4e8b0c2363ebe0c2ea2cbc9f
 Patch29: valgrind-3.15.0-arm-preadv2-pwritev2.patch
 
+# Upstream commit ce094ba912b1fb1539242e4d6b2a76c513a3d132
+Patch30: valgrind-3.15.0-avx_estimate_insn-test.patch
+
 BuildRequires: glibc-devel
 
 %if %{build_openmpi}
@@ -330,6 +333,7 @@ Valgrind User Manual for details.
 %patch27 -p1
 %patch28 -p1
 %patch29 -p1
+%patch30 -p1
 
 %build
 
@@ -553,6 +557,7 @@ fi
 * Fri Feb 28 2020 Mark Wielaard <mjw@fedoraproject.org> - 3.15.0-19
 - Add valgrind-3.15.0-time64.patch
 - Add valgrind-3.15.0-arm-preadv2-pwritev2.patch
+- Add valgrind-3.15.0-avx_estimate_insn-test.patch
 
 * Fri Feb 14 2020 Mark Wielaard <mjw@fedoraproject.org> - 3.15.0-18
 - Add valgrind-3.15.0-ppc64-sigframe.patch
