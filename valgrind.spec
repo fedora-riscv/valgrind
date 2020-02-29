@@ -162,6 +162,9 @@ Patch27: valgrind-3.15.0-ppc64-sigframe.patch
 # KDE#416753 new 32bit time syscalls for 2038+
 Patch28: valgrind-3.15.0-time64.patch
 
+# Upstream commit 2d040ce2c7fd328b4e8b0c2363ebe0c2ea2cbc9f
+Patch29: valgrind-3.15.0-arm-preadv2-pwritev2.patch
+
 BuildRequires: glibc-devel
 
 %if %{build_openmpi}
@@ -326,6 +329,7 @@ Valgrind User Manual for details.
 %patch26 -p1
 %patch27 -p1
 %patch28 -p1
+%patch29 -p1
 
 %build
 
@@ -548,6 +552,7 @@ fi
 %changelog
 * Fri Feb 28 2020 Mark Wielaard <mjw@fedoraproject.org> - 3.15.0-19
 - Add valgrind-3.15.0-time64.patch
+- Add valgrind-3.15.0-arm-preadv2-pwritev2.patch
 
 * Fri Feb 14 2020 Mark Wielaard <mjw@fedoraproject.org> - 3.15.0-18
 - Add valgrind-3.15.0-ppc64-sigframe.patch
