@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.15.0
-Release: 19%{?dist}
+Release: 20%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -170,6 +170,9 @@ Patch30: valgrind-3.15.0-avx_estimate_insn-test.patch
 
 # Upstream commit fe6805efc1b6db0cfa5f1cd5fb1854775cbfa31a
 Patch31: valgrind-3.15.0-gcc-10-x86-amd64-asm-test.patch
+
+# Upstream commit 3a2711c659ac839934f13e0529e14d6c15325383
+Patch32: valgrind-3.15.0-z15.patch
 
 BuildRequires: glibc-devel
 
@@ -338,6 +341,7 @@ Valgrind User Manual for details.
 %patch29 -p1
 %patch30 -p1
 %patch31 -p1
+%patch32 -p1
 
 %build
 
@@ -558,6 +562,9 @@ fi
 %endif
 
 %changelog
+* Wed Mar  4 2020 Mark Wielaard <mjw@fedoraproject.org> - 3.15.0-20
+- Add valgrind-3.15.0-z15.patch
+
 * Fri Feb 28 2020 Mark Wielaard <mjw@fedoraproject.org> - 3.15.0-19
 - Add valgrind-3.15.0-time64.patch
 - Add valgrind-3.15.0-arm-preadv2-pwritev2.patch
