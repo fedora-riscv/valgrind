@@ -2,8 +2,8 @@
 
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
-Version: 3.15.0
-Release: 20%{?dist}
+Version: 3.16.0
+Release: 0.2.GIT%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -71,7 +71,7 @@ URL: http://www.valgrind.org/
 # So those will already have their full symbol table.
 %undefine _include_minidebuginfo
 
-Source0: ftp://sourceware.org/pub/valgrind/valgrind-%{version}.tar.bz2
+Source0: ftp://sourceware.org/pub/valgrind/valgrind-%{version}.GIT.tar.bz2
 
 # Needs investigation and pushing upstream
 Patch1: valgrind-3.9.0-cachegrind-improvements.patch
@@ -85,94 +85,13 @@ Patch3: valgrind-3.9.0-ldso-supp.patch
 # We want all executables and libraries in libexec instead of lib
 # so they are only available for valgrind usage itself and so the
 # same directory is used independent of arch.
-Patch4: valgrind-3.15.0-pkglibexecdir.patch
-
-# KDE#398649 s390x z13 support doesn't build with older gcc/binutils
-# Disable z13 support (on rhel6)
-Patch5: valgrind-3.15.0-disable-s390x-z13.patch
+Patch4: valgrind-3.16.0-pkglibexecdir.patch
 
 # Add some stack-protector
-Patch6: valgrind-3.15.0-some-stack-protector.patch
-
-# KDE#406561  mcinfcallWSRU gdbserver_test fails on ppc64
-Patch7: valgrind-3.15.0-ppc64-filter_gdb.patch
-
-# KDE#407218 Add support for the copy_file_range syscall
-Patch8: valgrind-3.15.0-copy_file_range.patch
-
-# KDE#407307 Intercept stpcpy also in ld.so for arm64
-Patch9: valgrind-3.15.0-arm64-ld-stpcpy.patch
-
-# commit 59784c aarch64 (arm64) isn't a supported architecture for exp-sgcheck.
-Patch10: valgrind-3.15.0-exp-sgcheck-no-aarch64.patch
-
-# commit 917e42 Make memcheck/tests/arm64-linux/scalar work under root
-Patch11: valgrind-3.15.0-scalar-arm64.patch
-
-# commit abc09f Make memcheck/tests/x86-linux/scalar test work under root.
-Patch12: valgrind-3.15.0-scalar-x86.patch
-
-# KDE#407764 s390x: drd fails on z13 due to function wrapping issue
-Patch13: valgrind-3.15.0-s390x-wrap-drd.patch
+Patch5: valgrind-3.16.0-some-stack-protector.patch
 
 # Add some -Wl,z,now.
-Patch14: valgrind-3.15.0-some-Wl-z-now.patch
-
-# KDE#408009 Expose rdrand and f16c even on avx if host cpu supports them
-Patch15: valgrind-3.15.0-avx-rdrand-f16c.patch
-
-# KDE#408091 Missing pkey syscalls
-Patch16: valgrind-3.15.0-pkey.patch
-
-# KDE#408414 Add support for preadv2 and pwritev2 syscalls
-Patch17: valgrind-3.15.0-preadv2-pwritev2.patch
-
-# Upstream commit 9616e9bc9a1950f70ab1abd1c6ca9abc3f26eb7f
-Patch18: valgrind-3.15.0-arm-membarrier.patch
-
-# KDE#404406 s390x: z14 miscellaneous instructions not implemented
-Patch19: valgrind-3.15.0-z14-misc.patch
-
-# KDE#405201 Incorrect size of struct vki_siginfo on 64-bit Linux architectures
-Patch20: valgrind-3.15.0-ptrace-siginfo.patch
-
-# RHBZ#1794482 guest_s390_defs.h:291: multiple definition of `s390x_vec_op_t'
-Patch21: valgrind-3.15.0-gcc-10-typedef-enum.patch
-
-# GCC10 build error bad asm on i686
-# Upstream commit 2dab3249867615055a680cad7fccb22411587579
-Patch22: valgrind-3.15.0-gcc-10-i686-asm-test.patch
-
-# KDE#416667 gcc10 ppc64le impossible constraint in 'asm' in test_isa
-Patch23: valgrind-3.15.0-gcc10-ppc64-asm-constraints.patch
-
-# KDE#416301 s390x: "compare and signal" not supported
-Patch24: valgrind-3.15.0-s390x-compare-and-signal.patch
-
-# KDE#417452 s390_insn_store_emit: dst->tag for HRcVec128
-Patch25: valgrind-3.15.0-s390x-HRcVec128.patch
-
-# KDE#417578 - Add suppressions for glibc DTV leaks
-Patch26: valgrind-3.15.0-glibc-dtv-supp.patch
-
-# KDE#416760 Assertion 'VG_IS_16_ALIGNED(sizeof(struct rt_sigframe))' failed
-# KDE#417427 commit to fix vki_siginfo_t definition created errors on PPC64
-Patch27: valgrind-3.15.0-ppc64-sigframe.patch
-
-# KDE#416753 new 32bit time syscalls for 2038+
-Patch28: valgrind-3.15.0-time64.patch
-
-# Upstream commit 2d040ce2c7fd328b4e8b0c2363ebe0c2ea2cbc9f
-Patch29: valgrind-3.15.0-arm-preadv2-pwritev2.patch
-
-# Upstream commit ce094ba912b1fb1539242e4d6b2a76c513a3d132
-Patch30: valgrind-3.15.0-avx_estimate_insn-test.patch
-
-# Upstream commit fe6805efc1b6db0cfa5f1cd5fb1854775cbfa31a
-Patch31: valgrind-3.15.0-gcc-10-x86-amd64-asm-test.patch
-
-# Upstream commit 3a2711c659ac839934f13e0529e14d6c15325383
-Patch32: valgrind-3.15.0-z15.patch
+Patch6: valgrind-3.16.0-some-Wl-z-now.patch
 
 BuildRequires: glibc-devel
 
@@ -289,59 +208,12 @@ Valgrind User Manual for details.
 %endif
 
 %prep
-%setup -q -n %{?scl:%{pkg_name}}%{!?scl:%{name}}-%{version}
+%setup -q -n %{?scl:%{pkg_name}}%{!?scl:%{name}}-%{version}.GIT
 
 %patch1 -p1
 %patch2 -p1
 %patch3 -p1
 %patch4 -p1
-
-# Disable s390x z13 support on old rhel, binutils is just too old.
-%if 0%{?rhel} == 6
-%patch5 -p1
-%endif
-
-# Old rhel gcc doesn't have -fstack-protector-strong.
-%if 0%{?fedora} || 0%{?rhel} >= 7
-%patch6 -p1
-%endif
-
-%patch7 -p1
-%patch8 -p1
-%patch9 -p1
-%patch10 -p1
-%patch11 -p1
-%patch12 -p1
-%patch13 -p1
-
-# This depends on patch6, old rhel gcc doesn't have -fstack-protector-strong.
-%if 0%{?fedora} || 0%{?rhel} >= 7
-%patch14 -p1
-%endif
-
-%patch15 -p1
-%patch16 -p1
-%patch17 -p1
-%patch18 -p1
-
-# Don't add s390x z14 support on old rhel, binutils is just too old.
-%if 0%{?fedora} || 0%{?rhel} >= 7
-%patch19 -p1
-%endif
-
-%patch20 -p1
-%patch21 -p1
-%patch22 -p1
-%patch23 -p1
-%patch24 -p1
-%patch25 -p1
-%patch26 -p1
-%patch27 -p1
-%patch28 -p1
-%patch29 -p1
-%patch30 -p1
-%patch31 -p1
-%patch32 -p1
 
 %build
 
@@ -562,6 +434,13 @@ fi
 %endif
 
 %changelog
+* Fri May  1 2020 Mark Wielaard <mjw@fedoraproject.org> - 3.16.0-0.2.GIT
+- Update to upstream 3.16.0 branch point (commit 55cdb7c4e)
+
+* Fri Apr 17 2020 Mark Wielaard <mjw@fedoraproject.org> - 3.16.0-0.1.GIT
+- Update to upstream 3.16.0-GIT (commit 52d02fe23)
+  - Drop all streamed patches.
+
 * Wed Mar  4 2020 Mark Wielaard <mjw@fedoraproject.org> - 3.15.0-20
 - Add valgrind-3.15.0-z15.patch
 
