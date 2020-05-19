@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.16.0
-Release: 0.3.RC2%{?dist}
+Release: 0.4.RC2%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -118,6 +118,9 @@ BuildRequires: perl(Getopt::Long)
 # We always autoreconf
 BuildRequires: automake
 BuildRequires: autoconf
+
+# For make check validating the documentation
+BuildRequires: docbook-dtds
 
 %{?scl:Requires:%scl_runtime}
 
@@ -434,6 +437,9 @@ fi
 %endif
 
 %changelog
+* Tue May 19 2020 Mark Wielaard <mjw@fedoraproject.org> - 3.16.0-0.4.RC2
+- Add docbook-dtds to BuildRequires.
+
 * Tue May 19 2020 Mark Wielaard <mjw@fedoraproject.org> - 3.16.0-0.3.RC2
 - Update to upstream 3.16.0 RC2
 
