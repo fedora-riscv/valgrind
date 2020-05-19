@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.16.0
-Release: 0.2.GIT%{?dist}
+Release: 0.3.RC2%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -71,7 +71,7 @@ URL: http://www.valgrind.org/
 # So those will already have their full symbol table.
 %undefine _include_minidebuginfo
 
-Source0: ftp://sourceware.org/pub/valgrind/valgrind-%{version}.GIT.tar.bz2
+Source0: ftp://sourceware.org/pub/valgrind/valgrind-%{version}.RC2.tar.bz2
 
 # Needs investigation and pushing upstream
 Patch1: valgrind-3.9.0-cachegrind-improvements.patch
@@ -208,7 +208,7 @@ Valgrind User Manual for details.
 %endif
 
 %prep
-%setup -q -n %{?scl:%{pkg_name}}%{!?scl:%{name}}-%{version}.GIT
+%setup -q -n %{?scl:%{pkg_name}}%{!?scl:%{name}}-%{version}.RC2
 
 %patch1 -p1
 %patch2 -p1
@@ -434,6 +434,9 @@ fi
 %endif
 
 %changelog
+* Tue May 19 2020 Mark Wielaard <mjw@fedoraproject.org> - 3.16.0-0.3.RC2
+- Update to upstream 3.16.0 RC2
+
 * Fri May  1 2020 Mark Wielaard <mjw@fedoraproject.org> - 3.16.0-0.2.GIT
 - Update to upstream 3.16.0 branch point (commit 55cdb7c4e)
 
