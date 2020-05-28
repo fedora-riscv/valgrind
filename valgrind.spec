@@ -218,6 +218,12 @@ Valgrind User Manual for details.
 %patch3 -p1
 %patch4 -p1
 
+# Old rhel gcc doesn't have -fstack-protector-strong.
+%if 0%{?fedora} || 0%{?rhel} >= 7
+%patch5 -p1
+%patch6 -p1
+%endif
+
 %build
 
 # Some patches (might) touch Makefile.am or configure.ac files.
@@ -437,6 +443,9 @@ fi
 %endif
 
 %changelog
+* Wed May 27 2020 Mark Wielaard <mjw@fedoraproject.org> - 3.16.0-2
+- Apply stack-protector and -Wl,z,now patches.
+
 * Wed May 27 2020 Mark Wielaard <mjw@fedoraproject.org> - 3.16.0-1
 - Update to upstream valgrind 3.16.0 final.
 
