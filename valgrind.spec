@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.16.0
-Release: 2%{?dist}
+Release: 3%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -92,6 +92,9 @@ Patch5: valgrind-3.16.0-some-stack-protector.patch
 
 # Add some -Wl,z,now.
 Patch6: valgrind-3.16.0-some-Wl-z-now.patch
+
+# KDE#422677 PPC sync instruction L field should only be 2 bits in ISA 3.0
+Patch7: valgrind-3.16.0-ppc-L-field.patch
 
 BuildRequires: glibc-devel
 
@@ -223,6 +226,8 @@ Valgrind User Manual for details.
 %patch5 -p1
 %patch6 -p1
 %endif
+
+%patch7 -p1
 
 %build
 
@@ -443,6 +448,9 @@ fi
 %endif
 
 %changelog
+* Fri Jun 19 2020 Mark Wielaard <mjw@fedoraproject.org> - 3.16.0-3
+- Add valgrind-3.16.0-ppc-L-field.patch
+
 * Wed May 27 2020 Mark Wielaard <mjw@fedoraproject.org> - 3.16.0-2
 - Apply stack-protector and -Wl,z,now patches.
 
