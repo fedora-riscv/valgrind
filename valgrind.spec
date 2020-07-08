@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.16.1
-Release: 1%{?dist}
+Release: 2%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -225,6 +225,10 @@ Valgrind User Manual for details.
 %endif
 
 %build
+# LTO triggers undefined symbols in valgrind.  Valgrind has a --enable-lto
+# configure time option, but that doesn't seem to help.
+# Disable LTO for now.
+%define _lto_cflags %{nil}
 
 # Some patches (might) touch Makefile.am or configure.ac files.
 # Just always autoreconf so we don't need patches to prebuild files.
@@ -443,6 +447,9 @@ fi
 %endif
 
 %changelog
+* Wed July  8 2020 Jeff Law <law@redhat.org> - 3.16.1-2
+- Disable LTO
+
 * Tue Jun 23 2020 Mark Wielaard <mjw@fedoraproject.org> - 3.16.1-1
 - Update to upstream valgrind 3.16.1.
 
