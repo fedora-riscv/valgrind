@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.16.1
-Release: 2%{?dist}
+Release: 3%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -294,11 +294,11 @@ export LDFLAGS
   %{only_arch} \
   GDB=%{_bindir}/gdb
 
-make %{?_smp_mflags}
+%make_build
 
 %install
 rm -rf $RPM_BUILD_ROOT
-make DESTDIR=$RPM_BUILD_ROOT install
+%make_install
 mkdir docs/installed
 mv $RPM_BUILD_ROOT%{_datadir}/doc/valgrind/* docs/installed/
 rm -f docs/installed/*.ps
@@ -360,7 +360,7 @@ cat /proc/cpuinfo
 %{?scl:PATH=%{_bindir}${PATH:+:${PATH}}}
 # Make sure no extra CFLAGS, CXXFLAGS or LDFLAGS leak through,
 # the testsuite sets all flags necessary. See also configure above.
-make %{?_smp_mflags} CFLAGS="" CXXFLAGS="" LDFLAGS="" check
+%make_build CFLAGS="" CXXFLAGS="" LDFLAGS="" check
 
 # Workaround https://bugzilla.redhat.com/show_bug.cgi?id=1434601
 # for gdbserver tests.
@@ -447,6 +447,10 @@ fi
 %endif
 
 %changelog
+* Tue Jul 14 2020 Tom Stellard <tstellar@redhat.com> - 3.16.1-3
+- Use make macros
+- https://fedoraproject.org/wiki/Changes/UseMakeBuildInstallMacro
+
 * Wed Jul  8 2020 Jeff Law <law@redhat.org> - 3.16.1-2
 - Disable LTO
 
