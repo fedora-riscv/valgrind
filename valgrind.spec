@@ -447,7 +447,7 @@ fi
 %endif
 
 %changelog
-* Wed July  8 2020 Jeff Law <law@redhat.org> - 3.16.1-2
+* Wed Jul  8 2020 Jeff Law <law@redhat.org> - 3.16.1-2
 - Disable LTO
 
 * Tue Jun 23 2020 Mark Wielaard <mjw@fedoraproject.org> - 3.16.1-1
