@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.16.1
-Release: 3%{?dist}
+Release: 4%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -101,6 +101,9 @@ Patch8: valgrind-3.16.1-epoll.patch
 
 # KDE#369029  handle linux syscalls sched_getattr and sched_setattr
 Patch9: valgrind-3.16.1-sched_getsetattr.patch
+
+# KDE#415293  Incorrect call-graph tracking due to new _dl_runtime_resolve*
+Patch10: valgrind-3.16.1-dl_runtime_resolve.patch
 
 BuildRequires: glibc-devel
 
@@ -236,6 +239,7 @@ Valgrind User Manual for details.
 %patch7 -p1
 %patch8 -p1
 %patch9 -p1
+%patch10 -p1
 
 %build
 # LTO triggers undefined symbols in valgrind.  Valgrind has a --enable-lto
@@ -460,10 +464,11 @@ fi
 %endif
 
 %changelog
-* Mon Jul 27 2020 Mark Wielaard <mjw@fedoraproject.org>
+* Mon Jul 27 2020 Mark Wielaard <mjw@fedoraproject.org> - 3.16.1-4
 - Add valgrind-3.16.1-REX-prefix-JMP.patch
 - Add valgrind-3.16.1-epoll.patch
 - Add valgrind-3.16.1-sched_getsetattr.patch
+- Add valgrind-3.16.1-dl_runtime_resolve.patch
 
 * Tue Jul 14 2020 Tom Stellard <tstellar@redhat.com> - 3.16.1-3
 - Use make macros
