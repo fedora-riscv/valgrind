@@ -99,6 +99,9 @@ Patch7: valgrind-3.16.1-REX-prefix-JMP.patch
 # KDE#422623  epoll_ctl warns for uninit padding on non-amd64 64bit arches
 Patch8: valgrind-3.16.1-epoll.patch
 
+# KDE#369029  handle linux syscalls sched_getattr and sched_setattr
+Patch9: valgrind-3.16.1-sched_getsetattr.patch
+
 BuildRequires: glibc-devel
 
 %if %{build_openmpi}
@@ -232,6 +235,7 @@ Valgrind User Manual for details.
 
 %patch7 -p1
 %patch8 -p1
+%patch9 -p1
 
 %build
 # LTO triggers undefined symbols in valgrind.  Valgrind has a --enable-lto
@@ -459,6 +463,7 @@ fi
 * Mon Jul 27 2020 Mark Wielaard <mjw@fedoraproject.org>
 - Add valgrind-3.16.1-REX-prefix-JMP.patch
 - Add valgrind-3.16.1-epoll.patch
+- Add valgrind-3.16.1-sched_getsetattr.patch
 
 * Tue Jul 14 2020 Tom Stellard <tstellar@redhat.com> - 3.16.1-3
 - Use make macros

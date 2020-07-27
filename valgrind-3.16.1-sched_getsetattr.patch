@@ -1,0 +1,201 @@
+commit a53adb79711ccfc76a4ee32b20253045cdab55c7
+Author: Mark Wielaard <mark@klomp.org>
+Date:   Mon Jul 27 16:36:17 2020 +0200
+
+    Handle linux syscalls sched_getattr and sched_setattr
+    
+    The only "special" thing about these syscalls is that the given
+    struct sched_attr determines its own size for future expansion.
+    
+    Original fix by "ISHIKAWA,chiaki" <ishikawa@yk.rim.or.jp>
+    
+    https://bugs.kde.org/show_bug.cgi?id=369029
+
+diff --git a/coregrind/m_syswrap/priv_syswrap-linux.h b/coregrind/m_syswrap/priv_syswrap-linux.h
+index cdc73c1e6..eb0b320ca 100644
+--- a/coregrind/m_syswrap/priv_syswrap-linux.h
++++ b/coregrind/m_syswrap/priv_syswrap-linux.h
+@@ -227,6 +227,8 @@ DECL_TEMPLATE(linux, sys_fremovexattr);
+ // syscalls.
+ DECL_TEMPLATE(linux, sys_sched_setparam);
+ DECL_TEMPLATE(linux, sys_sched_getparam);
++DECL_TEMPLATE(linux, sys_sched_setattr);
++DECL_TEMPLATE(linux, sys_sched_getattr);
+ DECL_TEMPLATE(linux, sys_sched_setscheduler);
+ DECL_TEMPLATE(linux, sys_sched_getscheduler);
+ DECL_TEMPLATE(linux, sys_sched_yield);
+diff --git a/coregrind/m_syswrap/syswrap-amd64-linux.c b/coregrind/m_syswrap/syswrap-amd64-linux.c
+index 28d90135a..d6f3eb910 100644
+--- a/coregrind/m_syswrap/syswrap-amd64-linux.c
++++ b/coregrind/m_syswrap/syswrap-amd64-linux.c
+@@ -846,9 +846,8 @@ static SyscallTableEntry syscall_table[] = {
+    LINX_(__NR_process_vm_writev, sys_process_vm_writev),// 311
+    LINX_(__NR_kcmp,              sys_kcmp),             // 312
+    LINX_(__NR_finit_module,      sys_finit_module),     // 313
+-//   LIN__(__NR_sched_setattr,     sys_ni_syscall),       // 314
+-
+-//   LIN__(__NR_sched_getattr,     sys_ni_syscall),       // 315
++   LINX_(__NR_sched_setattr,     sys_sched_setattr),    // 314
++   LINXY(__NR_sched_getattr,     sys_sched_getattr),    // 315
+    LINX_(__NR_renameat2,         sys_renameat2),        // 316
+ //   LIN__(__NR_seccomp,           sys_ni_syscall),       // 317
+    LINXY(__NR_getrandom,         sys_getrandom),        // 318
+diff --git a/coregrind/m_syswrap/syswrap-arm-linux.c b/coregrind/m_syswrap/syswrap-arm-linux.c
+index 579542785..70700e53f 100644
+--- a/coregrind/m_syswrap/syswrap-arm-linux.c
++++ b/coregrind/m_syswrap/syswrap-arm-linux.c
+@@ -1009,6 +1009,8 @@ static SyscallTableEntry syscall_main_table[] = {
+    LINXY(__NR_process_vm_readv,  sys_process_vm_readv), // 376
+    LINX_(__NR_process_vm_writev, sys_process_vm_writev),// 377
+ 
++   LINX_(__NR_sched_setattr,     sys_sched_setattr),    // 380
++   LINXY(__NR_sched_getattr,     sys_sched_getattr),    // 381
+    LINX_(__NR_renameat2,         sys_renameat2),        // 382
+ 
+    LINXY(__NR_getrandom,         sys_getrandom),        // 384
+diff --git a/coregrind/m_syswrap/syswrap-arm64-linux.c b/coregrind/m_syswrap/syswrap-arm64-linux.c
+index 81e01456f..acca02442 100644
+--- a/coregrind/m_syswrap/syswrap-arm64-linux.c
++++ b/coregrind/m_syswrap/syswrap-arm64-linux.c
+@@ -806,8 +806,8 @@ static SyscallTableEntry syscall_main_table[] = {
+    LINX_(__NR_process_vm_writev, sys_process_vm_writev), // 271
+    LINX_(__NR_kcmp,              sys_kcmp),              // 272
+    LINX_(__NR_finit_module,      sys_finit_module),      // 273
+-   //   (__NR_sched_setattr,     sys_ni_syscall),        // 274
+-   //   (__NR_sched_getattr,     sys_ni_syscall),        // 275
++   LINX_(__NR_sched_setattr,     sys_sched_setattr),     // 274
++   LINXY(__NR_sched_getattr,     sys_sched_getattr),     // 275
+    LINX_(__NR_renameat2,         sys_renameat2),         // 276
+    //   (__NR_seccomp,           sys_ni_syscall),        // 277
+    LINXY(__NR_getrandom,         sys_getrandom),         // 278
+diff --git a/coregrind/m_syswrap/syswrap-linux.c b/coregrind/m_syswrap/syswrap-linux.c
+index 5b5b7eee6..56be3032d 100644
+--- a/coregrind/m_syswrap/syswrap-linux.c
++++ b/coregrind/m_syswrap/syswrap-linux.c
+@@ -3677,6 +3677,41 @@ POST(sys_sched_getparam)
+    POST_MEM_WRITE( ARG2, sizeof(struct vki_sched_param) );
+ }
+ 
++PRE(sys_sched_setattr)
++{
++   struct vki_sched_attr *attr;
++   PRINT("sched_setattr ( %ld, %#" FMT_REGWORD "x, %#"
++         FMT_REGWORD "x )", SARG1, ARG2, ARG3 );
++   PRE_REG_READ3(long, "sched_setattr",
++                 vki_pid_t, pid, struct sched_attr *, p, unsigned int, flags);
++   /* We need to be able to read at least the size field.  */
++   PRE_MEM_READ( "sched_setattr(attr->size)", ARG2, sizeof(vki_uint32_t) );
++   attr = (struct vki_sched_attr *)(Addr)ARG2;
++   if (ML_(safe_to_deref)(attr,sizeof(vki_uint32_t)))
++      PRE_MEM_READ( "sched_setattr(attr)", (Addr)attr, attr->size);
++}
++
++PRE(sys_sched_getattr)
++{
++   struct vki_sched_attr *attr;
++   PRINT("sched_getattr ( %ld, %#" FMT_REGWORD "x, %ld, %#"
++         FMT_REGWORD "x )", SARG1, ARG2, ARG3, ARG4 );
++   PRE_REG_READ4(long, "sched_getattr",
++                 vki_pid_t, pid, struct sched_attr *, p,
++                 unsigned int, size, unsigned int, flags);
++   /* We need to be able to read at least the size field.  */
++   PRE_MEM_READ( "sched_setattr(attr->size)", ARG2, sizeof(vki_uint32_t) );
++   /* And the kernel needs to be able to write to the whole struct size. */
++   attr = (struct vki_sched_attr *)(Addr)ARG2;
++   if (ML_(safe_to_deref)(attr,sizeof(vki_uint32_t)))
++      PRE_MEM_WRITE( "sched_setattr(attr)", (Addr)attr, attr->size);
++}
++POST(sys_sched_getattr)
++{
++   struct vki_sched_attr *attr = (struct vki_sched_attr *)(Addr)ARG2;
++   POST_MEM_WRITE( (Addr)attr, attr->size );
++}
++
+ PRE(sys_sched_getscheduler)
+ {
+    PRINT("sys_sched_getscheduler ( %ld )", SARG1);
+diff --git a/coregrind/m_syswrap/syswrap-ppc32-linux.c b/coregrind/m_syswrap/syswrap-ppc32-linux.c
+index eed12a1bc..c19cb9e0e 100644
+--- a/coregrind/m_syswrap/syswrap-ppc32-linux.c
++++ b/coregrind/m_syswrap/syswrap-ppc32-linux.c
+@@ -1016,6 +1016,9 @@ static SyscallTableEntry syscall_table[] = {
+    LINXY(__NR_process_vm_readv,  sys_process_vm_readv), // 351
+    LINX_(__NR_process_vm_writev, sys_process_vm_writev),// 352
+ 
++   LINX_(__NR_sched_setattr,     sys_sched_setattr),    // 355
++   LINXY(__NR_sched_getattr,     sys_sched_getattr),    // 356
++
+    LINXY(__NR_getrandom,         sys_getrandom),        // 359
+    LINXY(__NR_memfd_create,      sys_memfd_create),     // 360
+ 
+diff --git a/coregrind/m_syswrap/syswrap-ppc64-linux.c b/coregrind/m_syswrap/syswrap-ppc64-linux.c
+index d58200b49..b6422a765 100644
+--- a/coregrind/m_syswrap/syswrap-ppc64-linux.c
++++ b/coregrind/m_syswrap/syswrap-ppc64-linux.c
+@@ -998,6 +998,8 @@ static SyscallTableEntry syscall_table[] = {
+    LINXY(__NR_process_vm_readv,  sys_process_vm_readv), // 351
+    LINX_(__NR_process_vm_writev, sys_process_vm_writev),// 352
+ 
++   LINX_(__NR_sched_setattr,     sys_sched_setattr),    // 355
++   LINXY(__NR_sched_getattr,     sys_sched_getattr),    // 356
+    LINX_(__NR_renameat2,         sys_renameat2),        // 357
+ 
+    LINXY(__NR_getrandom,         sys_getrandom),        // 359
+diff --git a/coregrind/m_syswrap/syswrap-s390x-linux.c b/coregrind/m_syswrap/syswrap-s390x-linux.c
+index a0a330aa2..3427fee16 100644
+--- a/coregrind/m_syswrap/syswrap-s390x-linux.c
++++ b/coregrind/m_syswrap/syswrap-s390x-linux.c
+@@ -825,8 +825,8 @@ static SyscallTableEntry syscall_table[] = {
+    LINX_(__NR_kcmp, sys_kcmp),                                        // 343
+ // ?????(__NR_finit_module, ),                                        // 344
+ 
+-// ?????(__NR_sched_setattr, ),                                       // 345
+-// ?????(__NR_sched_getattr, ),                                       // 346
++   LINX_(__NR_sched_setattr, sys_sched_setattr),                      // 345
++   LINXY(__NR_sched_getattr, sys_sched_getattr),                      // 346
+    LINX_(__NR_renameat2, sys_renameat2),                              // 347
+ // ?????(__NR_seccomp, ),                                             // 348
+    LINXY(__NR_getrandom, sys_getrandom),                              // 349
+diff --git a/coregrind/m_syswrap/syswrap-x86-linux.c b/coregrind/m_syswrap/syswrap-x86-linux.c
+index 332ed0bf2..b59d96f37 100644
+--- a/coregrind/m_syswrap/syswrap-x86-linux.c
++++ b/coregrind/m_syswrap/syswrap-x86-linux.c
+@@ -1580,8 +1580,8 @@ static SyscallTableEntry syscall_table[] = {
+    LINX_(__NR_kcmp,              sys_kcmp),             // 349
+ 
+ //   LIN__(__NR_finit_module,      sys_ni_syscall),       // 350
+-//   LIN__(__NR_sched_setattr,     sys_ni_syscall),       // 351
+-//   LIN__(__NR_sched_getattr,     sys_ni_syscall),       // 352
++   LINX_(__NR_sched_setattr,     sys_sched_setattr),    // 351
++   LINXY(__NR_sched_getattr,     sys_sched_getattr),    // 352
+    LINX_(__NR_renameat2,         sys_renameat2),        // 353
+ //   LIN__(__NR_seccomp,           sys_ni_syscall),       // 354
+ 
+diff --git a/include/vki/vki-linux.h b/include/vki/vki-linux.h
+index 75b583165..ef93b9258 100644
+--- a/include/vki/vki-linux.h
++++ b/include/vki/vki-linux.h
+@@ -410,6 +410,23 @@ struct vki_sched_param {
+ 	int sched_priority;
+ };
+ 
++struct vki_sched_attr {
++	vki_uint32_t size;
++	vki_uint32_t sched_policy;
++	vki_uint64_t sched_flags;
++
++	/* SCHED_NORMAL, SCHED_BATCH */
++	vki_int32_t sched_nice;
++
++	/* SCHED_FIFO, SCHED_RR */
++	vki_uint32_t sched_priority;
++
++	/* SCHED_DEADLINE */
++	vki_uint64_t sched_runtime;
++	vki_uint64_t sched_deadline;
++	vki_uint64_t sched_period;
++};
++
+ #define VKI_TASK_COMM_LEN 16
+ 
+ //----------------------------------------------------------------------
