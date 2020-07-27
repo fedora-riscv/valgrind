@@ -96,6 +96,9 @@ Patch6: valgrind-3.16.0-some-Wl-z-now.patch
 # KDE#422174  unhandled instruction bytes: 0x48 0xE9 (REX prefix JMP instr)
 Patch7: valgrind-3.16.1-REX-prefix-JMP.patch
 
+# KDE#422623  epoll_ctl warns for uninit padding on non-amd64 64bit arches
+Patch8: valgrind-3.16.1-epoll.patch
+
 BuildRequires: glibc-devel
 
 %if %{build_openmpi}
@@ -228,6 +231,7 @@ Valgrind User Manual for details.
 %endif
 
 %patch7 -p1
+%patch8 -p1
 
 %build
 # LTO triggers undefined symbols in valgrind.  Valgrind has a --enable-lto
@@ -454,6 +458,7 @@ fi
 %changelog
 * Mon Jul 27 2020 Mark Wielaard <mjw@fedoraproject.org>
 - Add valgrind-3.16.1-REX-prefix-JMP.patch
+- Add valgrind-3.16.1-epoll.patch
 
 * Tue Jul 14 2020 Tom Stellard <tstellar@redhat.com> - 3.16.1-3
 - Use make macros
