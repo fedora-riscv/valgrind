@@ -1,0 +1,38 @@
+commit e2dec0ff9b1e071779bee2c4e6fc82f8194b1c1d
+Author: Mark Wielaard <mark@klomp.org>
+Date:   Sun Jul 26 21:17:23 2020 +0200
+
+    Handle REX prefixed JMP instruction.
+    
+    The NET Core runtime might generate a JMP with a REX prefix.
+    For Jv (32bit offset) and Jb (8bit offset) this is valid.
+    Prefixes that change operand size are ignored for such JMPs.
+    So remove the check for sz == 4 and force sz = 4 for Jv.
+    
+    https://bugs.kde.org/show_bug.cgi?id=422174
+
+diff --git a/VEX/priv/guest_amd64_toIR.c b/VEX/priv/guest_amd64_toIR.c
+index fadf47d41..7888132eb 100644
+--- a/VEX/priv/guest_amd64_toIR.c
++++ b/VEX/priv/guest_amd64_toIR.c
+@@ -21392,8 +21392,8 @@ Long dis_ESC_NONE (
+ 
+    case 0xE9: /* Jv (jump, 16/32 offset) */
+       if (haveF3(pfx)) goto decode_failure;
+-      if (sz != 4) 
+-         goto decode_failure; /* JRS added 2004 July 11 */
++      sz = 4; /* Prefixes that change operand size are ignored for this
++                 instruction. Operand size is forced to 32bit. */
+       if (haveF2(pfx)) DIP("bnd ; "); /* MPX bnd prefix. */
+       d64 = (guest_RIP_bbstart+delta+sz) + getSDisp(sz,delta); 
+       delta += sz;
+@@ -21404,8 +21404,7 @@ Long dis_ESC_NONE (
+ 
+    case 0xEB: /* Jb (jump, byte offset) */
+       if (haveF3(pfx)) goto decode_failure;
+-      if (sz != 4) 
+-         goto decode_failure; /* JRS added 2004 July 11 */
++      /* Prefixes that change operand size are ignored for this instruction. */
+       if (haveF2(pfx)) DIP("bnd ; "); /* MPX bnd prefix. */
+       d64 = (guest_RIP_bbstart+delta+1) + getSDisp8(delta); 
+       delta++;
