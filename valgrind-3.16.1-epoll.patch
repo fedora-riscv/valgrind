@@ -84,3 +84,34 @@ index 5b5b7eee6..929a4d9af 100644
  }
  
  PRE(sys_eventfd)
+commit b74f9f23c8758c77367f18368ea95baa858544cb
+Author: Mark Wielaard <mark@klomp.org>
+Date:   Tue Aug 18 23:58:55 2020 +0200
+
+    Fix epoll_ctl setting of array event and data fields.
+    
+    Fix for https://bugs.kde.org/show_bug.cgi?id=422623 in commit ecf5ba119
+    epoll_ctl warns for uninitialized padding on non-amd64 64bit arches
+    contained a bug. A pointer to an array is not a pointer to a pointer to
+    an array. Found by a Fedora user:
+    https://bugzilla.redhat.com/show_bug.cgi?id=1844778#c10
+
+diff --git a/coregrind/m_syswrap/syswrap-linux.c b/coregrind/m_syswrap/syswrap-linux.c
+index 0850487e9..3f488795a 100644
+--- a/coregrind/m_syswrap/syswrap-linux.c
++++ b/coregrind/m_syswrap/syswrap-linux.c
+@@ -2115,11 +2115,11 @@ static void epoll_post_helper ( ThreadId tid, SyscallArgs* arrghs,
+    vg_assert(SUCCESS);
+    if (RES > 0) {
+       Int i;
+-      struct vki_epoll_event **events = (struct vki_epoll_event**)(Addr)ARG2;
++      struct vki_epoll_event *events = (struct vki_epoll_event*)(Addr)ARG2;
+       for (i = 0; i < RES; i++) {
+          /* Assume both events and data are set (data is user space only). */
+-         POST_FIELD_WRITE(events[i]->events);
+-         POST_FIELD_WRITE(events[i]->data);
++         POST_FIELD_WRITE(events[i].events);
++         POST_FIELD_WRITE(events[i].data);
+       }
+    }
+ }

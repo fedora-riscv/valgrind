@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.16.1
-Release: 4%{?dist}
+Release: 5%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -464,6 +464,9 @@ fi
 %endif
 
 %changelog
+* Tue Aug 18 2020 Mark Wielaard <mjw@fedoraproject.org> - 3.16.1-5
+- Update valgrind-3.16.1-epoll.patch
+
 * Mon Jul 27 2020 Mark Wielaard <mjw@fedoraproject.org> - 3.16.1-4
 - Add valgrind-3.16.1-REX-prefix-JMP.patch
 - Add valgrind-3.16.1-epoll.patch
