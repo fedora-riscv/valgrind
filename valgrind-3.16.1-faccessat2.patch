@@ -1,0 +1,201 @@
+From fe4b349df3d5edc1c849e9890cbc6b191386a03c Mon Sep 17 00:00:00 2001
+From: Mark Wielaard <mark@klomp.org>
+Date: Fri, 16 Oct 2020 02:55:06 +0200
+Subject: [PATCH] Support new faccessat2 linux syscall (439)
+
+faccessat2 is a new syscall in linux 5.8 and will be used by glibc 2.33.
+faccessat2 is simply faccessat with a new flag argument. It has
+a common number across all linux arches.
+
+https://bugs.kde.org/427787
+---
+ NEWS                                         | 1 +
+ coregrind/m_syswrap/priv_syswrap-linux.h     | 1 +
+ coregrind/m_syswrap/syswrap-amd64-linux.c    | 2 ++
+ coregrind/m_syswrap/syswrap-arm-linux.c      | 2 ++
+ coregrind/m_syswrap/syswrap-arm64-linux.c    | 2 ++
+ coregrind/m_syswrap/syswrap-linux.c          | 9 +++++++++
+ coregrind/m_syswrap/syswrap-mips32-linux.c   | 2 ++
+ coregrind/m_syswrap/syswrap-mips64-linux.c   | 1 +
+ coregrind/m_syswrap/syswrap-nanomips-linux.c | 1 +
+ coregrind/m_syswrap/syswrap-ppc32-linux.c    | 2 ++
+ coregrind/m_syswrap/syswrap-ppc64-linux.c    | 2 ++
+ coregrind/m_syswrap/syswrap-s390x-linux.c    | 2 ++
+ coregrind/m_syswrap/syswrap-x86-linux.c      | 2 ++
+ include/vki/vki-scnums-shared-linux.h        | 2 ++
+ 14 files changed, 31 insertions(+)
+
+diff --git a/coregrind/m_syswrap/priv_syswrap-linux.h b/coregrind/m_syswrap/priv_syswrap-linux.h
+index eb0b320ca..110f7c832 100644
+--- a/coregrind/m_syswrap/priv_syswrap-linux.h
++++ b/coregrind/m_syswrap/priv_syswrap-linux.h
+@@ -180,6 +180,7 @@ DECL_TEMPLATE(linux, sys_symlinkat);
+ DECL_TEMPLATE(linux, sys_readlinkat);
+ DECL_TEMPLATE(linux, sys_fchmodat);
+ DECL_TEMPLATE(linux, sys_faccessat);
++DECL_TEMPLATE(linux, sys_faccessat2);
+ DECL_TEMPLATE(linux, sys_utimensat);
+ DECL_TEMPLATE(linux, sys_name_to_handle_at);
+ DECL_TEMPLATE(linux, sys_open_by_handle_at);
+diff --git a/coregrind/m_syswrap/syswrap-amd64-linux.c b/coregrind/m_syswrap/syswrap-amd64-linux.c
+index d6f3eb910..45e1f3d1b 100644
+--- a/coregrind/m_syswrap/syswrap-amd64-linux.c
++++ b/coregrind/m_syswrap/syswrap-amd64-linux.c
+@@ -873,6 +873,8 @@ static SyscallTableEntry syscall_table[] = {
+    LINXY(__NR_io_uring_setup,    sys_io_uring_setup),    // 425
+    LINXY(__NR_io_uring_enter,    sys_io_uring_enter),    // 426
+    LINXY(__NR_io_uring_register, sys_io_uring_register), // 427
++
++   LINX_(__NR_faccessat2,	 sys_faccessat2),        // 439
+ };
+ 
+ SyscallTableEntry* ML_(get_linux_syscall_entry) ( UInt sysno )
+diff --git a/coregrind/m_syswrap/syswrap-arm-linux.c b/coregrind/m_syswrap/syswrap-arm-linux.c
+index 70700e53f..978aedbe6 100644
+--- a/coregrind/m_syswrap/syswrap-arm-linux.c
++++ b/coregrind/m_syswrap/syswrap-arm-linux.c
+@@ -1046,6 +1046,8 @@ static SyscallTableEntry syscall_main_table[] = {
+    LINXY(__NR_futex_time64,      sys_futex_time64),     // 422
+    LINXY(__NR_sched_rr_get_interval_time64,
+          sys_sched_rr_get_interval_time64),             // 423
++
++   LINX_(__NR_faccessat2,    sys_faccessat2),           // 439
+ };
+ 
+ 
+diff --git a/coregrind/m_syswrap/syswrap-arm64-linux.c b/coregrind/m_syswrap/syswrap-arm64-linux.c
+index acca02442..051d84989 100644
+--- a/coregrind/m_syswrap/syswrap-arm64-linux.c
++++ b/coregrind/m_syswrap/syswrap-arm64-linux.c
+@@ -825,6 +825,8 @@ static SyscallTableEntry syscall_main_table[] = {
+    //   (__NR_pkey_free,         sys_ni_syscall),        // 290
+ 
+    LINXY(__NR_statx,             sys_statx),             // 397
++
++   LINX_(__NR_faccessat2,        sys_faccessat2),        // 439
+ };
+ 
+ 
+diff --git a/coregrind/m_syswrap/syswrap-linux.c b/coregrind/m_syswrap/syswrap-linux.c
+index 3f488795a..41849873e 100644
+--- a/coregrind/m_syswrap/syswrap-linux.c
++++ b/coregrind/m_syswrap/syswrap-linux.c
+@@ -5988,6 +5988,15 @@ PRE(sys_faccessat)
+    PRE_MEM_RASCIIZ( "faccessat(pathname)", ARG2 );
+ }
+ 
++PRE(sys_faccessat2)
++{
++   PRINT("sys_faccessat2 ( %ld, %#" FMT_REGWORD "x(%s), %ld, %ld )",
++         SARG1, ARG2, (HChar*)(Addr)ARG2, SARG3, SARG4);
++   PRE_REG_READ4(long, "faccessat2",
++                 int, dfd, const char *, pathname, int, mode, int, flags);
++   PRE_MEM_RASCIIZ( "faccessat2(pathname)", ARG2 );
++}
++
+ PRE(sys_name_to_handle_at)
+ {
+    PRINT("sys_name_to_handle_at ( %ld, %#" FMT_REGWORD "x(%s), %#"
+diff --git a/coregrind/m_syswrap/syswrap-mips32-linux.c b/coregrind/m_syswrap/syswrap-mips32-linux.c
+index 5face576b..f35fb8bbb 100644
+--- a/coregrind/m_syswrap/syswrap-mips32-linux.c
++++ b/coregrind/m_syswrap/syswrap-mips32-linux.c
+@@ -1131,6 +1131,8 @@ static SyscallTableEntry syscall_main_table[] = {
+    LINXY(__NR_futex_time64,            sys_futex_time64),            // 422
+    LINXY(__NR_sched_rr_get_interval_time64,
+          sys_sched_rr_get_interval_time64),                          // 423
++
++   LINX_ (__NR_faccessat2,             sys_faccessat2),              // 439
+ };
+ 
+ SyscallTableEntry* ML_(get_linux_syscall_entry) (UInt sysno)
+diff --git a/coregrind/m_syswrap/syswrap-mips64-linux.c b/coregrind/m_syswrap/syswrap-mips64-linux.c
+index c64911a50..bd260679c 100644
+--- a/coregrind/m_syswrap/syswrap-mips64-linux.c
++++ b/coregrind/m_syswrap/syswrap-mips64-linux.c
+@@ -812,6 +812,7 @@ static SyscallTableEntry syscall_main_table[] = {
+    LINX_ (__NR_syncfs, sys_syncfs),
+    LINXY (__NR_statx, sys_statx),
+    LINX_ (__NR_setns, sys_setns),
++   LINX_ (__NR_faccessat2, sys_faccessat2),
+ };
+ 
+ SyscallTableEntry * ML_(get_linux_syscall_entry) ( UInt sysno )
+diff --git a/coregrind/m_syswrap/syswrap-nanomips-linux.c b/coregrind/m_syswrap/syswrap-nanomips-linux.c
+index 7ceecb6da..a904745ab 100644
+--- a/coregrind/m_syswrap/syswrap-nanomips-linux.c
++++ b/coregrind/m_syswrap/syswrap-nanomips-linux.c
+@@ -821,6 +821,7 @@ static SyscallTableEntry syscall_main_table[] = {
+    //    (__NR_pkey_mprotect,          sys_ni_syscall),
+    //    (__NR_pkey_alloc,             sys_ni_syscall),
+    //    (__NR_pkey_free,              sys_ni_syscall),
++   LINX_ (__NR_faccessat2,             sys_faccessat2),
+ };
+ 
+ SyscallTableEntry* ML_(get_linux_syscall_entry) (UInt sysno)
+diff --git a/coregrind/m_syswrap/syswrap-ppc32-linux.c b/coregrind/m_syswrap/syswrap-ppc32-linux.c
+index c19cb9e0e..6ddd482d9 100644
+--- a/coregrind/m_syswrap/syswrap-ppc32-linux.c
++++ b/coregrind/m_syswrap/syswrap-ppc32-linux.c
+@@ -1049,6 +1049,8 @@ static SyscallTableEntry syscall_table[] = {
+    LINXY(__NR_futex_time64,      sys_futex_time64),     // 422
+    LINXY(__NR_sched_rr_get_interval_time64,
+          sys_sched_rr_get_interval_time64),             // 423
++
++   LINX_(__NR_faccessat2,        sys_faccessat2),       // 439
+ };
+ 
+ SyscallTableEntry* ML_(get_linux_syscall_entry) ( UInt sysno )
+diff --git a/coregrind/m_syswrap/syswrap-ppc64-linux.c b/coregrind/m_syswrap/syswrap-ppc64-linux.c
+index b6422a765..7026e4ac6 100644
+--- a/coregrind/m_syswrap/syswrap-ppc64-linux.c
++++ b/coregrind/m_syswrap/syswrap-ppc64-linux.c
+@@ -1014,6 +1014,8 @@ static SyscallTableEntry syscall_table[] = {
+    LINX_(__NR_pwritev2,          sys_pwritev2),         // 381
+ 
+    LINXY(__NR_statx,             sys_statx),            // 383
++
++   LINX_(__NR_faccessat2,        sys_faccessat2),       // 439
+ };
+ 
+ SyscallTableEntry* ML_(get_linux_syscall_entry) ( UInt sysno )
+diff --git a/coregrind/m_syswrap/syswrap-s390x-linux.c b/coregrind/m_syswrap/syswrap-s390x-linux.c
+index 3427fee16..c5e4bb957 100644
+--- a/coregrind/m_syswrap/syswrap-s390x-linux.c
++++ b/coregrind/m_syswrap/syswrap-s390x-linux.c
+@@ -859,6 +859,8 @@ static SyscallTableEntry syscall_table[] = {
+    LINX_(__NR_pwritev2, sys_pwritev2),                                // 377
+ 
+    LINXY(__NR_statx, sys_statx),                                      // 379
++
++   LINX_(__NR_faccessat2,  sys_faccessat2),                           // 439
+ };
+ 
+ SyscallTableEntry* ML_(get_linux_syscall_entry) ( UInt sysno )
+diff --git a/coregrind/m_syswrap/syswrap-x86-linux.c b/coregrind/m_syswrap/syswrap-x86-linux.c
+index b59d96f37..67d866497 100644
+--- a/coregrind/m_syswrap/syswrap-x86-linux.c
++++ b/coregrind/m_syswrap/syswrap-x86-linux.c
+@@ -1644,6 +1644,8 @@ static SyscallTableEntry syscall_table[] = {
+    LINXY(__NR_io_uring_setup,    sys_io_uring_setup),   // 425
+    LINXY(__NR_io_uring_enter,    sys_io_uring_enter),   // 426
+    LINXY(__NR_io_uring_register, sys_io_uring_register),// 427
++
++   LINX_(__NR_faccessat2,	 sys_faccessat2),       // 439
+ };
+ 
+ SyscallTableEntry* ML_(get_linux_syscall_entry) ( UInt sysno )
+diff --git a/include/vki/vki-scnums-shared-linux.h b/include/vki/vki-scnums-shared-linux.h
+index 6221d5a81..c8bc31b4b 100644
+--- a/include/vki/vki-scnums-shared-linux.h
++++ b/include/vki/vki-scnums-shared-linux.h
+@@ -39,4 +39,6 @@
+ #define __NR_fsmount		432
+ #define __NR_fspick		433
+ 
++#define __NR_faccessat2		439
++
+ #endif
+-- 
+2.20.1
+

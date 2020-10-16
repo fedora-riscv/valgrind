@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.16.1
-Release: 5%{?dist}
+Release: 6%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -104,6 +104,9 @@ Patch9: valgrind-3.16.1-sched_getsetattr.patch
 
 # KDE#415293  Incorrect call-graph tracking due to new _dl_runtime_resolve*
 Patch10: valgrind-3.16.1-dl_runtime_resolve.patch
+
+# KDE#427787  Support new faccessat2 linux syscall (439)
+Patch11: valgrind-3.16.1-faccessat2.patch
 
 BuildRequires: glibc-devel
 
@@ -240,6 +243,7 @@ Valgrind User Manual for details.
 %patch8 -p1
 %patch9 -p1
 %patch10 -p1
+%patch11 -p1
 
 %build
 # LTO triggers undefined symbols in valgrind.  Valgrind has a --enable-lto
@@ -464,6 +468,9 @@ fi
 %endif
 
 %changelog
+* Fri Oct 16 2020 Mark Wielaard <mjw@fedoraproject.org> - 3.16.1-6
+- Add valgrind-3.16.1-faccessat2.patch
+
 * Tue Aug 18 2020 Mark Wielaard <mjw@fedoraproject.org> - 3.16.1-5
 - Update valgrind-3.16.1-epoll.patch
 
