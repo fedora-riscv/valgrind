@@ -111,6 +111,9 @@ Patch11: valgrind-3.16.1-faccessat2.patch
 # KDE#427931 gdbserver_tests/nlcontrolc.vgtest hangs on fedora rawhide
 Patch12: valgrind-3.16.1-gdbserver_nlcontrolc.patch
 
+# KDE#427870 lmw, lswi and related PowerPC insns aren't allowed on ppc64le
+Patch13: valgrind-3.16.1-PPC64BE-lsw.patch
+
 BuildRequires: glibc-devel
 
 %if %{build_openmpi}
@@ -248,6 +251,7 @@ Valgrind User Manual for details.
 %patch10 -p1
 %patch11 -p1
 %patch12 -p1
+%patch13 -p1
 
 %build
 # LTO triggers undefined symbols in valgrind.  Valgrind has a --enable-lto
@@ -475,6 +479,7 @@ fi
 * Fri Oct 16 2020 Mark Wielaard <mjw@fedoraproject.org> - 3.16.1-6
 - Add valgrind-3.16.1-faccessat2.patch
 - Add valgrind-3.16.1-gdbserver_nlcontrolc.patch
+- Add valgrind-3.16.1-PPC64BE-lsw.patch
 
 * Tue Aug 18 2020 Mark Wielaard <mjw@fedoraproject.org> - 3.16.1-5
 - Update valgrind-3.16.1-epoll.patch
