@@ -108,6 +108,9 @@ Patch10: valgrind-3.16.1-dl_runtime_resolve.patch
 # KDE#427787  Support new faccessat2 linux syscall (439)
 Patch11: valgrind-3.16.1-faccessat2.patch
 
+# KDE#427931 gdbserver_tests/nlcontrolc.vgtest hangs on fedora rawhide
+Patch12: valgrind-3.16.1-gdbserver_nlcontrolc.patch
+
 BuildRequires: glibc-devel
 
 %if %{build_openmpi}
@@ -244,6 +247,7 @@ Valgrind User Manual for details.
 %patch9 -p1
 %patch10 -p1
 %patch11 -p1
+%patch12 -p1
 
 %build
 # LTO triggers undefined symbols in valgrind.  Valgrind has a --enable-lto
@@ -470,6 +474,7 @@ fi
 %changelog
 * Fri Oct 16 2020 Mark Wielaard <mjw@fedoraproject.org> - 3.16.1-6
 - Add valgrind-3.16.1-faccessat2.patch
+- Add valgrind-3.16.1-gdbserver_nlcontrolc.patch
 
 * Tue Aug 18 2020 Mark Wielaard <mjw@fedoraproject.org> - 3.16.1-5
 - Update valgrind-3.16.1-epoll.patch
