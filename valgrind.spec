@@ -143,6 +143,9 @@ BuildRequires: autoconf
 # For make check validating the documentation
 BuildRequires: docbook-dtds
 
+# configure might use which
+BuildRequires: which
+
 %{?scl:Requires:%scl_runtime}
 
 # We need to fixup selinux file context when doing a scl build.
@@ -476,6 +479,9 @@ fi
 %endif
 
 %changelog
+* Mon Nov  9 2020 Mark Wielaard <mjw@fedoraproject.org>
+- Add BuildRequires which (#1895773)
+
 * Fri Oct 16 2020 Mark Wielaard <mjw@fedoraproject.org> - 3.16.1-6
 - Add valgrind-3.16.1-faccessat2.patch
 - Add valgrind-3.16.1-gdbserver_nlcontrolc.patch
