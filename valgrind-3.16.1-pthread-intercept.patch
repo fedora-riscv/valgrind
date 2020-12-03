@@ -1,0 +1,222 @@
+commit 15330adf7c2471fbaa6a0818db07078d81dbff97
+Author: Bart Van Assche <bvanassche@acm.org>
+Date:   Sat Sep 19 08:08:59 2020 -0700
+
+    drd: Port to Fedora 33
+    
+    Apparently on Fedora 33 the POSIX thread functions exist in both libc and
+    libpthread. Hence this patch that intercepts the pthread functions in
+    libc. See also https://bugs.kde.org/show_bug.cgi?id=426144 .
+
+diff --git a/drd/drd_pthread_intercepts.c b/drd/drd_pthread_intercepts.c
+index 58c45aaec..c2882e5ab 100644
+--- a/drd/drd_pthread_intercepts.c
++++ b/drd/drd_pthread_intercepts.c
+@@ -174,7 +174,16 @@ static int never_true;
+    ret_ty VG_WRAP_FUNCTION_ZZ(VG_Z_LIBC_SONAME,zf) argl_decl            \
+    { return implf argl; }
+ #else
++/*
++ * On Linux, intercept both the libc and the libpthread functions. At
++ * least glibc 2.32.9000 (Fedora 34) has an implementation of all pthread
++ * functions in both libc and libpthread. Older glibc versions only have an
++ * implementation of the pthread functions in libpthread.
++ */
+ #define PTH_FUNC(ret_ty, zf, implf, argl_decl, argl)                    \
++   ret_ty VG_WRAP_FUNCTION_ZZ(VG_Z_LIBC_SONAME,zf) argl_decl;           \
++   ret_ty VG_WRAP_FUNCTION_ZZ(VG_Z_LIBC_SONAME,zf) argl_decl            \
++   { return implf argl; }                                               \
+    ret_ty VG_WRAP_FUNCTION_ZZ(VG_Z_LIBPTHREAD_SONAME,zf) argl_decl;     \
+    ret_ty VG_WRAP_FUNCTION_ZZ(VG_Z_LIBPTHREAD_SONAME,zf) argl_decl      \
+    { return implf argl; }
+
+commit 3073d03e4b6e76797828b3f466863dbdda76cc7a
+Author: Bart Van Assche <bvanassche@acm.org>
+Date:   Tue Oct 20 19:40:19 2020 -0700
+
+    drd: Unbreak the musl build
+    
+    See also https://bugs.kde.org/show_bug.cgi?id=428035.
+    
+    Reported-by: Stacy <stacy.gaikovaia@windriver.com>
+    Fixes: 15330adf7c24 ("drd: Port to Fedora 33")
+
+diff --git a/drd/drd_pthread_intercepts.c b/drd/drd_pthread_intercepts.c
+index 62c466f50..585aafe22 100644
+--- a/drd/drd_pthread_intercepts.c
++++ b/drd/drd_pthread_intercepts.c
+@@ -174,6 +174,13 @@ static int never_true;
+    ret_ty VG_WRAP_FUNCTION_ZZ(VG_Z_LIBC_SONAME,zf) argl_decl            \
+    { return implf argl; }
+ #else
++#ifdef MUSL_LIBC
++/* musl provides a single library that includes pthreads functions. */
++#define PTH_FUNC(ret_ty, zf, implf, argl_decl, argl)                    \
++   ret_ty VG_WRAP_FUNCTION_ZZ(VG_Z_LIBPTHREAD_SONAME,zf) argl_decl;     \
++   ret_ty VG_WRAP_FUNCTION_ZZ(VG_Z_LIBPTHREAD_SONAME,zf) argl_decl      \
++   { return implf argl; }
++#else
+ /*
+  * On Linux, intercept both the libc and the libpthread functions. At
+  * least glibc 2.32.9000 (Fedora 34) has an implementation of all pthread
+@@ -188,6 +195,7 @@ static int never_true;
+    ret_ty VG_WRAP_FUNCTION_ZZ(VG_Z_LIBPTHREAD_SONAME,zf) argl_decl      \
+    { return implf argl; }
+ #endif
++#endif
+ 
+ /**
+  * Macro for generating three Valgrind interception functions: one with the
+diff --git a/drd/drd_pthread_intercepts.c b/drd/drd_pthread_intercepts.c
+
+index 585aafe22..3d1f90d3b 100644
+--- a/drd/drd_pthread_intercepts.c
++++ b/drd/drd_pthread_intercepts.c
+@@ -151,7 +151,7 @@ static drd_rtld_guard_fn DRD_(rtld_bind_clear) = NULL;
+  * @param[in] arg_decl Argument declaration list enclosed in parentheses.
+  * @param[in] argl Argument list enclosed in parentheses.
+  */
+-#ifdef VGO_darwin
++#if defined(VGO_darwin)
+ static int never_true;
+ #define PTH_FUNC(ret_ty, zf, implf, argl_decl, argl)                    \
+    ret_ty VG_WRAP_FUNCTION_ZZ(VG_Z_LIBPTHREAD_SONAME,zf) argl_decl;     \
+@@ -164,29 +164,12 @@ static int never_true;
+ 	 fflush(stdout);						\
+       return pth_func_result;						\
+    }
+-#elif defined(VGO_solaris)
+-/* On Solaris, libpthread is just a filter library on top of libc.
+- * Threading and synchronization functions in runtime linker are not
+- * intercepted.
+- */
++#elif defined(VG_WRAP_THREAD_FUNCTION_LIBC_ONLY)
+ #define PTH_FUNC(ret_ty, zf, implf, argl_decl, argl)                    \
+    ret_ty VG_WRAP_FUNCTION_ZZ(VG_Z_LIBC_SONAME,zf) argl_decl;           \
+    ret_ty VG_WRAP_FUNCTION_ZZ(VG_Z_LIBC_SONAME,zf) argl_decl            \
+    { return implf argl; }
+-#else
+-#ifdef MUSL_LIBC
+-/* musl provides a single library that includes pthreads functions. */
+-#define PTH_FUNC(ret_ty, zf, implf, argl_decl, argl)                    \
+-   ret_ty VG_WRAP_FUNCTION_ZZ(VG_Z_LIBPTHREAD_SONAME,zf) argl_decl;     \
+-   ret_ty VG_WRAP_FUNCTION_ZZ(VG_Z_LIBPTHREAD_SONAME,zf) argl_decl      \
+-   { return implf argl; }
+-#else
+-/*
+- * On Linux, intercept both the libc and the libpthread functions. At
+- * least glibc 2.32.9000 (Fedora 34) has an implementation of all pthread
+- * functions in both libc and libpthread. Older glibc versions only have an
+- * implementation of the pthread functions in libpthread.
+- */
++#elif defined(VG_WRAP_THREAD_FUNCTION_LIBC_AND_LIBPTHREAD)
+ #define PTH_FUNC(ret_ty, zf, implf, argl_decl, argl)                    \
+    ret_ty VG_WRAP_FUNCTION_ZZ(VG_Z_LIBC_SONAME,zf) argl_decl;           \
+    ret_ty VG_WRAP_FUNCTION_ZZ(VG_Z_LIBC_SONAME,zf) argl_decl            \
+@@ -194,7 +177,8 @@ static int never_true;
+    ret_ty VG_WRAP_FUNCTION_ZZ(VG_Z_LIBPTHREAD_SONAME,zf) argl_decl;     \
+    ret_ty VG_WRAP_FUNCTION_ZZ(VG_Z_LIBPTHREAD_SONAME,zf) argl_decl      \
+    { return implf argl; }
+-#endif
++#else
++#  error "Unknown platform/thread wrapping"
+ #endif
+ 
+ /**
+diff --git a/helgrind/hg_intercepts.c b/helgrind/hg_intercepts.c
+index a10c3a4a3..2bc89f8a0 100644
+--- a/helgrind/hg_intercepts.c
++++ b/helgrind/hg_intercepts.c
+@@ -78,26 +78,37 @@
+ /*----------------------------------------------------------------*/
+ 
+ #if defined(VGO_solaris)
+-/* On Solaris, libpthread is just a filter library on top of libc.
+- * Threading and synchronization functions in runtime linker are not
+- * intercepted.
+- */
+-#define PTH_FUNC(ret_ty, f, args...) \
+-   ret_ty I_WRAP_SONAME_FNNAME_ZZ(VG_Z_LIBC_SONAME,f)(args); \
+-   ret_ty I_WRAP_SONAME_FNNAME_ZZ(VG_Z_LIBC_SONAME,f)(args)
+-
+ /* pthread_t is typedef'd to 'unsigned int' but in DO_CREQ_* macros
+    sizeof(Word) is expected. */
+ #define CREQ_PTHREAD_T Word
+ #define SEM_ERROR ret
+ #else
+-#define PTH_FUNC(ret_ty, f, args...) \
+-   ret_ty I_WRAP_SONAME_FNNAME_ZZ(VG_Z_LIBPTHREAD_SONAME,f)(args); \
+-   ret_ty I_WRAP_SONAME_FNNAME_ZZ(VG_Z_LIBPTHREAD_SONAME,f)(args)
+ #define CREQ_PTHREAD_T pthread_t
+ #define SEM_ERROR errno
+ #endif /* VGO_solaris */
+ 
++#define HG_EXPAND(tok) #tok
++#define HG_STR(tok) HG_EXPAND(tok)
++#define HG_WEAK_ALIAS(name, aliasname) \
++  extern __typeof (name) aliasname __attribute__ ((weak, alias(HG_STR(name))))
++
++#if defined(VG_WRAP_THREAD_FUNCTION_LIBPTHREAD_ONLY)
++#define PTH_FUNC(ret_ty, f, args...) \
++   ret_ty I_WRAP_SONAME_FNNAME_ZZ(VG_Z_LIBPTHREAD_SONAME,f)(args); \
++   ret_ty I_WRAP_SONAME_FNNAME_ZZ(VG_Z_LIBPTHREAD_SONAME,f)(args)
++#elif defined(VG_WRAP_THREAD_FUNCTION_LIBC_AND_LIBPTHREAD)
++#define PTH_FUNC(ret_ty, f, args...) \
++   ret_ty I_WRAP_SONAME_FNNAME_ZZ(VG_Z_LIBPTHREAD_SONAME,f)(args); \
++   HG_WEAK_ALIAS(I_WRAP_SONAME_FNNAME_ZZ(VG_Z_LIBPTHREAD_SONAME,f), I_WRAP_SONAME_FNNAME_ZZ(VG_Z_LIBC_SONAME,f)); \
++   ret_ty I_WRAP_SONAME_FNNAME_ZZ(VG_Z_LIBPTHREAD_SONAME,f)(args)
++#elif defined(VG_WRAP_THREAD_FUNCTION_LIBC_ONLY)
++#define PTH_FUNC(ret_ty, f, args...) \
++   ret_ty I_WRAP_SONAME_FNNAME_ZZ(VG_Z_LIBC_SONAME,f)(args); \
++   ret_ty I_WRAP_SONAME_FNNAME_ZZ(VG_Z_LIBC_SONAME,f)(args)
++#else
++#  error "Unknown platform/thread wrapping"
++#endif
++
+ // Do a client request.  These are macros rather than a functions so
+ // as to avoid having an extra frame in stack traces.
+ 
+diff --git a/include/pub_tool_redir.h b/include/pub_tool_redir.h
+index bd65a44b4..d665afd98 100644
+--- a/include/pub_tool_redir.h
++++ b/include/pub_tool_redir.h
+@@ -277,11 +277,7 @@
+ /* --- Soname of the pthreads library. --- */
+ 
+ #if defined(VGO_linux)
+-# if defined(MUSL_LIBC)
+-#  define  VG_Z_LIBPTHREAD_SONAME  libcZdZa              // libc.*
+-#else
+ #  define  VG_Z_LIBPTHREAD_SONAME  libpthreadZdsoZd0     // libpthread.so.0
+-#endif
+ #elif defined(VGO_darwin)
+ #  define  VG_Z_LIBPTHREAD_SONAME  libSystemZdZaZddylib  // libSystem.*.dylib
+ #elif defined(VGO_solaris)
+@@ -364,6 +360,27 @@
+ 
+ Bool VG_(is_soname_ld_so) (const HChar *soname);
+ 
++// Some macros to help decide which libraries (libc or libpthread
++// or some platform-specific variation of these) should be used
++// for wrapping pthread/semaphore functions with DRD and Helgrind
++// The possibilities are a) only in libpthread
++// b) mabye in both libpthread and libc or c) only in libc
++// Linux GNU libc is moving from a) to c) (starting with Fedora 33)
++// Linux MUSL libc is c)
++// Darwin is a)
++// Solaris is c)
++// FreeBSD is b)
++
++#if defined(VGO_darwin)
++#define VG_WRAP_THREAD_FUNCTION_LIBPTHREAD_ONLY
++#elif defined(VGO_solaris) || (defined(VGO_linux) && defined(MUSL_LIBC))
++#define VG_WRAP_THREAD_FUNCTION_LIBC_ONLY
++#elif defined(VGO_linux)
++#define VG_WRAP_THREAD_FUNCTION_LIBC_AND_LIBPTHREAD
++#else
++#  error "Unknown platform"
++#endif
++
+ #endif   // __PUB_TOOL_REDIR_H
+ 
+ /*--------------------------------------------------------------------*/

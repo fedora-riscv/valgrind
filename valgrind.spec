@@ -114,6 +114,9 @@ Patch12: valgrind-3.16.1-gdbserver_nlcontrolc.patch
 # KDE#427870 lmw, lswi and related PowerPC insns aren't allowed on ppc64le
 Patch13: valgrind-3.16.1-PPC64BE-lsw.patch
 
+# KDE#428909 helgrind: need to intercept duplicate libc definitions
+Patch14: valgrind-3.16.1-pthread-intercept.patch
+
 BuildRequires: glibc-devel
 
 %if %{build_openmpi}
@@ -255,6 +258,7 @@ Valgrind User Manual for details.
 %patch11 -p1
 %patch12 -p1
 %patch13 -p1
+%patch14 -p1
 
 %build
 # LTO triggers undefined symbols in valgrind.  Valgrind has a --enable-lto
@@ -479,6 +483,9 @@ fi
 %endif
 
 %changelog
+* Thu Dec  3 2020 Mark Wielaard <mjw@fedoraproject.org>
+- Add valgrind-3.16.1-pthread-intercept.patch
+
 * Mon Nov  9 2020 Mark Wielaard <mjw@fedoraproject.org>
 - Add BuildRequires which (#1895773)
 
