@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.16.1
-Release: 6%{?dist}
+Release: 7%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -116,6 +116,12 @@ Patch13: valgrind-3.16.1-PPC64BE-lsw.patch
 
 # KDE#428909 helgrind: need to intercept duplicate libc definitions
 Patch14: valgrind-3.16.1-pthread-intercept.patch
+
+# KDE#428648 s390_emit_load_mem panics due to 20-bit offset for vector load
+Patch15: valgrind-3.16.1-s390_emit_load_mem.patch
+
+# KDE#133812 s390x: z14 vector instructions not implemented
+Patch16: valgrind-3.16.1-s390x-z14-vector.patch
 
 BuildRequires: glibc-devel
 
@@ -259,6 +265,8 @@ Valgrind User Manual for details.
 %patch12 -p1
 %patch13 -p1
 %patch14 -p1
+%patch15 -p1
+%patch16 -p1
 
 %build
 # LTO triggers undefined symbols in valgrind.  Valgrind has a --enable-lto
@@ -483,8 +491,10 @@ fi
 %endif
 
 %changelog
-* Thu Dec  3 2020 Mark Wielaard <mjw@fedoraproject.org>
+* Thu Dec  3 2020 Mark Wielaard <mjw@fedoraproject.org> - 3.16.1-7
 - Add valgrind-3.16.1-pthread-intercept.patch
+- Add valgrind-3.16.1-s390_emit_load_mem.patch
+- Add valgrind-3.16.1-s390x-z14-vector.patch
 
 * Mon Nov  9 2020 Mark Wielaard <mjw@fedoraproject.org>
 - Add BuildRequires which (#1895773)
