@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.16.1
-Release: 7%{?dist}
+Release: 8%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -491,6 +491,9 @@ fi
 %endif
 
 %changelog
+* Thu Dec  3 2020 Mark Wielaard <mjw@fedoraproject.org> - 3.16.1-8
+- Update valgrind-3.16.1-s390x-z14-vector.patch
+
 * Thu Dec  3 2020 Mark Wielaard <mjw@fedoraproject.org> - 3.16.1-7
 - Add valgrind-3.16.1-pthread-intercept.patch
 - Add valgrind-3.16.1-s390_emit_load_mem.patch

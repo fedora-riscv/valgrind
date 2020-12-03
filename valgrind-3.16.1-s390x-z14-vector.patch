@@ -1,7 +1,16 @@
 diff --git a/VEX/priv/guest_s390_defs.h b/VEX/priv/guest_s390_defs.h
-index 9f93cff19..ea878d8af 100644
+index 9f93cff19..905429015 100644
 --- a/VEX/priv/guest_s390_defs.h
 +++ b/VEX/priv/guest_s390_defs.h
+@@ -8,7 +8,7 @@
+    This file is part of Valgrind, a dynamic binary instrumentation
+    framework.
+ 
+-   Copyright IBM Corp. 2010-2017
++   Copyright IBM Corp. 2010-2020
+ 
+    This program is free software; you can redistribute it and/or
+    modify it under the terms of the GNU General Public License as
 @@ -263,26 +263,27 @@ extern ULong last_execute_target;
     before  S390_VEC_OP_LAST. */
  typedef enum {
@@ -51,9 +60,18 @@ index 9f93cff19..ea878d8af 100644
  
  /* Arguments of s390x_dirtyhelper_vec_op(...) which are packed into one
 diff --git a/VEX/priv/guest_s390_helpers.c b/VEX/priv/guest_s390_helpers.c
-index a470d9f8d..b9c0514ba 100644
+index a470d9f8d..b71b621ae 100644
 --- a/VEX/priv/guest_s390_helpers.c
 +++ b/VEX/priv/guest_s390_helpers.c
+@@ -8,7 +8,7 @@
+    This file is part of Valgrind, a dynamic binary instrumentation
+    framework.
+ 
+-   Copyright IBM Corp. 2010-2017
++   Copyright IBM Corp. 2010-2020
+ 
+    This program is free software; you can redistribute it and/or
+    modify it under the terms of the GNU General Public License as
 @@ -314,20 +314,11 @@ ULong s390x_dirtyhelper_STCKE(ULong *addr) {return 3;}
  /*--- Dirty helper for Store Facility instruction          ---*/
  /*------------------------------------------------------------*/
@@ -79,14 +97,15 @@ index a470d9f8d..b9c0514ba 100644
  }
  
  ULong
-@@ -336,6 +327,76 @@ s390x_dirtyhelper_STFLE(VexGuestS390XState *guest_state, ULong *addr)
+@@ -336,6 +327,77 @@ s390x_dirtyhelper_STFLE(VexGuestS390XState *guest_state, ULong *addr)
     ULong hoststfle[S390_NUM_FACILITY_DW], cc, num_dw, i;
     register ULong reg0 asm("0") = guest_state->guest_r0 & 0xF;  /* r0[56:63] */
  
-+   /* Restrict to facilities that we know about and assume to be compatible with
-+      Valgrind.  Of course, in this way we may reject features that Valgrind is
-+      not really involved in (and thus would be compatible), but quering for
-+      such features doesn't seem like a typical use case. */
++   /* Restrict to facilities that we know about and that we assume to be
++      compatible with Valgrind.  Of course, in this way we may reject features
++      that Valgrind is not really involved in (and thus would be compatible
++      with), but quering for such features doesn't seem like a typical use
++      case. */
 +   ULong accepted_facility[S390_NUM_FACILITY_DW] = {
 +      /* ===  0 .. 63  === */
 +      (s390_stfle_range(0, 16)
@@ -156,7 +175,7 @@ index a470d9f8d..b9c0514ba 100644
     /* We cannot store more than S390_NUM_FACILITY_DW
        (and it makes not much sense to do so anyhow) */
     if (reg0 > S390_NUM_FACILITY_DW - 1)
-@@ -351,35 +412,9 @@ s390x_dirtyhelper_STFLE(VexGuestS390XState *guest_state, ULong *addr)
+@@ -351,35 +413,9 @@ s390x_dirtyhelper_STFLE(VexGuestS390XState *guest_state, ULong *addr)
     /* Update guest register 0  with what STFLE set r0 to */
     guest_state->guest_r0 = reg0;
  
@@ -194,7 +213,7 @@ index a470d9f8d..b9c0514ba 100644
  
     return cc;
  }
-@@ -2500,25 +2535,26 @@ s390x_dirtyhelper_vec_op(VexGuestS390XState *guest_state,
+@@ -2500,25 +2536,26 @@ s390x_dirtyhelper_vec_op(VexGuestS390XState *guest_state,
     vassert(d->op > S390_VEC_OP_INVALID && d->op < S390_VEC_OP_LAST);
     static const UChar opcodes[][2] = {
        {0x00, 0x00}, /* invalid */
@@ -240,7 +259,7 @@ index a470d9f8d..b9c0514ba 100644
     };
  
     union {
-@@ -2612,6 +2648,7 @@ s390x_dirtyhelper_vec_op(VexGuestS390XState *guest_state,
+@@ -2612,6 +2649,7 @@ s390x_dirtyhelper_vec_op(VexGuestS390XState *guest_state,
     case S390_VEC_OP_VGFMA:
     case S390_VEC_OP_VMAH:
     case S390_VEC_OP_VMALH:
@@ -248,7 +267,7 @@ index a470d9f8d..b9c0514ba 100644
        the_insn.VRRd.v1 = 1;
        the_insn.VRRd.v2 = 2;
        the_insn.VRRd.v3 = 3;
-@@ -2621,9 +2658,9 @@ s390x_dirtyhelper_vec_op(VexGuestS390XState *guest_state,
+@@ -2621,9 +2659,9 @@ s390x_dirtyhelper_vec_op(VexGuestS390XState *guest_state,
        the_insn.VRRd.m6 = d->m5;
        break;
  
@@ -262,7 +281,7 @@ index a470d9f8d..b9c0514ba 100644
        the_insn.VRRc.v2 = 2;
        the_insn.VRRc.v3 = 3;
 diff --git a/VEX/priv/guest_s390_toIR.c b/VEX/priv/guest_s390_toIR.c
-index c27a8d3fe..d4f428c24 100644
+index c27a8d3fe..5f2c5ce98 100644
 --- a/VEX/priv/guest_s390_toIR.c
 +++ b/VEX/priv/guest_s390_toIR.c
 @@ -8,7 +8,7 @@
@@ -691,7 +710,7 @@ index c27a8d3fe..d4f428c24 100644
  
     return "vpopct";
  }
-@@ -18335,12 +18516,52 @@ s390_irgen_VMALH(UChar v1, UChar v2, UChar v3, UChar v4, UChar m5)
+@@ -18335,12 +18516,53 @@ s390_irgen_VMALH(UChar v1, UChar v2, UChar v3, UChar v4, UChar m5)
     return "vmalh";
  }
  
@@ -704,12 +723,13 @@ index c27a8d3fe..d4f428c24 100644
 +   IRTemp cc = newTemp(Ity_I64);
 +
 +   s390x_vec_op_details_t details = { .serialized = 0ULL };
-+   details.op = S390_VEC_OP_VMALH;
++   details.op = S390_VEC_OP_VMSL;
 +   details.v1 = v1;
 +   details.v2 = v2;
 +   details.v3 = v3;
 +   details.v4 = v4;
 +   details.m4 = m5;
++   details.m5 = m6;
 +
 +   d = unsafeIRDirty_1_N(cc, 0, "s390x_dirtyhelper_vec_op",
 +                         &s390x_dirtyhelper_vec_op,
@@ -746,7 +766,7 @@ index c27a8d3fe..d4f428c24 100644
  
     /* For Iop_F32toF64 we do this:
        f32[0] -> f64[0]
-@@ -18353,14 +18574,21 @@ s390_vector_fp_convert(IROp op, IRType fromType, IRType toType,
+@@ -18353,14 +18575,21 @@ s390_vector_fp_convert(IROp op, IRType fromType, IRType toType,
        The magic below with scaling factors is used to achieve the logic
        described above.
     */
@@ -774,7 +794,7 @@ index c27a8d3fe..d4f428c24 100644
           result = binop(op,
                          mkexpr(encode_bfp_rounding_mode(m5)),
                          argument);
-@@ -18369,10 +18597,6 @@ s390_vector_fp_convert(IROp op, IRType fromType, IRType toType,
+@@ -18369,10 +18598,6 @@ s390_vector_fp_convert(IROp op, IRType fromType, IRType toType,
        }
        put_vr(v1, toType, i * destinationIndexScaleFactor, result);
     }
@@ -785,7 +805,7 @@ index c27a8d3fe..d4f428c24 100644
  }
  
  static const HChar *
-@@ -18380,12 +18604,8 @@ s390_irgen_VCDG(UChar v1, UChar v2, UChar m3, UChar m4, UChar m5)
+@@ -18380,12 +18605,8 @@ s390_irgen_VCDG(UChar v1, UChar v2, UChar m3, UChar m4, UChar m5)
  {
     s390_insn_assert("vcdg", m3 == 3);
  
@@ -800,7 +820,7 @@ index c27a8d3fe..d4f428c24 100644
  
     return "vcdg";
  }
-@@ -18395,12 +18615,8 @@ s390_irgen_VCDLG(UChar v1, UChar v2, UChar m3, UChar m4, UChar m5)
+@@ -18395,12 +18616,8 @@ s390_irgen_VCDLG(UChar v1, UChar v2, UChar m3, UChar m4, UChar m5)
  {
     s390_insn_assert("vcdlg", m3 == 3);
  
@@ -815,7 +835,7 @@ index c27a8d3fe..d4f428c24 100644
  
     return "vcdlg";
  }
-@@ -18410,12 +18626,8 @@ s390_irgen_VCGD(UChar v1, UChar v2, UChar m3, UChar m4, UChar m5)
+@@ -18410,12 +18627,8 @@ s390_irgen_VCGD(UChar v1, UChar v2, UChar m3, UChar m4, UChar m5)
  {
     s390_insn_assert("vcgd", m3 == 3);
  
@@ -830,7 +850,7 @@ index c27a8d3fe..d4f428c24 100644
  
     return "vcgd";
  }
-@@ -18425,12 +18637,8 @@ s390_irgen_VCLGD(UChar v1, UChar v2, UChar m3, UChar m4, UChar m5)
+@@ -18425,12 +18638,8 @@ s390_irgen_VCLGD(UChar v1, UChar v2, UChar m3, UChar m4, UChar m5)
  {
     s390_insn_assert("vclgd", m3 == 3);
  
@@ -845,7 +865,7 @@ index c27a8d3fe..d4f428c24 100644
  
     return "vclgd";
  }
-@@ -18438,246 +18646,262 @@ s390_irgen_VCLGD(UChar v1, UChar v2, UChar m3, UChar m4, UChar m5)
+@@ -18438,246 +18647,262 @@ s390_irgen_VCLGD(UChar v1, UChar v2, UChar m3, UChar m4, UChar m5)
  static const HChar *
  s390_irgen_VFI(UChar v1, UChar v2, UChar m3, UChar m4, UChar m5)
  {
@@ -1259,7 +1279,7 @@ index c27a8d3fe..d4f428c24 100644
  
     IRTemp cc_s390 = newTemp(Ity_I32);
     assign(cc_s390, convert_vex_bfpcc_to_s390(cc_vex));
-@@ -18695,213 +18919,253 @@ s390_irgen_WFK(UChar v1, UChar v2, UChar m3, UChar m4)
+@@ -18695,213 +18920,253 @@ s390_irgen_WFK(UChar v1, UChar v2, UChar m3, UChar m4)
  }
  
  static const HChar *
@@ -1662,7 +1682,7 @@ index c27a8d3fe..d4f428c24 100644
  }
  
  /* New insns are added here.
-@@ -20489,11 +20753,23 @@ s390_decode_6byte_and_irgen(const UChar *bytes)
+@@ -20489,11 +20754,23 @@ s390_decode_6byte_and_irgen(const UChar *bytes)
                                                  RXY_dl2(ovl),
                                                  RXY_dh2(ovl));  goto ok;
     case 0xe60000000034ULL: /* VPKZ */ goto unimplemented;
@@ -1690,7 +1710,7 @@ index c27a8d3fe..d4f428c24 100644
     case 0xe60000000049ULL: /* VLIP */ goto unimplemented;
     case 0xe60000000050ULL: /* VCVB */ goto unimplemented;
     case 0xe60000000052ULL: /* VCVBG */ goto unimplemented;
-@@ -20691,12 +20967,18 @@ s390_decode_6byte_and_irgen(const UChar *bytes)
+@@ -20691,12 +20968,18 @@ s390_decode_6byte_and_irgen(const UChar *bytes)
     case 0xe7000000006bULL: s390_format_VRR_VVV(s390_irgen_VNO, VRR_v1(ovl),
                                                 VRR_v2(ovl), VRR_r3(ovl),
                                                 VRR_rxb(ovl));  goto ok;
@@ -1712,7 +1732,7 @@ index c27a8d3fe..d4f428c24 100644
     case 0xe70000000070ULL: s390_format_VRR_VVVM(s390_irgen_VESLV, VRR_v1(ovl),
                                                  VRR_v2(ovl), VRR_r3(ovl),
                                                  VRR_m4(ovl), VRR_rxb(ovl));  goto ok;
-@@ -20749,7 +21031,9 @@ s390_decode_6byte_and_irgen(const UChar *bytes)
+@@ -20749,7 +21032,9 @@ s390_decode_6byte_and_irgen(const UChar *bytes)
     case 0xe70000000084ULL: s390_format_VRR_VVVM(s390_irgen_VPDI, VRR_v1(ovl),
                                                 VRR_v2(ovl), VRR_r3(ovl),
                                                 VRR_m4(ovl), VRR_rxb(ovl));  goto ok;
@@ -1723,7 +1743,7 @@ index c27a8d3fe..d4f428c24 100644
     case 0xe7000000008aULL: s390_format_VRR_VVVVMM(s390_irgen_VSTRC, VRRd_v1(ovl),
                                                    VRRd_v2(ovl), VRRd_v3(ovl),
                                                    VRRd_v4(ovl), VRRd_m5(ovl),
-@@ -20780,8 +21064,16 @@ s390_decode_6byte_and_irgen(const UChar *bytes)
+@@ -20780,8 +21065,16 @@ s390_decode_6byte_and_irgen(const UChar *bytes)
     case 0xe70000000097ULL: s390_format_VRR_VVVMM(s390_irgen_VPKS, VRR_v1(ovl),
                                                 VRR_v2(ovl), VRR_r3(ovl),
                                                 VRR_m4(ovl), VRR_m5(ovl), VRR_rxb(ovl));  goto ok;
@@ -1742,7 +1762,7 @@ index c27a8d3fe..d4f428c24 100644
     case 0xe700000000a1ULL: s390_format_VRR_VVVM(s390_irgen_VMLH, VRR_v1(ovl),
                                                  VRR_v2(ovl), VRR_r3(ovl),
                                                  VRR_m4(ovl), VRR_rxb(ovl));  goto ok;
-@@ -20834,7 +21126,11 @@ s390_decode_6byte_and_irgen(const UChar *bytes)
+@@ -20834,7 +21127,11 @@ s390_decode_6byte_and_irgen(const UChar *bytes)
     case 0xe700000000b4ULL: s390_format_VRR_VVVM(s390_irgen_VGFM, VRR_v1(ovl),
                                                  VRR_v2(ovl), VRR_r3(ovl),
                                                  VRR_m4(ovl), VRR_rxb(ovl));  goto ok;
@@ -1755,7 +1775,7 @@ index c27a8d3fe..d4f428c24 100644
     case 0xe700000000b9ULL: s390_format_VRRd_VVVVM(s390_irgen_VACCC, VRRd_v1(ovl),
                                                    VRRd_v2(ovl), VRRd_v3(ovl),
                                                    VRRd_v4(ovl), VRRd_m5(ovl),
-@@ -20871,11 +21167,11 @@ s390_decode_6byte_and_irgen(const UChar *bytes)
+@@ -20871,11 +21168,11 @@ s390_decode_6byte_and_irgen(const UChar *bytes)
                                                    VRRa_v2(ovl), VRRa_m3(ovl),
                                                    VRRa_m4(ovl), VRRa_m5(ovl),
                                                    VRRa_rxb(ovl)); goto ok;
@@ -1769,7 +1789,7 @@ index c27a8d3fe..d4f428c24 100644
                                                    VRRa_v2(ovl), VRRa_m3(ovl),
                                                    VRRa_m4(ovl), VRRa_m5(ovl),
                                                    VRRa_rxb(ovl)); goto ok;
-@@ -20956,8 +21252,16 @@ s390_decode_6byte_and_irgen(const UChar *bytes)
+@@ -20956,8 +21253,16 @@ s390_decode_6byte_and_irgen(const UChar *bytes)
                                                     VRRa_m3(ovl), VRRa_m4(ovl),
                                                     VRRa_m5(ovl),
                                                     VRRa_rxb(ovl)); goto ok;
@@ -1789,9 +1809,18 @@ index c27a8d3fe..d4f428c24 100644
                                                  VRR_v2(ovl), VRR_r3(ovl),
                                                  VRR_m4(ovl), VRR_rxb(ovl));  goto ok;
 diff --git a/VEX/priv/host_s390_defs.c b/VEX/priv/host_s390_defs.c
-index 3b6121fec..a59db6578 100644
+index 3b6121fec..8762975b2 100644
 --- a/VEX/priv/host_s390_defs.c
 +++ b/VEX/priv/host_s390_defs.c
+@@ -8,7 +8,7 @@
+    This file is part of Valgrind, a dynamic binary instrumentation
+    framework.
+ 
+-   Copyright IBM Corp. 2010-2017
++   Copyright IBM Corp. 2010-2020
+    Copyright (C) 2012-2017  Florian Krohm   (britzel@acm.org)
+ 
+    This program is free software; you can redistribute it and/or
 @@ -684,6 +684,8 @@ s390_insn* genMove_S390(HReg from, HReg to, Bool mode64)
     switch (hregClass(from)) {
     case HRcInt64:
@@ -1845,9 +1874,18 @@ index 3b6121fec..a59db6578 100644
        UChar v2 = hregNumber(insn->variant.unop.src.variant.reg);
        return s390_emit_VFSQ(buf, v1, v2, s390_getM_from_size(insn->size), 0);
 diff --git a/VEX/priv/host_s390_defs.h b/VEX/priv/host_s390_defs.h
-index 3f6473e10..46d8e1f12 100644
+index 3f6473e10..9b69f4d38 100644
 --- a/VEX/priv/host_s390_defs.h
 +++ b/VEX/priv/host_s390_defs.h
+@@ -8,7 +8,7 @@
+    This file is part of Valgrind, a dynamic binary instrumentation
+    framework.
+ 
+-   Copyright IBM Corp. 2010-2017
++   Copyright IBM Corp. 2010-2020
+ 
+    This program is free software; you can redistribute it and/or
+    modify it under the terms of the GNU General Public License as
 @@ -205,6 +205,7 @@ typedef enum {
     S390_VEC_COUNT_ONES,
     S390_VEC_FLOAT_NEG,
@@ -1866,9 +1904,18 @@ index 3f6473e10..46d8e1f12 100644
  
  /*---------------------------------------------------------------*/
 diff --git a/VEX/priv/host_s390_isel.c b/VEX/priv/host_s390_isel.c
-index 134f3eb6f..58f70ff4e 100644
+index 134f3eb6f..2f9854038 100644
 --- a/VEX/priv/host_s390_isel.c
 +++ b/VEX/priv/host_s390_isel.c
+@@ -8,7 +8,7 @@
+    This file is part of Valgrind, a dynamic binary instrumentation
+    framework.
+ 
+-   Copyright IBM Corp. 2010-2017
++   Copyright IBM Corp. 2010-2020
+    Copyright (C) 2012-2017  Florian Krohm   (britzel@acm.org)
+ 
+    This program is free software; you can redistribute it and/or
 @@ -2362,9 +2362,10 @@ s390_isel_float128_expr_wrk(HReg *dst_hi, HReg *dst_lo, ISelEnv *env,
        case Iop_NegF128:
           if (left->tag == Iex_Unop &&
