@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.16.1
-Release: 8%{?dist}
+Release: 9%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -122,6 +122,9 @@ Patch15: valgrind-3.16.1-s390_emit_load_mem.patch
 
 # KDE#133812 s390x: z14 vector instructions not implemented
 Patch16: valgrind-3.16.1-s390x-z14-vector.patch
+
+# KDE#430354 ppc stxsibx and stxsihx instructions write too much data
+Patch17: valgrind-3.16.1-stxsibx-stxsihx.patch
 
 BuildRequires: glibc-devel
 
@@ -267,6 +270,7 @@ Valgrind User Manual for details.
 %patch14 -p1
 %patch15 -p1
 %patch16 -p1
+%patch17 -p1
 
 %build
 # LTO triggers undefined symbols in valgrind.  Valgrind has a --enable-lto
@@ -491,6 +495,9 @@ fi
 %endif
 
 %changelog
+* Sun Dec 13 2020 Mark Wielaard <mjw@fedoraproject.org> - 3.16.1-9
+- Add valgrind-3.16.1-stxsibx-stxsihx.patch
+
 * Thu Dec  3 2020 Mark Wielaard <mjw@fedoraproject.org> - 3.16.1-8
 - Update valgrind-3.16.1-s390x-z14-vector.patch
 
