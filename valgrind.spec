@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.16.1
-Release: 9%{?dist}
+Release: 10%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -125,6 +125,9 @@ Patch16: valgrind-3.16.1-s390x-z14-vector.patch
 
 # KDE#430354 ppc stxsibx and stxsihx instructions write too much data
 Patch17: valgrind-3.16.1-stxsibx-stxsihx.patch
+
+# KDE#426014 arm64: implement fmadd and fmsub as Iop_MAdd/Sub
+Patch18: valgrind-3.16.1-arm64-fma.patch
 
 BuildRequires: glibc-devel
 
@@ -271,6 +274,7 @@ Valgrind User Manual for details.
 %patch15 -p1
 %patch16 -p1
 %patch17 -p1
+%patch18 -p1
 
 %build
 # LTO triggers undefined symbols in valgrind.  Valgrind has a --enable-lto
@@ -495,6 +499,9 @@ fi
 %endif
 
 %changelog
+* Tue Dec 15 2020 Mark Wielaard <mjw@fedoraproject.org> - 3.16.1-10
+- Add valgrind-3.16.1-arm64-fma.patch
+
 * Sun Dec 13 2020 Mark Wielaard <mjw@fedoraproject.org> - 3.16.1-9
 - Add valgrind-3.16.1-stxsibx-stxsihx.patch
 
