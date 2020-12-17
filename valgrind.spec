@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.16.1
-Release: 10%{?dist}
+Release: 11%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -127,6 +127,7 @@ Patch16: valgrind-3.16.1-s390x-z14-vector.patch
 Patch17: valgrind-3.16.1-stxsibx-stxsihx.patch
 
 # KDE#426014 arm64: implement fmadd and fmsub as Iop_MAdd/Sub
+# KDE#430485 expr_is_guardable doesn't handle Iex_Qop
 Patch18: valgrind-3.16.1-arm64-fma.patch
 
 BuildRequires: glibc-devel
@@ -499,6 +500,9 @@ fi
 %endif
 
 %changelog
+* Thu Dec 17 2020 Mark Wielaard <mjw@fedoraproject.org> - 3.16.1-11
+- Update valgrind-3.16.1-arm64-fma.patch
+
 * Tue Dec 15 2020 Mark Wielaard <mjw@fedoraproject.org> - 3.16.1-10
 - Add valgrind-3.16.1-arm64-fma.patch
 
