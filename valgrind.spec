@@ -130,6 +130,9 @@ Patch17: valgrind-3.16.1-stxsibx-stxsihx.patch
 # KDE#430485 expr_is_guardable doesn't handle Iex_Qop
 Patch18: valgrind-3.16.1-arm64-fma.patch
 
+# KDE#397605 Add support for Linux FICLONE ioctl
+Patch19: valgrind-3.16.1-ficlone.patch
+
 BuildRequires: glibc-devel
 
 %if %{build_openmpi}
@@ -276,6 +279,7 @@ Valgrind User Manual for details.
 %patch16 -p1
 %patch17 -p1
 %patch18 -p1
+%patch19 -p1
 
 %build
 # LTO triggers undefined symbols in valgrind.  Valgrind has a --enable-lto
@@ -500,6 +504,9 @@ fi
 %endif
 
 %changelog
+* Sun Dec 20 2020 Mark Wielaard <mjw@fedoraproject.org>
+- Add valgrind-3.16.1-ficlone.patch
+
 * Thu Dec 17 2020 Mark Wielaard <mjw@fedoraproject.org> - 3.16.1-11
 - Update valgrind-3.16.1-arm64-fma.patch
 
