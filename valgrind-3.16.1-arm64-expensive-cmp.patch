@@ -1,0 +1,19 @@
+commit 359b98828ced9cfff8c1badfed75c7ef999cfee5
+Author: Julian Seward <jseward@acm.org>
+Date:   Sun Nov 15 18:28:09 2020 +0100
+
+    memcheck: on arm64, use expensive instrumentation for Cmp{EQ,NE}64 by default.
+
+diff --git a/memcheck/mc_translate.c b/memcheck/mc_translate.c
+index b32c9c9c5..e91d51094 100644
+--- a/memcheck/mc_translate.c
++++ b/memcheck/mc_translate.c
+@@ -8485,6 +8485,8 @@ IRSB* MC_(instrument) ( VgCallbackClosure* closure,
+ #     elif defined(VGA_ppc64le)
+       // Needed by (at least) set_AV_CR6() in the front end.
+       mce.dlbo.dl_CmpEQ64_CmpNE64 = DLexpensive;
++#     elif defined(VGA_arm64)
++      mce.dlbo.dl_CmpEQ64_CmpNE64 = DLexpensive;
+ #     endif
+ 
+       /* preInstrumentationAnalysis() will allocate &mce.tmpHowUsed and then
