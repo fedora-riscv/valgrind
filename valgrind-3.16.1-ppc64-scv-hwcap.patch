@@ -1,0 +1,57 @@
+From a88c168b4dd607bca47d3a1ec08573d3e5fa889b Mon Sep 17 00:00:00 2001
+From: Florian Weimer <fweimer@redhat.com>
+Date: Fri, 8 Jan 2021 15:08:50 +0100
+Subject: [PATCH] ppc64: Mask unrecognized AT_HWCAP2 values
+
+Also suppress printing a log message for scv instructions in the
+instruction stream.
+
+These changes are required for running glibc 2.33 on kernels with scv
+support under valgrind.
+---
+ VEX/priv/guest_ppc_toIR.c           | 5 +++--
+ coregrind/m_initimg/initimg-linux.c | 6 ++++++
+ 2 files changed, 9 insertions(+), 2 deletions(-)
+
+diff --git a/VEX/priv/guest_ppc_toIR.c b/VEX/priv/guest_ppc_toIR.c
+index e7b576fa2..99e96a577 100644
+--- a/VEX/priv/guest_ppc_toIR.c
++++ b/VEX/priv/guest_ppc_toIR.c
+@@ -8739,8 +8739,9 @@
+ {
+    IRType ty = mode64 ? Ity_I64 : Ity_I32;
+ 
+-   if (theInstr != 0x44000002) {
+-      vex_printf("dis_syslink(ppc)(theInstr)\n");
++   if (theInstr != 0x44000002) { // sc
++      if (theInstr != 0x44000001) // scv
++         vex_printf("dis_syslink(ppc)(theInstr)\n");
+       return False;
+    }
+ 
+diff --git a/coregrind/m_initimg/initimg-linux.c b/coregrind/m_initimg/initimg-linux.c
+index ba84fa6e9..fb68ae00b 100644
+--- a/coregrind/m_initimg/initimg-linux.c
++++ b/coregrind/m_initimg/initimg-linux.c
+@@ -750,6 +750,7 @@ Addr setup_client_stack( void*  init_sp,
+                 PPC_FEATURE2_HAS_ISEL         0x08000000
+                 PPC_FEATURE2_HAS_TAR          0x04000000
+                 PPC_FEATURE2_HAS_VCRYPTO      0x02000000
++                PPC_FEATURE2_HAS_IEEE128      0x00400000
+             */
+             auxv_2_07 = (auxv->u.a_val & 0x80000000ULL) == 0x80000000ULL;
+             hw_caps_2_07 = (vex_archinfo->hwcaps & VEX_HWCAPS_PPC64_ISA2_07)
+@@ -757,6 +757,11 @@
+ 	     * matches the setting in VEX HWCAPS.
+ 	     */
+             vg_assert(auxv_2_07 == hw_caps_2_07);
++
++            /* Mask unrecognized HWCAP bits.  Only keep the bits that have
++             * been mentioned above.
++             */
++            auxv->u.a_val &= 0xfec00000ULL;
+             }
+ 
+             break;
+--- valgrind-3.16.1/VEX/priv/guest_ppc_toIR.c	2021-01-08 16:43:45.947122866 +0100
++++ guest_ppc_toIR.c.new	2021-01-08 16:43:40.238166866 +0100

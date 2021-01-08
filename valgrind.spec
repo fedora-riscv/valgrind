@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.16.1
-Release: 12%{?dist}
+Release: 13%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -136,6 +136,9 @@ Patch19: valgrind-3.16.1-ficlone.patch
 # rhbz#1909415 valgrind makes false complaint about strcmp() on aarch64
 # upstream git commit 359b98828
 Patch20: valgrind-3.16.1-arm64-expensive-cmp.patch
+
+# KDE#431157 PPC_FEATURE2_SCV needs to be masked in AT_HWCAP2
+Patch21: valgrind-3.16.1-ppc64-scv-hwcap.patch
 
 BuildRequires: glibc-devel
 
@@ -285,6 +288,7 @@ Valgrind User Manual for details.
 %patch18 -p1
 %patch19 -p1
 %patch20 -p1
+%patch21 -p1
 
 %build
 # LTO triggers undefined symbols in valgrind.  Valgrind has a --enable-lto
@@ -509,6 +513,9 @@ fi
 %endif
 
 %changelog
+* Fri Jan  8 2021 Mark Wielaard <mjw@fedoraproject.org> - 3.16.1-13
+- Add valgrind-3.16.1-ppc64-scv-hwcap.patch
+
 * Sun Dec 20 2020 Mark Wielaard <mjw@fedoraproject.org> - 3.16.1-12
 - Add valgrind-3.16.1-ficlone.patch
 - Add valgrind-3.16.1-arm64-expensive-cmp.patch
