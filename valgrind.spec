@@ -140,6 +140,7 @@ Patch20: valgrind-3.16.1-arm64-expensive-cmp.patch
 # KDE#431157 PPC_FEATURE2_SCV needs to be masked in AT_HWCAP2
 Patch21: valgrind-3.16.1-ppc64-scv-hwcap.patch
 
+BuildRequires: make
 BuildRequires: glibc-devel
 
 %if %{build_openmpi}
