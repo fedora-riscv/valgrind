@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.16.1
-Release: 13%{?dist}
+Release: 14%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -139,6 +139,9 @@ Patch20: valgrind-3.16.1-arm64-expensive-cmp.patch
 
 # KDE#431157 PPC_FEATURE2_SCV needs to be masked in AT_HWCAP2
 Patch21: valgrind-3.16.1-ppc64-scv-hwcap.patch
+
+# KDE#432102 Support DWARF5
+Patch22: valgrind-3.16.1-dwarf5.patch
 
 BuildRequires: make
 BuildRequires: glibc-devel
@@ -290,6 +293,7 @@ Valgrind User Manual for details.
 %patch19 -p1
 %patch20 -p1
 %patch21 -p1
+%patch22 -p1
 
 %build
 # LTO triggers undefined symbols in valgrind.  Valgrind has a --enable-lto
@@ -514,6 +518,9 @@ fi
 %endif
 
 %changelog
+* Mon Jan 25 2021 Mark Wielaard <mjw@fedoraproject.org> - 3.16.1-14
+- Add valgrind-3.16.1-dwarf5.patch
+
 * Fri Jan  8 2021 Mark Wielaard <mjw@fedoraproject.org> - 3.16.1-13
 - Add valgrind-3.16.1-ppc64-scv-hwcap.patch
 

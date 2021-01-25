@@ -1,0 +1,2410 @@
+From 256a67e6a5a07e37997d3a5ef64204a99b8e5a50 Mon Sep 17 00:00:00 2001
+From: Mark Wielaard <mark@klomp.org>
+Date: Mon, 25 Jan 2021 15:33:34 +0100
+Subject: [PATCH] DWARF5
+
+---
+ coregrind/m_debuginfo/d3basics.c        |  99 ++++
+ coregrind/m_debuginfo/priv_d3basics.h   | 195 +++++-
+ coregrind/m_debuginfo/priv_readdwarf.h  |   3 +-
+ coregrind/m_debuginfo/priv_readdwarf3.h |   3 +-
+ coregrind/m_debuginfo/readdwarf.c       | 465 ++++++++++++---
+ coregrind/m_debuginfo/readdwarf3.c      | 748 +++++++++++++++++++-----
+ coregrind/m_debuginfo/readelf.c         |  33 +-
+ coregrind/m_debuginfo/readmacho.c       |  14 +-
+ 8 files changed, 1304 insertions(+), 256 deletions(-)
+
+diff --git a/coregrind/m_debuginfo/d3basics.c b/coregrind/m_debuginfo/d3basics.c
+index b6d13c118..e1127ffe2 100644
+--- a/coregrind/m_debuginfo/d3basics.c
++++ b/coregrind/m_debuginfo/d3basics.c
+@@ -128,6 +128,16 @@ const HChar* ML_(pp_DW_TAG) ( DW_TAG tag )
+       case DW_TAG_type_unit:          return "DW_TAG_type_unit";
+       case DW_TAG_rvalue_reference_type: return "DW_TAG_rvalue_reference_type";
+       case DW_TAG_template_alias:     return "DW_TAG_template_alias";
++      /* DWARF 5.  */
++      case DW_TAG_coarray_type:       return "DW_TAG_coarray_type";
++      case DW_TAG_generic_subrange:   return "DW_TAG_generic_subrange";
++      case DW_TAG_dynamic_type:       return "DW_TAG_dynamic_type";
++      case DW_TAG_atomic_type:        return "DW_TAG_atomic_type";
++      case DW_TAG_call_site:          return "DW_TAG_call_site";
++      case DW_TAG_call_site_parameter:
++         return "DW_TAG_call_site_parameter";
++      case DW_TAG_skeleton_unit:      return "DW_TAG_skeleton_unit";
++      case DW_TAG_immutable_type:     return "DW_TAG_immutable_type";
+       /* SGI/MIPS Extensions.  */
+       case DW_TAG_MIPS_loop:          return "DW_TAG_MIPS_loop";
+       /* HP extensions.  See:
+@@ -140,6 +150,16 @@ const HChar* ML_(pp_DW_TAG) ( DW_TAG tag )
+       case DW_TAG_class_template:     return "DW_TAG_class_template";
+       case DW_TAG_GNU_BINCL:          return "DW_TAG_GNU_BINCL";
+       case DW_TAG_GNU_EINCL:          return "DW_TAG_GNU_EINCL";
++      case DW_TAG_GNU_template_template_param:
++         return "DW_TAG_GNU_template_template_param";
++      case DW_TAG_GNU_template_parameter_pack:
++         return"DW_TAG_GNU_template_parameter_pack";
++      case DW_TAG_GNU_formal_parameter_pack:
++         return "DW_TAG_GNU_formal_parameter_pack";
++      case DW_TAG_GNU_call_site:
++         return "DW_TAG_GNU_call_site";
++      case DW_TAG_GNU_call_site_parameter:
++         return "DW_TAG_GNU_call_site_parameter";
+       /* Extensions for UPC.  See: http://upc.gwu.edu/~upc.  */
+       case DW_TAG_upc_shared_type:    return "DW_TAG_upc_shared_type";
+       case DW_TAG_upc_strict_type:    return "DW_TAG_upc_strict_type";
+@@ -180,6 +200,27 @@ const HChar* ML_(pp_DW_FORM) ( DW_FORM form )
+       case DW_FORM_exprloc:   return "DW_FORM_exprloc";
+       case DW_FORM_flag_present:return "DW_FORM_flag_present";
+       case DW_FORM_ref_sig8:  return "DW_FORM_ref_sig8";
++      case DW_FORM_strx:      return "DW_FORM_strx";
++      case DW_FORM_addrx:     return "DW_FORM_addrx";
++      case DW_FORM_ref_sup4:  return "DW_FORM_ref_sup4";
++      case DW_FORM_strp_sup:  return "DW_FORM_strp_sup";
++      case DW_FORM_data16:    return "DW_FORM_data16";
++      case DW_FORM_line_strp: return "DW_FORM_line_strp";
++      case DW_FORM_implicit_const:return "DW_FORM_implicit_const";
++      case DW_FORM_loclistx:  return "DW_FORM_loclistx";
++      case DW_FORM_rnglistx:  return "DW_FORM_rnglistx";
++      case DW_FORM_ref_sup8:  return "DW_FORM_ref_sup8";
++      case DW_FORM_strx1:     return "DW_FORM_strx1";
++      case DW_FORM_strx2:     return "DW_FORM_strx2";
++      case DW_FORM_strx3:     return "DW_FORM_strx3";
++      case DW_FORM_strx4:     return "DW_FORM_strx4";
++      case DW_FORM_addrx1:    return "DW_FORM_addrx1";
++      case DW_FORM_addrx2:    return "DW_FORM_addrx2";
++      case DW_FORM_addrx3:    return "DW_FORM_addrx3";
++      case DW_FORM_addrx4:    return "DW_FORM_addrx4";
++      /* GNU Debug Fission extensions.  */
++      case DW_FORM_GNU_addr_index:return "DW_FORM_GNU_addr_index";
++      case DW_FORM_GNU_str_index:return "DW_FORM_GNU_str_index";
+       case DW_FORM_GNU_ref_alt:return "DW_FORM_GNU_ref_alt";
+       case DW_FORM_GNU_strp_alt:return "DW_FORM_GNU_strp_alt";
+    }
+@@ -286,6 +327,36 @@ const HChar* ML_(pp_DW_AT) ( DW_AT attr )
+       case DW_AT_const_expr: return "DW_AT_const_expr";
+       case DW_AT_enum_class: return "DW_AT_enum_class";
+       case DW_AT_linkage_name: return "DW_AT_linkage_name";
++      /* DWARF 5 values.  */
++      case DW_AT_string_length_bit_size: return "DW_AT_string_length_bit_size";
++      case DW_AT_string_length_byte_size: return "DW_AT_string_length_byte_size";
++      case DW_AT_rank: return "DW_AT_rank";
++      case DW_AT_str_offsets_base: return "DW_AT_str_offsets_base";
++      case DW_AT_addr_base: return "DW_AT_addr_base";
++      case DW_AT_rnglists_base: return "DW_AT_rnglists_base";
++      case DW_AT_dwo_name: return "DW_AT_dwo_name";
++      case DW_AT_reference: return "DW_AT_reference";
++      case DW_AT_rvalue_reference: return "DW_AT_rvalue_reference";
++      case DW_AT_macros: return "DW_AT_macros";
++      case DW_AT_call_all_calls: return "DW_AT_call_all_calls";
++      case DW_AT_call_all_source_calls: return "DW_AT_call_all_source_calls";
++      case DW_AT_call_all_tail_calls: return "DW_AT_call_all_tail_calls";
++      case DW_AT_call_return_pc: return "DW_AT_call_return_pc";
++      case DW_AT_call_value: return "DW_AT_call_value";
++      case DW_AT_call_origin: return "DW_AT_call_origin";
++      case DW_AT_call_parameter: return "DW_AT_call_parameter";
++      case DW_AT_call_pc: return "DW_AT_call_pc";
++      case DW_AT_call_tail_call: return "DW_AT_call_tail_call";
++      case DW_AT_call_target: return "DW_AT_call_target";
++      case DW_AT_call_target_clobbered: return "DW_AT_call_target_clobbered";
++      case DW_AT_call_data_location: return "DW_AT_call_data_location";
++      case DW_AT_call_data_value: return "DW_AT_call_data_value";
++      case DW_AT_noreturn: return "DW_AT_noreturn";
++      case DW_AT_alignment: return "DW_AT_alignment";
++      case DW_AT_export_symbols: return "DW_AT_export_symbols";
++      case DW_AT_deleted: return "DW_AT_deleted";
++      case DW_AT_defaulted: return "DW_AT_defaulted";
++      case DW_AT_loclists_base: return "DW_AT_loclists_base";
+       /* SGI/MIPS extensions.  */
+       /* case DW_AT_MIPS_fde: return "DW_AT_MIPS_fde"; */
+       /* DW_AT_MIPS_fde == DW_AT_HP_unmodifiable */
+@@ -322,8 +393,36 @@ const HChar* ML_(pp_DW_AT) ( DW_AT attr )
+       case DW_AT_body_begin: return "DW_AT_body_begin";
+       case DW_AT_body_end: return "DW_AT_body_end";
+       case DW_AT_GNU_vector: return "DW_AT_GNU_vector";
++      case DW_AT_GNU_guarded_by: return "DW_AT_GNU_guarded_by";
++      case DW_AT_GNU_pt_guarded_by: return "DW_AT_GNU_pt_guarded_by";
++      case DW_AT_GNU_guarded: return "DW_AT_GNU_guarded";
++      case DW_AT_GNU_pt_guarded: return "DW_AT_GNU_pt_guarded";
++      case DW_AT_GNU_locks_excluded: return "DW_AT_GNU_locks_excluded";
++      case DW_AT_GNU_exclusive_locks_required: return "DW_AT_GNU_exclusive_locks_required";
++      case DW_AT_GNU_shared_locks_required: return "DW_AT_GNU_shared_locks_required";
++      case DW_AT_GNU_odr_signature: return "DW_AT_GNU_odr_signature";
++      case DW_AT_GNU_template_name: return "DW_AT_GNU_template_name";
++      case DW_AT_GNU_call_site_value: return "DW_AT_GNU_call_site_value";
++      case DW_AT_GNU_call_site_data_value: return "DW_AT_GNU_call_site_data_value";
++      case DW_AT_GNU_call_site_target: return "DW_AT_GNU_call_site_target";
++      case DW_AT_GNU_call_site_target_clobbered: return "DW_AT_GNU_call_site_target_clobbered";
++      case DW_AT_GNU_tail_call: return "DW_AT_GNU_tail_call";
+       case DW_AT_GNU_all_tail_call_sites: return "DW_AT_GNU_all_tail_call_sites";
+       case DW_AT_GNU_all_call_sites: return "DW_AT_GNU_all_call_sites";
++      case DW_AT_GNU_all_source_call_sites: return "DW_AT_GNU_all_source_call_sites";
++      case DW_AT_GNU_locviews: return "DW_AT_GNU_locviews";
++      case DW_AT_GNU_entry_view: return "DW_AT_GNU_entry_view";
++      case DW_AT_GNU_macros: return "DW_AT_GNU_macros";
++      case DW_AT_GNU_deleted: return "DW_AT_GNU_deleted";
++      case DW_AT_GNU_dwo_name: return "DW_AT_GNU_dwo_name";
++      case DW_AT_GNU_dwo_id: return "DW_AT_GNU_dwo_id";
++      case DW_AT_GNU_ranges_base: return "DW_AT_GNU_ranges_base";
++      case DW_AT_GNU_addr_base: return "DW_AT_GNU_addr_base";
++      case DW_AT_GNU_pubnames: return "DW_AT_GNU_pubnames";
++      case DW_AT_GNU_pubtypes: return "DW_AT_GNU_pubtypes";
++      case DW_AT_GNU_numerator: return "DW_AT_GNU_numerator";
++      case DW_AT_GNU_denominator: return "DW_AT_GNU_denominator";
++      case DW_AT_GNU_bias: return "DW_AT_GNU_bias";
+       /* VMS extensions.  */
+       case DW_AT_VMS_rtnbeg_pd_address: return "DW_AT_VMS_rtnbeg_pd_address";
+       /* UPC extension.  */
+diff --git a/coregrind/m_debuginfo/priv_d3basics.h b/coregrind/m_debuginfo/priv_d3basics.h
+index b60e3e8eb..9d825e39e 100644
+--- a/coregrind/m_debuginfo/priv_d3basics.h
++++ b/coregrind/m_debuginfo/priv_d3basics.h
+@@ -108,6 +108,15 @@ typedef enum
+     DW_TAG_type_unit = 0x41,
+     DW_TAG_rvalue_reference_type = 0x42,
+     DW_TAG_template_alias = 0x43,
++    /* DWARF 5.  */
++    DW_TAG_coarray_type = 0x44,
++    DW_TAG_generic_subrange = 0x45,
++    DW_TAG_dynamic_type = 0x46,
++    DW_TAG_atomic_type = 0x47,
++    DW_TAG_call_site = 0x48,
++    DW_TAG_call_site_parameter = 0x49,
++    DW_TAG_skeleton_unit = 0x4a,
++    DW_TAG_immutable_type = 0x4b,
+     /* SGI/MIPS Extensions.  */
+     DW_TAG_MIPS_loop = 0x4081,
+     /* HP extensions.  See: ftp://ftp.hp.com/pub/lang/tools/WDB/wdb-4.0.tar.gz .  */
+@@ -118,6 +127,11 @@ typedef enum
+     DW_TAG_class_template = 0x4103,	/* For C++.  */
+     DW_TAG_GNU_BINCL = 0x4104,
+     DW_TAG_GNU_EINCL = 0x4105,
++    DW_TAG_GNU_template_template_param = 0x4106,
++    DW_TAG_GNU_template_parameter_pack = 0x4107,
++    DW_TAG_GNU_formal_parameter_pack = 0x4108,
++    DW_TAG_GNU_call_site = 0x4109,
++    DW_TAG_GNU_call_site_parameter = 0x410a,
+     /* Extensions for UPC.  See: http://upc.gwu.edu/~upc.  */
+     DW_TAG_upc_shared_type = 0x8765,
+     DW_TAG_upc_strict_type = 0x8766,
+@@ -164,13 +178,23 @@ typedef enum dwarf_source_language
+     DW_LANG_D = 0x0013,
+     /* DWARF 4.  */
+     DW_LANG_Python = 0x0014,
+-    /* DWARF 5-pre. Only what GCC already outputs. */
++    /* DWARF 5.  */
+     DW_LANG_Go = 0x0016,
++    DW_LANG_Modula3 = 0x0017,
++    DW_LANG_Haskell = 0x0018,
++    DW_LANG_C_plus_plus_03 = 0x0019,
+     DW_LANG_C_plus_plus_11 = 0x001a,
++    DW_LANG_OCaml = 0x001b,
++    DW_LANG_Rust = 0x001c,
+     DW_LANG_C11 = 0x001d,
++    DW_LANG_Swift = 0x001e,
++    DW_LANG_Julia = 0x001f,
++    DW_LANG_Dylan = 0x0020,
+     DW_LANG_C_plus_plus_14 = 0x0021,
+     DW_LANG_Fortran03 = 0x0022,
+     DW_LANG_Fortran08 = 0x0023,
++    DW_LANG_RenderScript = 0x0024,
++    DW_LANG_BLISS = 0x0025,
+     /* MIPS.  */
+     DW_LANG_Mips_Assembler = 0x8001,
+     /* UPC.  */
+@@ -207,6 +231,28 @@ typedef enum
+     DW_FORM_exprloc = 0x18,
+     DW_FORM_flag_present = 0x19,
+     DW_FORM_ref_sig8 = 0x20,
++    /* DWARF 5 values.  */
++    DW_FORM_strx = 0x1a,
++    DW_FORM_addrx = 0x1b,
++    DW_FORM_ref_sup4 = 0x1c,
++    DW_FORM_strp_sup = 0x1d,
++    DW_FORM_data16 = 0x1e,
++    DW_FORM_line_strp = 0x1f,
++    DW_FORM_implicit_const = 0x21,
++    DW_FORM_loclistx = 0x22,
++    DW_FORM_rnglistx = 0x23,
++    DW_FORM_ref_sup8 = 0x24,
++    DW_FORM_strx1 = 0x25,
++    DW_FORM_strx2 = 0x26,
++    DW_FORM_strx3 = 0x27,
++    DW_FORM_strx4 = 0x28,
++    DW_FORM_addrx1 = 0x29,
++    DW_FORM_addrx2 = 0x2a,
++    DW_FORM_addrx3 = 0x2b,
++    DW_FORM_addrx4 = 0x2c,
++    /* GNU Debug Fission extensions.  */
++    DW_FORM_GNU_addr_index = 0x1f01,
++    DW_FORM_GNU_str_index = 0x1f02,
+     /* Extensions for DWZ multifile.
+        See http://www.dwarfstd.org/ShowIssue.php?issue=120604.1&type=open .  */
+     DW_FORM_GNU_ref_alt = 0x1f20,
+@@ -314,6 +360,36 @@ typedef enum
+     DW_AT_const_expr      = 0x6c,
+     DW_AT_enum_class      = 0x6d,
+     DW_AT_linkage_name    = 0x6e,
++    DW_AT_string_length_bit_size = 0x6f,
++    DW_AT_string_length_byte_size = 0x70,
++    DW_AT_rank = 0x71,
++    DW_AT_str_offsets_base = 0x72,
++    DW_AT_addr_base = 0x73,
++    DW_AT_rnglists_base = 0x74,
++    /* 0x75 reserved.  */
++    DW_AT_dwo_name = 0x76,
++    DW_AT_reference = 0x77,
++    DW_AT_rvalue_reference = 0x78,
++    DW_AT_macros = 0x79,
++    DW_AT_call_all_calls = 0x7a,
++    DW_AT_call_all_source_calls = 0x7b,
++    DW_AT_call_all_tail_calls = 0x7c,
++    DW_AT_call_return_pc = 0x7d,
++    DW_AT_call_value = 0x7e,
++    DW_AT_call_origin = 0x7f,
++    DW_AT_call_parameter = 0x80,
++    DW_AT_call_pc = 0x81,
++    DW_AT_call_tail_call = 0x82,
++    DW_AT_call_target = 0x83,
++    DW_AT_call_target_clobbered = 0x84,
++    DW_AT_call_data_location = 0x85,
++    DW_AT_call_data_value = 0x86,
++    DW_AT_noreturn = 0x87,
++    DW_AT_alignment = 0x88,
++    DW_AT_export_symbols = 0x89,
++    DW_AT_deleted = 0x8a,
++    DW_AT_defaulted = 0x8b,
++    DW_AT_loclists_base = 0x8c,
+     /* SGI/MIPS extensions.  */
+     DW_AT_MIPS_fde = 0x2001,
+     DW_AT_MIPS_loop_begin = 0x2002,
+@@ -349,8 +425,39 @@ typedef enum
+     DW_AT_body_begin = 0x2105,
+     DW_AT_body_end   = 0x2106,
+     DW_AT_GNU_vector = 0x2107,
++    DW_AT_GNU_guarded_by = 0x2108,
++    DW_AT_GNU_pt_guarded_by = 0x2109,
++    DW_AT_GNU_guarded = 0x210a,
++    DW_AT_GNU_pt_guarded = 0x210b,
++    DW_AT_GNU_locks_excluded = 0x210c,
++    DW_AT_GNU_exclusive_locks_required = 0x210d,
++    DW_AT_GNU_shared_locks_required = 0x210e,
++    DW_AT_GNU_odr_signature = 0x210f,
++    DW_AT_GNU_template_name = 0x2110,
++    DW_AT_GNU_call_site_value = 0x2111,
++    DW_AT_GNU_call_site_data_value = 0x2112,
++    DW_AT_GNU_call_site_target = 0x2113,
++    DW_AT_GNU_call_site_target_clobbered = 0x2114,
++    DW_AT_GNU_tail_call = 0x2115,
+     DW_AT_GNU_all_tail_call_sites = 0x2116,
+     DW_AT_GNU_all_call_sites = 0x2117,
++    DW_AT_GNU_all_source_call_sites = 0x2118,
++    DW_AT_GNU_locviews = 0x2137,
++    DW_AT_GNU_entry_view = 0x2138,
++    DW_AT_GNU_macros = 0x2119,
++    DW_AT_GNU_deleted = 0x211a,
++    /* GNU Debug Fission extensions.  */
++    DW_AT_GNU_dwo_name = 0x2130,
++    DW_AT_GNU_dwo_id = 0x2131,
++    DW_AT_GNU_ranges_base = 0x2132,
++    DW_AT_GNU_addr_base = 0x2133,
++    DW_AT_GNU_pubnames = 0x2134,
++    DW_AT_GNU_pubtypes = 0x2135,
++    /* https://gcc.gnu.org/wiki/DW_AT_GNU_numerator_denominator  */
++    DW_AT_GNU_numerator = 0x2303,
++    DW_AT_GNU_denominator = 0x2304,
++    /* https://gcc.gnu.org/wiki/DW_AT_GNU_bias  */
++    DW_AT_GNU_bias = 0x2305,
+     /* VMS extensions.  */
+     DW_AT_VMS_rtnbeg_pd_address = 0x2201,
+     /* UPC extension.  */
+@@ -387,6 +494,9 @@ typedef enum
+     DW_ATE_decimal_float = 0xf,
+     /* DWARF 4.  */
+     DW_ATE_UTF = 0x10,
++    /* DWARF 5.  */
++    DW_ATE_UCS = 0x11,
++    DW_ATE_ASCII = 0x12,
+     /* HP extensions.  */
+     DW_ATE_HP_float80            = 0x80, /* Floating-point (80 bit).  */
+     DW_ATE_HP_complex_float80    = 0x81, /* Complex floating-point (80 bit).  */
+@@ -558,8 +668,35 @@ typedef enum
+     /* DWARF 4 extensions.  */
+     DW_OP_implicit_value = 0x9e,
+     DW_OP_stack_value = 0x9f,
++    /* DWARF 5 extensions.  */
++    DW_OP_implicit_pointer = 0xa0,
++    DW_OP_addrx = 0xa1,
++    DW_OP_constx = 0xa2,
++    DW_OP_entry_value = 0xa3,
++    DW_OP_const_type = 0xa4,
++    DW_OP_regval_type = 0xa5,
++    DW_OP_deref_type = 0xa6,
++    DW_OP_xderef_type = 0xa7,
++    DW_OP_convert = 0xa8,
++    DW_OP_reinterpret = 0xa9,
+     /* GNU extensions.  */
+     DW_OP_GNU_push_tls_address = 0xe0,
++    DW_OP_GNU_uninit = 0xf0,
++    DW_OP_GNU_encoded_addr = 0xf1,
++    DW_OP_GNU_implicit_pointer = 0xf2,
++    DW_OP_GNU_entry_value = 0xf3,
++    DW_OP_GNU_const_type = 0xf4,
++    DW_OP_GNU_regval_type = 0xf5,
++    DW_OP_GNU_deref_type = 0xf6,
++    DW_OP_GNU_convert = 0xf7,
++    DW_OP_GNU_reinterpret = 0xf9,
++    DW_OP_GNU_parameter_ref = 0xfa,
++    /* GNU Debug Fission extensions.  */
++    DW_OP_GNU_addr_index = 0xfb,
++    DW_OP_GNU_const_index = 0xfc,
++    /* The GNU variable value extension.
++       See http://dwarfstd.org/ShowIssue.php?issue=161109.2 . */
++    DW_OP_GNU_variable_value = 0xfd,
+     /* HP extensions.  */
+     DW_OP_HP_unknown     = 0xe0, /* Ouch, the same as GNU_push_tls_address.  */
+     DW_OP_HP_is_value    = 0xe1,
+@@ -571,6 +708,62 @@ typedef enum
+   }
+   DW_OP;
+ 
++typedef enum
++  {
++    DW_UT_compile = 0x01,
++    DW_UT_type = 0x02,
++    DW_UT_partial = 0x03,
++    DW_UT_skeleton = 0x04,
++    DW_UT_split_compile = 0x05,
++    DW_UT_split_type = 0x06,
++
++    DW_UT_lo_user = 0x80,
++    DW_UT_hi_user = 0xff
++  }
++  DW_UT;
++
++typedef enum
++  {
++    DW_LNCT_path = 0x1,
++    DW_LNCT_directory_index = 0x2,
++    DW_LNCT_timestamp = 0x3,
++    DW_LNCT_size = 0x4,
++    DW_LNCT_MD5 = 0x5,
++
++    DW_LNCT_lo_user = 0x2000,
++    DW_LNCT_hi_user = 0x3fff
++  }
++  DW_LNCT;
++
++typedef enum
++  {
++    DW_RLE_end_of_list = 0x00,
++    DW_RLE_base_addressx = 0x01,
++    DW_RLE_startx_endx = 0x02,
++    DW_RLE_startx_length = 0x03,
++    DW_RLE_offset_pair = 0x04,
++    DW_RLE_base_address = 0x05,
++    DW_RLE_start_end = 0x06,
++    DW_RLE_start_length = 0x07
++  }
++  DW_RLE;
++
++typedef enum
++  {
++    DW_LLE_end_of_list = 0x00,
++    DW_LLE_base_addressx = 0x01,
++    DW_LLE_startx_endx = 0x02,
++    DW_LLE_startx_length = 0x03,
++    DW_LLE_offset_pair = 0x04,
++    DW_LLE_default_location = 0x05,
++    DW_LLE_base_address = 0x06,
++    DW_LLE_start_end = 0x07,
++    DW_LLE_start_length = 0x08,
++
++    DW_LLE_GNU_view_pair = 0x09
++  }
++  DW_LLE;
++
+ const HChar* ML_(pp_DW_children) ( DW_children hashch );
+ const HChar* ML_(pp_DW_TAG)      ( DW_TAG tag );
+ const HChar* ML_(pp_DW_FORM)     ( DW_FORM form );
+diff --git a/coregrind/m_debuginfo/priv_readdwarf.h b/coregrind/m_debuginfo/priv_readdwarf.h
+index 1e3f24c2a..302266924 100644
+--- a/coregrind/m_debuginfo/priv_readdwarf.h
++++ b/coregrind/m_debuginfo/priv_readdwarf.h
+@@ -50,7 +50,8 @@ void ML_(read_debuginfo_dwarf3)
+           DiSlice escn_debug_abbv,      /* .debug_abbrev */
+           DiSlice escn_debug_line,      /* .debug_line */
+           DiSlice escn_debug_str,       /* .debug_str */
+-          DiSlice escn_debug_str_alt ); /* .debug_str */
++          DiSlice escn_debug_str_alt,   /* .debug_str */
++          DiSlice escn_debug_line_str );/* .debug_line_str */
+ 
+ /* --------------------
+    DWARF1 reader
+diff --git a/coregrind/m_debuginfo/priv_readdwarf3.h b/coregrind/m_debuginfo/priv_readdwarf3.h
+index 1a5bd61c3..f6d1dd1ee 100644
+--- a/coregrind/m_debuginfo/priv_readdwarf3.h
++++ b/coregrind/m_debuginfo/priv_readdwarf3.h
+@@ -45,9 +45,10 @@ ML_(new_dwarf3_reader) (
+    DiSlice escn_debug_info,      DiSlice escn_debug_types,
+    DiSlice escn_debug_abbv,      DiSlice escn_debug_line,
+    DiSlice escn_debug_str,       DiSlice escn_debug_ranges,
++   DiSlice escn_debug_rnglists,  DiSlice escn_debug_loclists,
+    DiSlice escn_debug_loc,       DiSlice escn_debug_info_alt,
+    DiSlice escn_debug_abbv_alt,  DiSlice escn_debug_line_alt,
+-   DiSlice escn_debug_str_alt
++   DiSlice escn_debug_str_alt,   DiSlice escn_debug_line_str
+ );
+ 
+ #endif /* ndef __PRIV_READDWARF3_H */
+diff --git a/coregrind/m_debuginfo/readdwarf.c b/coregrind/m_debuginfo/readdwarf.c
+index 5701c504b..88d5d99f1 100644
+--- a/coregrind/m_debuginfo/readdwarf.c
++++ b/coregrind/m_debuginfo/readdwarf.c
+@@ -322,6 +322,123 @@ void process_extended_line_op( struct _DebugInfo* di,
+ ////////////////////////////////////////////////////////////////////
+ ////////////////////////////////////////////////////////////////////
+ 
++static
++HChar * get_line_str (struct _DebugInfo* di, const UnitInfo* ui,
++                      DiCursor *data, const UInt form,
++                      DiCursor debugstr_img, DiCursor debuglinestr_img)
++{
++   HChar *str = NULL;
++   switch (form) {
++   case DW_FORM_string:
++      str = ML_(cur_step_strdup)(data, "di.gls.string");
++      break;
++   case DW_FORM_strp:
++      if (!ui->dw64)
++         str = ML_(cur_read_strdup)(ML_(cur_plus)(debugstr_img,
++                                                  ML_(cur_step_UInt)(data)),
++                                    "di.gls.strp.dw32");
++      else
++         str = ML_(cur_read_strdup)(ML_(cur_plus)(debugstr_img,
++                                                  ML_(cur_step_ULong)(data)),
++                                    "di.gls.strp.dw64");
++      break;
++   case DW_FORM_line_strp:
++      if (!ui->dw64)
++         str = ML_(cur_read_strdup)(ML_(cur_plus)(debuglinestr_img,
++                                                  ML_(cur_step_UInt)(data)),
++                                    "di.gls.line_strp.dw32");
++      else
++         str = ML_(cur_read_strdup)(ML_(cur_plus)(debuglinestr_img,
++                                                  ML_(cur_step_ULong)(data)),
++                                    "di.gls.line_strp.dw64");
++      break;
++   default:
++      ML_(symerr)(di, True,
++                  "Unknown path string FORM in .debug_line");
++      break;
++   }
++   return str;
++}
++
++static
++Int get_line_ndx (struct _DebugInfo* di,
++                  DiCursor *data, const UInt form)
++{
++   Int res = 0;
++   switch (form) {
++   case DW_FORM_data1:
++      res = ML_(cur_step_UChar)(data);
++      break;
++   case DW_FORM_data2:
++      res = ML_(cur_step_UShort)(data);
++      break;
++   case DW_FORM_udata:
++      res = step_leb128U(data);
++      break;
++   default:
++      ML_(symerr)(di, True,
++                  "Unknown directory_index value FORM in .debug_line");
++      break;
++   }
++   return res;
++}
++
++static
++DiCursor skip_line_form (struct _DebugInfo* di, const UnitInfo* ui,
++                         DiCursor d, const UInt form)
++{
++   switch (form) {
++   case DW_FORM_block: {
++      ULong len = step_leb128U(&d);
++      d = ML_(cur_plus)(d, len);
++      break;
++   }
++   case DW_FORM_block1:
++      d = ML_(cur_plus)(d, ML_(cur_read_UChar)(d) + 1);
++      break;
++   case DW_FORM_block2:
++      d = ML_(cur_plus)(d, ML_(cur_read_UShort)(d) + 2);
++      break;
++   case DW_FORM_block4:
++      d = ML_(cur_plus)(d, ML_(cur_read_UInt)(d) + 4);
++      break;
++   case DW_FORM_flag:
++   case DW_FORM_data1:
++      d = ML_(cur_plus)(d, 1);
++      break;
++   case DW_FORM_data2:
++      d = ML_(cur_plus)(d, 2);
++      break;
++   case DW_FORM_data4:
++      d = ML_(cur_plus)(d, 4);
++      break;
++   case DW_FORM_data8:
++      d = ML_(cur_plus)(d, 8);
++      break;
++   case DW_FORM_data16:
++      d = ML_(cur_plus)(d, 16);
++      break;
++   case DW_FORM_string:
++      d = ML_(cur_plus)(d, ML_(cur_strlen)(d) + 1);
++      break;
++   case DW_FORM_strp:
++   case DW_FORM_line_strp:
++   case DW_FORM_sec_offset:
++      d = ML_(cur_plus)(d, ui->dw64 ? 8 : 4);
++      break;
++   case DW_FORM_udata:
++      (void)step_leb128U(&d);
++      break;
++   case DW_FORM_sdata:
++      (void)step_leb128S(&d);
++      break;
++   default:
++      ML_(symerr)(di, True, "Unknown FORM in .debug_line");
++      break;
++   }
++   return d;
++}
++
+ /* read a .debug_line section block for a compilation unit
+  *
+  * Input:   - theBlock must point to the start of the block
+@@ -335,7 +452,9 @@ static
+ void read_dwarf2_lineblock ( struct _DebugInfo* di,
+                              const UnitInfo* ui, 
+                              DiCursor  theBlock, /* IMAGE */
+-                             Int       noLargerThan )
++                             Int       noLargerThan,
++                             DiCursor  debugstr_img,
++                             DiCursor  debuglinestr_img)
+ {
+    Int            i;
+    DebugLineInfo  info;
+@@ -348,6 +467,9 @@ void read_dwarf2_lineblock ( struct _DebugInfo* di,
+    DiCursor       external = theBlock;
+    DiCursor       data = theBlock;
+ 
++   UChar          p_ndx = 0, d_ndx = 0; /* DWARF5 path and dir index. */
++   UInt           forms[256];           /* DWARF5 forms. */
++
+    /* fndn_ix_xa is an xarray of fndn_ix (indexes in di->fndnpool) which
+       are build from file names harvested from the DWARF2
+       info.  Entry [0] is the "null" pool index and is never referred to
+@@ -372,17 +494,6 @@ void read_dwarf2_lineblock ( struct _DebugInfo* di,
+    fndn_ix_xa = VG_(newXA) (ML_(dinfo_zalloc), "di.rd2l.2", ML_(dinfo_free),
+                             sizeof(UInt) );
+ 
+-   /* DWARF2 starts numbering filename entries at 1, so we need to
+-      add a dummy zeroth entry to the table. */
+-   fndn_ix = 0; // 0 is the "null" index in a fixed pool.
+-   VG_(addToXA) (fndn_ix_xa, &fndn_ix);
+-
+-   if (ML_(cur_is_valid)(ui->compdir))
+-      dirname = ML_(addStrFromCursor)(di, ui->compdir);
+-   else
+-      dirname = ML_(addStr)(di, ".", -1);
+-   VG_(addToXA) (dirname_xa, &dirname);
+-
+    info.li_length = step_initial_length_field( &external, &is64 );
+    if (di->ddump_line)
+       VG_(printf)("  Length:                      %llu\n", 
+@@ -402,13 +513,19 @@ void read_dwarf2_lineblock ( struct _DebugInfo* di,
+       VG_(printf)("  DWARF Version:               %d\n", 
+                   (Int)info.li_version);
+ 
+-   if (info.li_version != 2 && info.li_version != 3 && info.li_version != 4) {
++   if (info.li_version != 2 && info.li_version != 3 && info.li_version != 4
++       && info.li_version != 5) {
+       ML_(symerr)(di, True,
+-                  "Only DWARF version 2, 3 and 4 line info "
++                  "Only DWARF version 2, 3, 4 and 5 line info "
+                   "is currently supported.");
+       goto out;
+    }
+ 
++   if (info.li_version >= 5) {
++      /* UChar addr_size = */ ML_(cur_step_UChar)(&external);
++      /* UChar seg_size = */  ML_(cur_step_UChar)(&external);
++   }
++
+    info.li_header_length = is64 ? ML_(cur_step_ULong)(&external) 
+                                 : (ULong)(ML_(cur_step_UInt)(&external));
+    if (di->ddump_line)
+@@ -485,60 +602,141 @@ void read_dwarf2_lineblock ( struct _DebugInfo* di,
+    /* skip over "standard_opcode_lengths" */
+    data = ML_(cur_plus)(standard_opcodes, info.li_opcode_base - 1);
+ 
+-   /* Read the contents of the Directory table.  */
+-   if (di->ddump_line)
+-      VG_(printf)(" The Directory Table%s\n", 
+-                  ML_(cur_read_UChar)(data) == 0 ? " is empty." : ":" );
+-
+-   while (ML_(cur_read_UChar)(data) != 0) {
++   if (ML_(cur_is_valid)(ui->compdir))
++      dirname = ML_(addStrFromCursor)(di, ui->compdir);
++   else
++      dirname = ML_(addStr)(di, ".", -1);
+ 
+-      HChar* data_str = ML_(cur_read_strdup)(data, "di.rd2l.1");
++   if (info.li_version < 5) {
++      /* Read the contents of the Directory table.  */
+       if (di->ddump_line)
+-         VG_(printf)("  %s\n", data_str);
+-
+-      /* If data[0] is '/', then 'data' is an absolute path and we
+-         don't mess with it.  Otherwise, construct the
+-         path 'ui->compdir' ++ "/" ++ 'data'. */
+-
+-      if (data_str[0] != '/' 
+-          /* not an absolute path */
+-          && ML_(cur_is_valid)(ui->compdir)
+-          /* actually got something sensible for compdir */
+-          && ML_(cur_strlen)(ui->compdir))
+-      {
+-         HChar* compdir_str = ML_(cur_read_strdup)(ui->compdir, "di.rd2l.1b");
+-         SizeT  len = VG_(strlen)(compdir_str) + 1 + VG_(strlen)(data_str);
+-         HChar *buf = ML_(dinfo_zalloc)("di.rd2l.1c", len + 1);
+-
+-         VG_(strcpy)(buf, compdir_str);
+-         VG_(strcat)(buf, "/");
+-         VG_(strcat)(buf, data_str);
+-
+-         dirname = ML_(addStr)(di, buf, len);
+-         VG_(addToXA) (dirname_xa, &dirname);
+-         if (0) VG_(printf)("rel path  %s\n", buf);
+-         ML_(dinfo_free)(compdir_str);
+-         ML_(dinfo_free)(buf);
+-      } else {
+-         /* just use 'data'. */
+-         dirname = ML_(addStr)(di,data_str,-1);
+-         VG_(addToXA) (dirname_xa, &dirname);
+-         if (0) VG_(printf)("abs path  %s\n", data_str);
++         VG_(printf)("The Directory Table%s\n",
++                     ML_(cur_read_UChar)(data) == 0 ? " is empty." : ":" );
++
++      /* DWARF2 starts numbering filename entries at 1, so we need to
++         add a dummy zeroth entry to the table.  */
++      fndn_ix = 0; // 0 is the "null" index in a fixed pool.
++      VG_(addToXA) (fndn_ix_xa, &fndn_ix);
++      VG_(addToXA) (dirname_xa, &dirname);
++
++      while (ML_(cur_read_UChar)(data) != 0) {
++
++         HChar* data_str = ML_(cur_read_strdup)(data, "di.rd2l.1");
++         if (di->ddump_line)
++            VG_(printf)("  %s\n", data_str);
++
++         /* If data[0] is '/', then 'data' is an absolute path and we
++            don't mess with it.  Otherwise, construct the
++            path 'ui->compdir' ++ "/" ++ 'data'. */
++
++         if (data_str[0] != '/'
++             /* not an absolute path */
++             && ML_(cur_is_valid)(ui->compdir)
++             /* actually got something sensible for compdir */
++             && ML_(cur_strlen)(ui->compdir))
++         {
++            HChar* compdir_str = ML_(cur_read_strdup)(ui->compdir,
++                                                      "di.rd2l.1b");
++            SizeT  len = VG_(strlen)(compdir_str) + 1 + VG_(strlen)(data_str);
++            HChar *buf = ML_(dinfo_zalloc)("di.rd2l.1c", len + 1);
++
++            VG_(strcpy)(buf, compdir_str);
++            VG_(strcat)(buf, "/");
++            VG_(strcat)(buf, data_str);
++
++            dirname = ML_(addStr)(di, buf, len);
++            VG_(addToXA) (dirname_xa, &dirname);
++            if (0) VG_(printf)("rel path  %s\n", buf);
++            ML_(dinfo_free)(compdir_str);
++            ML_(dinfo_free)(buf);
++         } else {
++            /* just use 'data'. */
++            dirname = ML_(addStr)(di,data_str,-1);
++            VG_(addToXA) (dirname_xa, &dirname);
++            if (0) VG_(printf)("abs path  %s\n", data_str);
++         }
++
++         data = ML_(cur_plus)(data, VG_(strlen)(data_str) + 1);
++         ML_(dinfo_free)(data_str);
+       }
+ 
+-      data = ML_(cur_plus)(data, VG_(strlen)(data_str) + 1);
+-      ML_(dinfo_free)(data_str);
+-   }
++      if (di->ddump_line)
++         VG_(printf)("\n");
+ 
+-   if (di->ddump_line)
+-      VG_(printf)("\n");
++      if (ML_(cur_read_UChar)(data) != 0) {
++         ML_(symerr)(di, True,
++                     "can't find NUL at end of DWARF2 directory table");
++         goto out;
++      }
++      data = ML_(cur_plus)(data, 1);
++   } else {
++      UInt directories_count;
++      UChar directory_entry_format_count = ML_(cur_step_UChar)(&data);
++      UInt n;
++      for (n = 0; n < directory_entry_format_count; n++) {
++         UInt lnct = step_leb128U(&data);
++         UInt form = step_leb128U(&data);
++         if (lnct == DW_LNCT_path)
++            p_ndx = n;
++         forms[n] = form;
++      }
++      directories_count = step_leb128U(&data);
++      /* Read the contents of the Directory table.  */
++      if (di->ddump_line)
++         VG_(printf)(" dwarf The Directory Table%s\n",
++                     directories_count == 0 ? " is empty." : ":" );
++
++      for (n = 0; n < directories_count; n++) {
++         UInt f;
++         for (f = 0; f < directory_entry_format_count; f++) {
++            UInt form = forms[f];
++            if (f == p_ndx) {
++               HChar *data_str = get_line_str (di, ui, &data, form,
++                                               debugstr_img,
++                                               debuglinestr_img);
++               if (di->ddump_line)
++                  VG_(printf)("  %s\n", data_str);
++
++               /* If data[0] is '/', then 'data' is an absolute path and we
++                  don't mess with it.  Otherwise, construct the
++                  path 'ui->compdir' ++ "/" ++ 'data'. */
++
++               if (data_str[0] != '/'
++                   /* not an absolute path */
++                   && ML_(cur_is_valid)(ui->compdir)
++                   /* actually got something sensible for compdir */
++                   && ML_(cur_strlen)(ui->compdir))
++               {
++                  HChar* compdir_str = ML_(cur_read_strdup)(ui->compdir,
++                                                            "di.rd2l.1b");
++                  SizeT  len = VG_(strlen)(compdir_str) + 1
++                     + VG_(strlen)(data_str);
++                  HChar *buf = ML_(dinfo_zalloc)("di.rd2l.1c", len + 1);
++
++                  VG_(strcpy)(buf, compdir_str);
++                  VG_(strcat)(buf, "/");
++                  VG_(strcat)(buf, data_str);
++
++                  dirname = ML_(addStr)(di, buf, len);
++                  VG_(addToXA) (dirname_xa, &dirname);
++                  if (0) VG_(printf)("rel path  %s\n", buf);
++                  ML_(dinfo_free)(compdir_str);
++                  ML_(dinfo_free)(buf);
++               } else {
++                  /* just use 'data'. */
++                  dirname = ML_(addStr)(di,data_str,-1);
++                  VG_(addToXA) (dirname_xa, &dirname);
++                  if (0) VG_(printf)("abs path  %s\n", data_str);
++               }
+ 
+-   if (ML_(cur_read_UChar)(data) != 0) {
+-      ML_(symerr)(di, True,
+-                  "can't find NUL at end of DWARF2 directory table");
+-      goto out;
++               ML_(dinfo_free)(data_str);
++
++            } else {
++               data = skip_line_form (di, ui, data, form);
++            }
++         }
++      }
+    }
+-   data = ML_(cur_plus)(data, 1);
+ 
+    /* Read the contents of the File Name table.  This produces a bunch
+       of fndn_ix in fndn_ix_xa. */
+@@ -547,33 +745,76 @@ void read_dwarf2_lineblock ( struct _DebugInfo* di,
+       VG_(printf)("  Entry	Dir	Time	Size	Name\n");
+    }
+ 
+-   i = 1;
+-   while (ML_(cur_read_UChar)(data) != 0) {
+-      HChar* name    = ML_(cur_step_strdup)(&data, "di.rd2l.2");
+-      Int    diridx  = step_leb128U(&data);
+-      Int    uu_time = step_leb128U(&data); /* unused */
+-      Int    uu_size = step_leb128U(&data); /* unused */
++   if (info.li_version < 5) {
++      i = 1;
++      while (ML_(cur_read_UChar)(data) != 0) {
++         HChar* name    = ML_(cur_step_strdup)(&data, "di.rd2l.2");
++         Int    diridx  = step_leb128U(&data);
++         Int    uu_time = step_leb128U(&data); /* unused */
++         Int    uu_size = step_leb128U(&data); /* unused */
++
++         dirname = safe_dirname_ix( dirname_xa, diridx );
++         fndn_ix = ML_(addFnDn) (di, name, dirname);
++         VG_(addToXA) (fndn_ix_xa, &fndn_ix);
++         if (0) VG_(printf)("file %s diridx %d\n", name, diridx );
++         if (di->ddump_line)
++            VG_(printf)("  %d\t%d\t%d\t%d\t%s\n",
++                        i, diridx, uu_time, uu_size, name);
++         i++;
++         ML_(dinfo_free)(name);
++      }
+ 
+-      dirname = safe_dirname_ix( dirname_xa, diridx );
+-      fndn_ix = ML_(addFnDn) (di, name, dirname);
+-      VG_(addToXA) (fndn_ix_xa, &fndn_ix);
+-      if (0) VG_(printf)("file %s diridx %d\n", name, diridx );
+       if (di->ddump_line)
+-         VG_(printf)("  %d\t%d\t%d\t%d\t%s\n", 
+-                     i, diridx, uu_time, uu_size, name);
+-      i++;
+-      ML_(dinfo_free)(name);
+-   }
++         VG_(printf)("\n");
+ 
+-   if (di->ddump_line)
+-      VG_(printf)("\n");
++      if (ML_(cur_read_UChar)(data) != 0) {
++         ML_(symerr)(di, True,
++                     "can't find NUL at end of DWARF2 file name table");
++         goto out;
++      }
++      data = ML_(cur_plus)(data, 1);
++   } else {
++      UInt file_names_count;
++      UChar file_names_entry_format_count = ML_(cur_step_UChar)(&data);
++      UInt n;
++      for (n = 0; n < file_names_entry_format_count; n++) {
++         UInt lnct = step_leb128U(&data);
++         UInt form = step_leb128U(&data);
++         if (lnct == DW_LNCT_path)
++            p_ndx = n;
++         if (lnct == DW_LNCT_directory_index)
++            d_ndx = n;
++         forms[n] = form;
++      }
++      file_names_count = step_leb128U(&data);
++      for (n = 0; n < file_names_count; n++) {
++         UInt f;
++         HChar* name = NULL;
++         Int diridx  = 0;
++         for (f = 0; f < file_names_entry_format_count; f++) {
++            UInt form = forms[f];
++            if (f == p_ndx)
++               name = get_line_str (di, ui, &data, form,
++                                    debugstr_img, debuglinestr_img);
++            else if (n == d_ndx)
++               diridx = get_line_ndx (di, &data, form);
++            else
++               data = skip_line_form (di, ui, data, form);
++         }
+ 
+-   if (ML_(cur_read_UChar)(data) != 0) {
+-      ML_(symerr)(di, True,
+-                  "can't find NUL at end of DWARF2 file name table");
+-      goto out;
++         dirname = safe_dirname_ix( dirname_xa, diridx );
++         fndn_ix = ML_(addFnDn) (di, name, dirname);
++         VG_(addToXA) (fndn_ix_xa, &fndn_ix);
++         if (0) VG_(printf)("file %s diridx %d\n", name, diridx );
++         if (di->ddump_line)
++            VG_(printf)("  %u\t%d\t%d\t%d\t%s\n",
++                        n, diridx, 0, 0, name);
++         ML_(dinfo_free)(name);
++      }
++
++      if (di->ddump_line)
++         VG_(printf)("\n");
+    }
+-   data = ML_(cur_plus)(data, 1);
+ 
+    if (di->ddump_line)
+       VG_(printf)(" Line Number Statements:\n");
+@@ -772,9 +1013,12 @@ static DiCursor lookup_abbrev( DiCursor p, ULong acode )
+       (void)step_leb128U(&p);  /* skip tag */
+       p = ML_(cur_plus)(p,1);  /* skip has_children flag */
+       ULong name;
++      ULong form;
+       do {
+          name = step_leb128U(&p); /* name */
+-         (void)step_leb128U(&p);  /* form */
++         form = step_leb128U(&p);  /* form */
++         if (form == 0x21) /* DW_FORM_implicit_const */
++            step_leb128S(&p);
+       }
+       while (name != 0); /* until name == form == 0 */
+    }
+@@ -804,13 +1048,14 @@ void read_unitinfo_dwarf2( /*OUT*/UnitInfo* ui,
+                                   DiCursor  unitblock_img,
+                                   DiCursor  debugabbrev_img,
+                                   DiCursor  debugstr_img,
+-                                  DiCursor  debugstr_alt_img )
++                                  DiCursor  debugstr_alt_img,
++                                  DiCursor  debuglinestr_img)
+ {
+    UInt   acode, abcode;
+    ULong  atoffs, blklen;
+    UShort ver;
+ 
+-   UChar    addr_size;
++   UChar    addr_size = 0;
+    DiCursor p = unitblock_img;
+    DiCursor end_img;
+    DiCursor abbrev_img;
+@@ -823,16 +1068,25 @@ void read_unitinfo_dwarf2( /*OUT*/UnitInfo* ui,
+    /* This block length */
+    blklen = step_initial_length_field( &p, &ui->dw64 );
+ 
+-   /* version should be 2, 3 or 4 */
++   /* version should be 2, 3, 4 or 5 */
+    ver = ML_(cur_step_UShort)(&p);
+ 
+-   /* get offset in abbrev */
+-   atoffs = ui->dw64 ? ML_(cur_step_ULong)(&p)
+-                     : (ULong)(ML_(cur_step_UInt)(&p));
++   if (ver >= 5)
++      /* unit_type for DWARF5 */
++      /* unit_type = */ ML_(cur_step_UChar)(&p);
++   else
++      /* get offset in abbrev */
++      atoffs = ui->dw64 ? ML_(cur_step_ULong)(&p)
++                        : (ULong)(ML_(cur_step_UInt)(&p));
+ 
+    /* Address size */
+    addr_size = ML_(cur_step_UChar)(&p);
+ 
++   if (ver >= 5)
++      /* get offset in abbrev */
++      atoffs = ui->dw64 ? ML_(cur_step_ULong)(&p)
++                        : (ULong)(ML_(cur_step_UInt)(&p));
++
+    /* End of this block */
+    end_img = ML_(cur_plus)(unitblock_img, blklen + (ui->dw64 ? 12 : 4)); 
+ 
+@@ -909,6 +1163,17 @@ void read_unitinfo_dwarf2( /*OUT*/UnitInfo* ui,
+                   sval = ML_(cur_plus)(debugstr_img, ML_(cur_read_ULong)(p));
+                p = ML_(cur_plus)(p, ui->dw64 ? 8 : 4);
+                break;
++            case 0x1f: /* FORM_line_strp */ /* pointer in .debug_line_str */
++               /* 2006-01-01: only generate a value if a debug_str
++                  section was found) */
++               if (ML_(cur_is_valid)(debuglinestr_img) && !ui->dw64)
++                  sval = ML_(cur_plus)(debuglinestr_img,
++                                       ML_(cur_read_UInt)(p));
++               if (ML_(cur_is_valid)(debuglinestr_img) && ui->dw64)
++                  sval = ML_(cur_plus)(debuglinestr_img,
++                                       ML_(cur_read_ULong)(p));
++               p = ML_(cur_plus)(p, ui->dw64 ? 8 : 4);
++               break;
+             case 0x08: /* FORM_string */
+                sval = p;
+                p = ML_(cur_plus)(p, ML_(cur_strlen)(p) + 1);
+@@ -928,7 +1193,13 @@ void read_unitinfo_dwarf2( /*OUT*/UnitInfo* ui,
+                p = ML_(cur_plus)(p, 8);
+                /* perhaps should assign unconditionally to cval? */
+                break;
++            case 0x21: /* FORM_implicit_const */
++               cval = step_leb128S (&abbrev_img);
++               break;
+             /* TODO : Following ones just skip data - implement if you need */
++            case 0x1e: /* FORM_data16 */
++               p = ML_(cur_plus)(p, 16);
++               break;
+             case 0x01: /* FORM_addr */
+                p = ML_(cur_plus)(p, addr_size);
+                break;
+@@ -1028,7 +1299,8 @@ void ML_(read_debuginfo_dwarf3)
+           DiSlice escn_debug_abbv,      /* .debug_abbrev */
+           DiSlice escn_debug_line,      /* .debug_line */
+           DiSlice escn_debug_str,       /* .debug_str */
+-          DiSlice escn_debug_str_alt )  /* .debug_str */
++          DiSlice escn_debug_str_alt,   /* .debug_str */
++          DiSlice escn_debug_line_str)  /* .debug_line_str */
+ {
+    UnitInfo ui;
+    UShort   ver;
+@@ -1067,9 +1339,9 @@ void ML_(read_debuginfo_dwarf3)
+ 
+       /* version should be 2 */
+       ver = ML_(cur_read_UShort)( ML_(cur_plus)(block_img, blklen_len) );
+-      if ( ver != 2 && ver != 3 && ver != 4 ) {
++      if ( ver != 2 && ver != 3 && ver != 4 && ver != 5) {
+          ML_(symerr)( di, True,
+-                      "Ignoring non-Dwarf2/3/4 block in .debug_info" );
++                      "Ignoring non-Dwarf2/3/4/5 block in .debug_info" );
+          continue;
+       }
+       
+@@ -1082,7 +1354,8 @@ void ML_(read_debuginfo_dwarf3)
+       read_unitinfo_dwarf2( &ui, block_img, 
+                                  ML_(cur_from_sli)(escn_debug_abbv),
+                                  ML_(cur_from_sli)(escn_debug_str),
+-                                 ML_(cur_from_sli)(escn_debug_str_alt) );
++                                 ML_(cur_from_sli)(escn_debug_str_alt),
++                                 ML_(cur_from_sli)(escn_debug_line_str));
+       if (0) {
+          HChar* str_name    = ML_(cur_read_strdup)(ui.name,    "di.rdd3.1");
+          HChar* str_compdir = ML_(cur_read_strdup)(ui.compdir, "di.rdd3.2");
+@@ -1107,7 +1380,9 @@ void ML_(read_debuginfo_dwarf3)
+       read_dwarf2_lineblock(
+          di, &ui,
+          ML_(cur_plus)(ML_(cur_from_sli)(escn_debug_line), ui.stmt_list),
+-         escn_debug_line.szB  - ui.stmt_list
++         escn_debug_line.szB  - ui.stmt_list,
++         ML_(cur_from_sli)(escn_debug_str),
++         ML_(cur_from_sli)(escn_debug_line_str)
+       );
+    }
+ }
+diff --git a/coregrind/m_debuginfo/readdwarf3.c b/coregrind/m_debuginfo/readdwarf3.c
+index c4d529bc6..82bc8f241 100644
+--- a/coregrind/m_debuginfo/readdwarf3.c
++++ b/coregrind/m_debuginfo/readdwarf3.c
+@@ -384,6 +384,7 @@ typedef
+    struct _name_form {
+       ULong at_name;  // Dwarf Attribute name
+       ULong at_form;  // Dwarf Attribute form
++      Long  at_val;   // Dwarf Attribute value (for implicit_const)
+       UInt  skip_szB; // Nr of bytes skippable from here ...
+       UInt  next_nf;  // ... to reach this attr/form index in the g_abbv.nf
+    } name_form;
+@@ -423,7 +424,7 @@ typedef
+       void (*barf)( const HChar* ) __attribute__((noreturn));
+       /* Is this 64-bit DWARF ? */
+       Bool   is_dw64;
+-      /* Which DWARF version ?  (2, 3 or 4) */
++      /* Which DWARF version ?  (2, 3, 4 or 5) */
+       UShort version;
+       /* Length of this Compilation Unit, as stated in the
+          .unit_length :: InitialLength field of the CU Header.
+@@ -452,12 +453,15 @@ typedef
+       /* Image information for various sections. */
+       DiSlice escn_debug_str;
+       DiSlice escn_debug_ranges;
++      DiSlice escn_debug_rnglists;
++      DiSlice escn_debug_loclists;
+       DiSlice escn_debug_loc;
+       DiSlice escn_debug_line;
+       DiSlice escn_debug_info;
+       DiSlice escn_debug_types;
+       DiSlice escn_debug_info_alt;
+       DiSlice escn_debug_str_alt;
++      DiSlice escn_debug_line_str;
+       /* How much to add to .debug_types resp. alternate .debug_info offsets
+          in cook_die*.  */
+       UWord  types_cuOff_bias;
+@@ -651,25 +655,35 @@ static GExpr* make_singleton_GX ( DiCursor block, ULong nbytes )
+ __attribute__((noinline))
+ static GExpr* make_general_GX ( const CUConst* cc,
+                                 Bool     td3,
+-                                ULong    debug_loc_offset,
++                                ULong    offset,
+                                 Addr     svma_of_referencing_CU )
+ {
++   Bool      done;
+    Addr      base;
+    Cursor    loc;
+    XArray*   xa; /* XArray of UChar */
+    GExpr*    gx;
+    Word      nbytes;
++   Bool      addBase = cc->version < 5;
+ 
+    vg_assert(sizeof(UWord) == sizeof(Addr));
+-   if (!ML_(sli_is_valid)(cc->escn_debug_loc) || cc->escn_debug_loc.szB == 0)
++   if (cc->version < 5 && (!ML_(sli_is_valid)(cc->escn_debug_loc)
++                           || cc->escn_debug_loc.szB == 0))
+       cc->barf("make_general_GX: .debug_loc is empty/missing");
++   if (cc->version >= 5 && (!ML_(sli_is_valid)(cc->escn_debug_loclists)
++                           || cc->escn_debug_loclists.szB == 0))
++      cc->barf("make_general_GX: .debug_loclists is empty/missing");
+ 
+-   init_Cursor( &loc, cc->escn_debug_loc, 0, cc->barf,
+-                "Overrun whilst reading .debug_loc section(2)" );
+-   set_position_of_Cursor( &loc, debug_loc_offset );
++   if (cc->version < 5)
++      init_Cursor( &loc, cc->escn_debug_loc, 0, cc->barf,
++                   "Overrun whilst reading .debug_loc section(2)" );
++   else
++      init_Cursor( &loc, cc->escn_debug_loclists, 0, cc->barf,
++                   "Overrun whilst reading .debug_loclists section(2)" );
++   set_position_of_Cursor( &loc, offset );
+ 
+-   TRACE_D3("make_general_GX (.debug_loc_offset = %llu, ioff = %llu) {\n",
+-            debug_loc_offset, get_DiCursor_from_Cursor(&loc).ioff );
++   TRACE_D3("make_general_GX (offset = %llu, ioff = %llu) {\n",
++            offset, get_DiCursor_from_Cursor(&loc).ioff );
+ 
+    /* Who frees this xa?  It is freed before this fn exits. */
+    xa = VG_(newXA)( ML_(dinfo_zalloc), "di.readdwarf3.mgGX.1", 
+@@ -679,40 +693,86 @@ static GExpr* make_general_GX ( const CUConst* cc,
+    { UChar c = 1; /*biasMe*/ VG_(addBytesToXA)( xa, &c, sizeof(c) ); }
+ 
+    base = 0;
+-   while (True) {
++   done = False;
++   while (!done) {
+       Bool  acquire;
+       UWord len;
+-      /* Read a (host-)word pair.  This is something of a hack since
+-         the word size to read is really dictated by the ELF file;
+-         however, we assume we're reading a file with the same
+-         word-sizeness as the host.  Reasonably enough. */
+-      UWord w1 = get_UWord( &loc );
+-      UWord w2 = get_UWord( &loc );
+-
+-      TRACE_D3("   %08lx %08lx\n", w1, w2);
+-      if (w1 == 0 && w2 == 0)
+-         break; /* end of list */
+-
+-      if (w1 == -1UL) {
+-         /* new value for 'base' */
+-         base = w2;
+-         continue;
++      UWord w1;
++      UWord w2;
++      if (cc->version < 5) {
++         /* Read a (host-)word pair.  This is something of a hack since
++            the word size to read is really dictated by the ELF file;
++            however, we assume we're reading a file with the same
++            word-sizeness as the host.  Reasonably enough. */
++         w1 = get_UWord( &loc );
++         w2 = get_UWord( &loc );
++
++         TRACE_D3("   %08lx %08lx\n", w1, w2);
++         if (w1 == 0 && w2 == 0) {
++            done = True;
++            break; /* end of list */
++         }
++
++         if (w1 == -1UL) {
++            /* new value for 'base' */
++            base = w2;
++            continue;
++         }
++         /* else a location expression follows */
++         len = (UWord)get_UShort( &loc );
++      } else {
++         w1 = 0;
++         w2 = 0;
++         len = 0;
++         DW_LLE r = get_UChar( &loc );
++         switch (r) {
++         case DW_LLE_end_of_list:
++            done = True;
++            break;
++         case DW_LLE_base_address:
++            base = get_UWord( &loc );
++            break;
++         case DW_LLE_start_length:
++            w1 = get_UWord( &loc );
++            w2 = w1 + get_ULEB128( &loc );
++            len = get_ULEB128( &loc );
++            break;
++         case DW_LLE_offset_pair:
++            w1 = base + get_ULEB128( &loc );
++            w2 = base + get_ULEB128( &loc );
++            len = get_ULEB128( &loc );
++            break;
++         case DW_LLE_start_end:
++            w1 = get_UWord ( &loc );
++            w2 = get_UWord ( &loc );
++            len = get_ULEB128( &loc );
++            break;
++         case DW_LLE_GNU_view_pair:
++            get_ULEB128( &loc );
++            get_ULEB128( &loc );
++            break;
++         case DW_LLE_base_addressx:
++         case DW_LLE_startx_endx:
++         case DW_LLE_startx_length:
++         case DW_LLE_default_location:
++         default:
++            cc->barf( "Unhandled or unknown loclists entry" );
++            done = True;
++         }
+       }
+ 
+-      /* else a location expression follows */
+       /* else enumerate [w1+base, w2+base) */
+       /* w2 is 1 past end of range, as per D3 defn for "DW_AT_high_pc"
+          (sec 2.17.2) */
+       if (w1 > w2) {
+          TRACE_D3("negative range is for .debug_loc expr at "
+                   "file offset %llu\n", 
+-                  debug_loc_offset);
++                  offset);
+          cc->barf( "negative range in .debug_loc section" );
+       }
+ 
+       /* ignore zero length ranges */
+       acquire = w1 < w2;
+-      len     = (UWord)get_UShort( &loc );
+ 
+       if (acquire) {
+          UWord  w;
+@@ -720,9 +780,9 @@ static GExpr* make_general_GX ( const CUConst* cc,
+          UChar  c;
+          c = 0; /* !isEnd*/
+          VG_(addBytesToXA)( xa, &c, sizeof(c) );
+-         w = w1    + base + svma_of_referencing_CU;
++         w = w1    + (addBase ? base : 0) + svma_of_referencing_CU;
+          VG_(addBytesToXA)( xa, &w, sizeof(w) );
+-         w = w2 -1 + base + svma_of_referencing_CU;
++         w = w2 -1 + (addBase ? base : 0) + svma_of_referencing_CU;
+          VG_(addBytesToXA)( xa, &w, sizeof(w) );
+          s = (UShort)len;
+          VG_(addBytesToXA)( xa, &s, sizeof(s) );
+@@ -839,45 +899,96 @@ get_range_list ( const CUConst* cc,
+    XArray*   xa; /* XArray of AddrRange */
+    AddrRange pair;
+ 
+-   if (!ML_(sli_is_valid)(cc->escn_debug_ranges)
+-       || cc->escn_debug_ranges.szB == 0)
++   if (cc->version < 5 && (!ML_(sli_is_valid)(cc->escn_debug_ranges)
++                           || cc->escn_debug_ranges.szB == 0))
+       cc->barf("get_range_list: .debug_ranges is empty/missing");
++   if (cc->version >= 5 && (!ML_(sli_is_valid)(cc->escn_debug_rnglists)
++                            || cc->escn_debug_rnglists.szB == 0))
++      cc->barf("get_range_list: .debug_rnglists is empty/missing");
++
++   if (cc->version < 5)
++      init_Cursor( &ranges, cc->escn_debug_ranges, 0, cc->barf,
++                   "Overrun whilst reading .debug_ranges section(2)" );
++   else
++      init_Cursor( &ranges, cc->escn_debug_rnglists, 0, cc->barf,
++                   "Overrun whilst reading .debug_rnglists section(2)" );
+ 
+-   init_Cursor( &ranges, cc->escn_debug_ranges, 0, cc->barf,
+-                "Overrun whilst reading .debug_ranges section(2)" );
+    set_position_of_Cursor( &ranges, debug_ranges_offset );
+ 
+    /* Who frees this xa?  varstack_preen() does. */
+    xa = VG_(newXA)( ML_(dinfo_zalloc), "di.readdwarf3.grl.1", ML_(dinfo_free),
+                     sizeof(AddrRange) );
+    base = 0;
+-   while (True) {
+-      /* Read a (host-)word pair.  This is something of a hack since
+-         the word size to read is really dictated by the ELF file;
+-         however, we assume we're reading a file with the same
+-         word-sizeness as the host.  Reasonably enough. */
+-      UWord w1 = get_UWord( &ranges );
+-      UWord w2 = get_UWord( &ranges );
+-
+-      if (w1 == 0 && w2 == 0)
+-         break; /* end of list. */
+-
+-      if (w1 == -1UL) {
+-         /* new value for 'base' */
+-         base = w2;
+-         continue;
+-      }
++   if (cc->version < 5) {
++      while (True) {
++         /* Read a (host-)word pair.  This is something of a hack since
++            the word size to read is really dictated by the ELF file;
++            however, we assume we're reading a file with the same
++            word-sizeness as the host.  Reasonably enough. */
++         UWord w1 = get_UWord( &ranges );
++         UWord w2 = get_UWord( &ranges );
+ 
+-      /* else enumerate [w1+base, w2+base) */
+-      /* w2 is 1 past end of range, as per D3 defn for "DW_AT_high_pc"
+-         (sec 2.17.2) */
+-      if (w1 > w2)
+-         cc->barf( "negative range in .debug_ranges section" );
+-      if (w1 < w2) {
+-         pair.aMin = w1     + base + svma_of_referencing_CU;
+-         pair.aMax = w2 - 1 + base + svma_of_referencing_CU;
+-         vg_assert(pair.aMin <= pair.aMax);
+-         VG_(addToXA)( xa, &pair );
++         if (w1 == 0 && w2 == 0)
++            break; /* end of list. */
++
++         if (w1 == -1UL) {
++            /* new value for 'base' */
++            base = w2;
++            continue;
++         }
++
++         /* else enumerate [w1+base, w2+base) */
++         /* w2 is 1 past end of range, as per D3 defn for "DW_AT_high_pc"
++            (sec 2.17.2) */
++         if (w1 > w2)
++            cc->barf( "negative range in .debug_ranges section" );
++         if (w1 < w2) {
++            pair.aMin = w1     + base + svma_of_referencing_CU;
++            pair.aMax = w2 - 1 + base + svma_of_referencing_CU;
++            vg_assert(pair.aMin <= pair.aMax);
++            VG_(addToXA)( xa, &pair );
++         }
++      }
++   } else {
++      Bool done = False;
++      while (!done) {
++         UWord w1 = 0;
++         UWord w2 = 0;
++         DW_RLE r = get_UChar( &ranges );
++         switch (r) {
++         case DW_RLE_end_of_list:
++            done = True;
++            break;
++         case DW_RLE_base_address:
++            base = get_UWord( &ranges );
++            break;
++         case DW_RLE_start_length:
++            w1 = get_UWord( &ranges );
++            w2 = w1 + get_ULEB128( &ranges );
++            break;
++         case DW_RLE_offset_pair:
++            w1 = base + get_ULEB128( &ranges );
++            w2 = base + get_ULEB128( &ranges );
++            break;
++         case DW_RLE_start_end:
++            w1 = get_UWord ( &ranges );
++            w2 = get_UWord ( &ranges );
++            break;
++         case DW_RLE_base_addressx:
++         case DW_RLE_startx_endx:
++         case DW_RLE_startx_length:
++         default:
++            cc->barf( "Unhandled or unknown range list entry" );
++            done = True;
++         }
++         if (w1 > w2)
++            cc->barf( "negative range in .debug_rnglists section" );
++         if (w1 < w2) {
++            pair.aMin = w1     + svma_of_referencing_CU;
++            pair.aMax = w2 - 1 + svma_of_referencing_CU;
++            vg_assert(pair.aMin <= pair.aMax);
++            VG_(addToXA)( xa, &pair );
++         }
+       }
+    }
+    return xa;
+@@ -930,6 +1041,8 @@ static void init_ht_abbvs (CUConst* cc,
+          }
+          ta->nf[ta_nf_n].at_name = get_ULEB128( &c );
+          ta->nf[ta_nf_n].at_form = get_ULEB128( &c );
++         if (ta->nf[ta_nf_n].at_form == DW_FORM_implicit_const)
++            ta->nf[ta_nf_n].at_val = get_SLEB128( &c );
+          if (ta->nf[ta_nf_n].at_name == 0 && ta->nf[ta_nf_n].at_form == 0) {
+             ta_nf_n++;
+             break; 
+@@ -1005,7 +1118,7 @@ void parse_CU_Header ( /*OUT*/CUConst* cc,
+ 		       Bool type_unit,
+                        Bool alt_info )
+ {
+-   UChar  address_size;
++   UChar  address_size, unit_type;
+    ULong  debug_abbrev_offset;
+ 
+    VG_(memset)(cc, 0, sizeof(*cc));
+@@ -1021,10 +1134,21 @@ void parse_CU_Header ( /*OUT*/CUConst* cc,
+ 
+    /* version */
+    cc->version = get_UShort( c );
+-   if (cc->version != 2 && cc->version != 3 && cc->version != 4)
+-      cc->barf( "parse_CU_Header: is neither DWARF2 nor DWARF3 nor DWARF4" );
++   if (cc->version != 2 && cc->version != 3 && cc->version != 4
++       && cc->version != 5)
++      cc->barf( "parse_CU_Header: "
++                "is neither DWARF2 nor DWARF3 nor DWARF4 nor DWARF5" );
+    TRACE_D3("   Version:       %d\n", (Int)cc->version );
+ 
++   /* unit type */
++   if (cc->version >= 5) {
++      unit_type = get_UChar( c );
++      address_size = get_UChar( c );
++   } else {
++      unit_type = type_unit ? DW_UT_type : DW_UT_compile;
++      address_size = 0; /* Will be read later. */
++   }
++
+    /* debug_abbrev_offset */
+    debug_abbrev_offset = get_Dwarfish_UWord( c, cc->is_dw64 );
+    if (debug_abbrev_offset >= escn_debug_abbv.szB)
+@@ -1035,7 +1159,9 @@ void parse_CU_Header ( /*OUT*/CUConst* cc,
+       give up.  This makes it safe to assume elsewhere that
+       DW_FORM_addr and DW_FORM_ref_addr can be treated as a host
+       word. */
+-   address_size = get_UChar( c );
++   if (cc->version < 5)
++      address_size = get_UChar( c );
++
+    if (address_size != sizeof(void*))
+       cc->barf( "parse_CU_Header: invalid address_size" );
+    TRACE_D3("   Pointer Size:  %d\n", (Int)address_size );
+@@ -1043,7 +1169,7 @@ void parse_CU_Header ( /*OUT*/CUConst* cc,
+    cc->is_type_unit = type_unit;
+    cc->is_alt_info = alt_info;
+ 
+-   if (type_unit) {
++   if (type_unit || (cc->version >= 5 && unit_type == DW_UT_type)) {
+       cc->type_signature = get_ULong( c );
+       cc->type_offset = get_Dwarfish_UWord( c, cc->is_dw64 );
+    }
+@@ -1130,8 +1256,9 @@ typedef
+ static
+ void get_Form_contents ( /*OUT*/FormContents* cts,
+                          const CUConst* cc, Cursor* c,
+-                         Bool td3, DW_FORM form )
++                         Bool td3, const name_form *abbv )
+ {
++   DW_FORM form = abbv->at_form;
+    VG_(bzero_inline)(cts, sizeof(*cts));
+    // !!! keep switch in sync with get_Form_szB. The nr of characters read below
+    // must be computed similarly in get_Form_szB.
+@@ -1157,6 +1284,19 @@ void get_Form_contents ( /*OUT*/FormContents* cts,
+          cts->szB   = 8;
+          TRACE_D3("%llu", cts->u.val);
+          break;
++     case DW_FORM_data16: {
++         /* This is more like a block than an integral value.  */
++         ULong    u64b;
++         DiCursor data16 = get_DiCursor_from_Cursor(c);
++         TRACE_D3("data16: ");
++         for (u64b = 16; u64b > 0; u64b--) {
++            UChar u8 = get_UChar(c);
++            TRACE_D3("%x ", (UInt)u8);
++         }
++         cts->u.cur = data16;
++         cts->szB   = - (Long)16;
++         break;
++         }
+       case DW_FORM_sec_offset:
+          cts->u.val = (ULong)get_Dwarfish_UWord( c, cc->is_dw64 );
+          cts->szB   = cc->is_dw64 ? 8 : 4;
+@@ -1242,6 +1382,26 @@ void get_Form_contents ( /*OUT*/FormContents* cts,
+          cts->szB   = - (Long)(1 + (ULong)ML_(cur_strlen)(str));
+          break;
+       }
++      case DW_FORM_line_strp: {
++         /* this is an offset into .debug_line_str */
++         UWord uw = (UWord)get_Dwarfish_UWord( c, cc->is_dw64 );
++         if (!ML_(sli_is_valid)(cc->escn_debug_line_str)
++             || uw >= cc->escn_debug_line_str.szB)
++            cc->barf("get_Form_contents: DW_FORM_line_strp "
++                     "points outside .debug_line_str");
++         /* FIXME: check the entire string lies inside debug_line_str,
++            not just the first byte of it. */
++         DiCursor line_str
++            = ML_(cur_plus)( ML_(cur_from_sli)(cc->escn_debug_line_str), uw );
++         if (TD3) {
++            HChar* tmp = ML_(cur_read_strdup)(line_str, "di.getFC.1.5");
++            TRACE_D3("(indirect line string, offset: 0x%lx): %s", uw, tmp);
++            ML_(dinfo_free)(tmp);
++         }
++         cts->u.cur = line_str;
++         cts->szB   = - (Long)(1 + (ULong)ML_(cur_strlen)(line_str));
++         break;
++      }
+       case DW_FORM_string: {
+          DiCursor str = get_AsciiZ(c);
+          if (TD3) {
+@@ -1307,6 +1467,11 @@ void get_Form_contents ( /*OUT*/FormContents* cts,
+          cts->u.val = 1;
+          cts->szB   = 1;
+          break;
++      case DW_FORM_implicit_const:
++         cts->u.val = (ULong)abbv->at_val;
++         cts->szB   = 8;
++         TRACE_D3("%llu", cts->u.val);
++         break;
+       case DW_FORM_block1: {
+          ULong    u64b;
+          ULong    u64   = (ULong)get_UChar(c);
+@@ -1396,9 +1561,14 @@ void get_Form_contents ( /*OUT*/FormContents* cts,
+          cts->szB   = sizeof(UWord);
+          break;
+       }
+-      case DW_FORM_indirect:
+-         get_Form_contents (cts, cc, c, td3, (DW_FORM)get_ULEB128(c));
++      case DW_FORM_indirect: {
++         /* Urgh, this is ugly and somewhat unclear how it works
++            with DW_FORM_implicit_const. HACK.  */
++         name_form nfi = *abbv;
++         nfi.at_form = (DW_FORM)get_ULEB128(c);
++         get_Form_contents (cts, cc, c, td3, &nfi);
+          return;
++      }
+ 
+       case DW_FORM_GNU_ref_alt:
+          cts->u.val = get_Dwarfish_UWord(c, cc->is_dw64);
+@@ -1471,6 +1641,7 @@ UInt get_Form_szB (const CUConst* cc, DW_FORM form )
+       case DW_FORM_data2: return 2;
+       case DW_FORM_data4: return 4;
+       case DW_FORM_data8: return 8;
++      case DW_FORM_data16: return 16;
+       case DW_FORM_sec_offset:
+          if (cc->is_dw64)
+             return 8;
+@@ -1488,6 +1659,7 @@ UInt get_Form_szB (const CUConst* cc, DW_FORM form )
+          else 
+             return sizeof_Dwarfish_UWord (cc->is_dw64);
+       case DW_FORM_strp:
++      case DW_FORM_line_strp:
+          return sizeof_Dwarfish_UWord (cc->is_dw64);
+       case DW_FORM_string: 
+          return VARSZ_FORM;
+@@ -1522,6 +1694,8 @@ UInt get_Form_szB (const CUConst* cc, DW_FORM form )
+          return sizeof_Dwarfish_UWord(cc->is_dw64);
+       case DW_FORM_GNU_strp_alt:
+          return sizeof_Dwarfish_UWord(cc->is_dw64);
++      case DW_FORM_implicit_const:
++	 return 0; /* Value inside abbrev. */
+       default:
+          VG_(printf)(
+             "get_Form_szB: unhandled %u (%s)\n",
+@@ -1544,13 +1718,13 @@ void skip_DIE (UWord  *sibling,
+    while (True) {
+       if (abbv->nf[nf_i].at_name == DW_AT_sibling) {
+          get_Form_contents( &cts, cc, c_die, False /*td3*/,
+-                            (DW_FORM)abbv->nf[nf_i].at_form );
++                            &abbv->nf[nf_i] );
+          if ( cts.szB > 0 ) 
+             *sibling = cts.u.val;
+          nf_i++;
+       } else if (abbv->nf[nf_i].skip_szB == VARSZ_FORM) {
+          get_Form_contents( &cts, cc, c_die, False /*td3*/,
+-                            (DW_FORM)abbv->nf[nf_i].at_form );
++                            &abbv->nf[nf_i] );
+          nf_i++;
+       } else {
+          advance_position_of_Cursor (c_die, (ULong)abbv->nf[nf_i].skip_szB);
+@@ -1778,6 +1952,124 @@ static GExpr* get_GX ( const CUConst* cc, Bool td3, const FormContents* cts )
+    return gexpr;
+ }
+ 
++static
++HChar * get_line_str (struct _DebugInfo* di, Bool is_dw64,
++                      Cursor *data, const UInt form,
++                      DiSlice debugstr_img, DiSlice debuglinestr_img)
++{
++   HChar *str = NULL;
++   switch (form) {
++   case DW_FORM_string: {
++      DiCursor distr = get_AsciiZ(data);
++      str = ML_(cur_step_strdup)(&distr, "di.gls.string");
++      break;
++   }
++   case DW_FORM_strp: {
++      UWord uw = (UWord)get_Dwarfish_UWord( data, is_dw64 );
++      DiCursor distr
++         = ML_(cur_plus)( ML_(cur_from_sli)(debugstr_img), uw );
++      str = ML_(cur_read_strdup)(distr, "di.gls.strp");
++      break;
++   }
++   case DW_FORM_line_strp: {
++      UWord uw = (UWord)get_Dwarfish_UWord( data, is_dw64 );
++      DiCursor distr
++         = ML_(cur_plus)( ML_(cur_from_sli)(debuglinestr_img), uw );
++      str = ML_(cur_read_strdup)(distr, "di.gls.line_strp");
++      break;
++   }
++   default:
++      ML_(symerr)(di, True,
++                  "Unknown path string FORM in .debug_line");
++      break;
++   }
++   return str;
++}
++
++static
++Int get_line_ndx (struct _DebugInfo* di,
++                  Cursor *data, const UInt form)
++{
++   Int res = 0;
++   switch (form) {
++   case DW_FORM_data1:
++      res = get_UChar(data);
++      break;
++   case DW_FORM_data2:
++      res = get_UShort(data);
++      break;
++   case DW_FORM_udata:
++      res = get_ULEB128(data);
++      break;
++   default:
++      ML_(symerr)(di, True,
++                  "Unknown directory_index value FORM in .debug_line");
++      break;
++   }
++   return res;
++}
++
++static
++void skip_line_form (struct _DebugInfo* di, Bool is_dw64,
++                         Cursor *d, const UInt form)
++{
++   switch (form) {
++   case DW_FORM_block: {
++      ULong len = get_ULEB128(d);
++      advance_position_of_Cursor (d, len);
++      break;
++   }
++   case DW_FORM_block1: {
++      UChar len = get_UChar(d);
++      advance_position_of_Cursor (d, len);
++      break;
++   }
++   case DW_FORM_block2: {
++      UShort len = get_UShort(d);
++      advance_position_of_Cursor (d, len);
++      break;
++   }
++   case DW_FORM_block4: {
++      UInt len = get_UInt(d);
++      advance_position_of_Cursor (d, len);
++      break;
++   }
++   case DW_FORM_flag:
++   case DW_FORM_data1:
++      advance_position_of_Cursor (d, 1);
++      break;
++   case DW_FORM_data2:
++      advance_position_of_Cursor (d, 2);
++      break;
++   case DW_FORM_data4:
++      advance_position_of_Cursor (d, 4);
++      break;
++   case DW_FORM_data8:
++      advance_position_of_Cursor (d, 8);
++      break;
++   case DW_FORM_data16:
++      advance_position_of_Cursor (d, 16);
++      break;
++   case DW_FORM_string:
++      (void)get_AsciiZ (d);
++      break;
++   case DW_FORM_strp:
++   case DW_FORM_line_strp:
++   case DW_FORM_sec_offset:
++      advance_position_of_Cursor (d, is_dw64 ? 8 : 4);
++      break;
++   case DW_FORM_udata:
++      (void)get_ULEB128(d);
++      break;
++   case DW_FORM_sdata:
++      (void)get_SLEB128(d);
++      break;
++   default:
++      ML_(symerr)(di, True, "Unknown FORM in .debug_line");
++      break;
++   }
++}
++
+ /* Returns an xarray* of directory names (indexed by the dwarf dirname
+    integer).
+    If 'compdir' is NULL, entry [0] will be set to "."
+@@ -1786,8 +2078,8 @@ static GExpr* get_GX ( const CUConst* cc, Bool td3, const FormContents* cts )
+    whatever that means, according to the DWARF3 spec.
+    FIXME??? readdwarf3.c/readdwarf.c have a lot of duplicated code */
+ static
+-XArray* read_dirname_xa (DebugInfo* di, const HChar *compdir,
+-                         Cursor *c,
++XArray* read_dirname_xa (DebugInfo* di, UShort version, const HChar *compdir,
++                         Cursor *c, const CUConst *cc,
+                          Bool td3 )
+ {
+    XArray*        dirname_xa;   /* xarray of HChar* dirname */
+@@ -1804,51 +2096,121 @@ XArray* read_dirname_xa (DebugInfo* di, const HChar *compdir,
+       dirname = compdir;
+       compdir_len = VG_(strlen)(compdir);
+    }
+-   VG_(addToXA) (dirname_xa, &dirname);
+-
+-   TRACE_D3(" The Directory Table%s\n", 
+-            peek_UChar(c) == 0 ? " is empty." : ":" );
+-
+-   while (peek_UChar(c) != 0) {
+-
+-      DiCursor cur = get_AsciiZ(c);
+-      HChar* data_str = ML_(cur_read_strdup)( cur, "dirname_xa.1" );
+-      TRACE_D3("  %s\n", data_str);
+-
+-      /* If data_str[0] is '/', then 'data' is an absolute path and we
+-         don't mess with it.  Otherwise, construct the
+-         path 'compdir' ++ "/" ++ 'data'. */
+-
+-      if (data_str[0] != '/' 
+-          /* not an absolute path */
+-          && compdir
+-          /* actually got something sensible for compdir */
+-          && compdir_len)
+-      {
+-         SizeT  len = compdir_len + 1 + VG_(strlen)(data_str);
+-         HChar *buf = ML_(dinfo_zalloc)("dirname_xa.2", len + 1);
+-
+-         VG_(strcpy)(buf, compdir);
+-         VG_(strcat)(buf, "/");
+-         VG_(strcat)(buf, data_str);
+-
+-         dirname = ML_(addStr)(di, buf, len);
+-         VG_(addToXA) (dirname_xa, &dirname);
+-         if (0) VG_(printf)("rel path  %s\n", buf);
+-         ML_(dinfo_free)(buf);
+-      } else {
+-         /* just use 'data'. */
+-         dirname = ML_(addStr)(di,data_str,-1);
+-         VG_(addToXA) (dirname_xa, &dirname);
+-         if (0) VG_(printf)("abs path  %s\n", data_str);
++
++   /* For version 5, the compdir is the first (zero) entry. */
++   if (version < 5)
++      VG_(addToXA) (dirname_xa, &dirname);
++
++   if (version < 5) {
++      TRACE_D3("The Directory Table%s\n",
++               peek_UChar(c) == 0 ? " is empty." : ":" );
++
++      while (peek_UChar(c) != 0) {
++
++         DiCursor cur = get_AsciiZ(c);
++         HChar* data_str = ML_(cur_read_strdup)( cur, "dirname_xa.1" );
++         TRACE_D3("  %s\n", data_str);
++
++         /* If data_str[0] is '/', then 'data' is an absolute path and we
++            don't mess with it.  Otherwise, construct the
++            path 'compdir' ++ "/" ++ 'data'. */
++
++         if (data_str[0] != '/'
++             /* not an absolute path */
++             && compdir
++             /* actually got something sensible for compdir */
++             && compdir_len)
++         {
++            SizeT  len = compdir_len + 1 + VG_(strlen)(data_str);
++            HChar *buf = ML_(dinfo_zalloc)("dirname_xa.2", len + 1);
++
++            VG_(strcpy)(buf, compdir);
++            VG_(strcat)(buf, "/");
++            VG_(strcat)(buf, data_str);
++
++            dirname = ML_(addStr)(di, buf, len);
++            VG_(addToXA) (dirname_xa, &dirname);
++            if (0) VG_(printf)("rel path  %s\n", buf);
++            ML_(dinfo_free)(buf);
++         } else {
++            /* just use 'data'. */
++            dirname = ML_(addStr)(di,data_str,-1);
++            VG_(addToXA) (dirname_xa, &dirname);
++            if (0) VG_(printf)("abs path  %s\n", data_str);
++         }
++
++         ML_(dinfo_free)(data_str);
++      }
++   } else {
++      UChar forms[256];
++      UChar p_ndx = 0;
++      UInt directories_count;
++      UChar directory_entry_format_count;
++      UInt n;
++      DiSlice debugstr_img = cc->escn_debug_str;
++      DiSlice debuglinestr_img = cc->escn_debug_line_str;
++
++      directory_entry_format_count = get_UChar(c);
++      for (n = 0; n < directory_entry_format_count; n++) {
++         UInt lnct = get_ULEB128(c);
++         UInt form = get_ULEB128(c);
++         if (lnct == DW_LNCT_path)
++            p_ndx = n;
++         forms[n] = form;
+       }
++      directories_count = get_ULEB128(c);
++      TRACE_D3("The Directory Table%s\n",
++               directories_count == 0 ? " is empty." : ":" );
++
++      for (n = 0; n < directories_count; n++) {
++         UInt f;
++         for (f = 0; f < directory_entry_format_count; f++) {
++            UInt form = forms[f];
++            if (f == p_ndx) {
++               HChar *data_str = get_line_str (di, cc->is_dw64, c, form,
++                                               debugstr_img,
++                                               debuglinestr_img);
++               TRACE_D3("  %s\n", data_str);
++
++               /* If data_str[0] is '/', then 'data' is an absolute path and we
++                  don't mess with it.  Otherwise, construct the
++                  path 'compdir' ++ "/" ++ 'data'. */
++
++               if (data_str[0] != '/'
++                   /* not an absolute path */
++                   && compdir
++                   /* actually got something sensible for compdir */
++                   && compdir_len)
++               {
++                  SizeT  len = compdir_len + 1 + VG_(strlen)(data_str);
++                  HChar *buf = ML_(dinfo_zalloc)("dirname_xa.2", len + 1);
++
++                  VG_(strcpy)(buf, compdir);
++                  VG_(strcat)(buf, "/");
++                  VG_(strcat)(buf, data_str);
++
++                  dirname = ML_(addStr)(di, buf, len);
++                  VG_(addToXA) (dirname_xa, &dirname);
++                  if (0) VG_(printf)("rel path  %s\n", buf);
++                  ML_(dinfo_free)(buf);
++               } else {
++                  /* just use 'data'. */
++                  dirname = ML_(addStr)(di,data_str,-1);
++                  VG_(addToXA) (dirname_xa, &dirname);
++                  if (0) VG_(printf)("abs path  %s\n", data_str);
++               }
+ 
+-      ML_(dinfo_free)(data_str);
++               ML_(dinfo_free)(data_str);
++            } else {
++               skip_line_form (di, cc->is_dw64, c, form);
++            }
++         }
++      }
+    }
+ 
+    TRACE_D3 ("\n");
+ 
+-   if (get_UChar (c) != 0) {
++   if (version < 5 && get_UChar (c) != 0) {
+       ML_(symerr)(NULL, True,
+                   "could not get NUL at end of DWARF directory table");
+       VG_(deleteXA)(dirname_xa);
+@@ -1888,9 +2250,13 @@ void read_filename_table( /*MOD*/XArray* /* of UInt* */ fndn_ix_Table,
+    get_Initial_Length( &is_dw64, &c,
+                        "read_filename_table: invalid initial-length field" );
+    version = get_UShort( &c );
+-   if (version != 2 && version != 3 && version != 4)
+-     cc->barf("read_filename_table: Only DWARF version 2, 3 and 4 line info "
+-              "is currently supported.");
++   if (version != 2 && version != 3 && version != 4 && version != 5)
++     cc->barf("read_filename_table: Only DWARF version 2, 3, 4 and 5 "
++              "line info is currently supported.");
++   if (version >= 5) {
++      /* addrs_size = */ get_UChar( &c );
++      /* seg_size =   */ get_UChar( &c );
++   }
+    /*header_length              = (ULong)*/ get_Dwarfish_UWord( &c, is_dw64 );
+    /*minimum_instruction_length = */ get_UChar( &c );
+    if (version >= 4)
+@@ -1903,30 +2269,77 @@ void read_filename_table( /*MOD*/XArray* /* of UInt* */ fndn_ix_Table,
+    for (i = 1; i < (Word)opcode_base; i++)
+      (void)get_UChar( &c );
+ 
+-   dirname_xa = read_dirname_xa(cc->di, compdir, &c, td3);
++   dirname_xa = read_dirname_xa(cc->di, version, compdir, &c, cc, td3);
+ 
+    /* Read and record the file names table */
+    vg_assert( VG_(sizeXA)( fndn_ix_Table ) == 0 );
+-   /* Add a dummy index-zero entry.  DWARF3 numbers its files
+-      from 1, for some reason. */
+-   fndn_ix = ML_(addFnDn) ( cc->di, "<unknown_file>", NULL );
+-   VG_(addToXA)( fndn_ix_Table, &fndn_ix );
+-   while (peek_UChar(&c) != 0) {
+-      DiCursor cur = get_AsciiZ(&c);
+-      str = ML_(addStrFromCursor)( cc->di, cur );
+-      dir_xa_ix = get_ULEB128( &c );
+-      if (dirname_xa != NULL 
+-          && dir_xa_ix >= 0 && dir_xa_ix < VG_(sizeXA) (dirname_xa))
+-         dirname = *(HChar**)VG_(indexXA) ( dirname_xa, dir_xa_ix );
+-      else
+-         dirname = NULL;
+-      fndn_ix = ML_(addFnDn)( cc->di, str, dirname);
+-      TRACE_D3("  read_filename_table: %ld fndn_ix %u %s %s\n",
+-               VG_(sizeXA)(fndn_ix_Table), fndn_ix, 
+-               dirname, str);
++   if (version < 5) {
++      /* Add a dummy index-zero entry.  DWARF3 numbers its files
++         from 1, for some reason. */
++      fndn_ix = ML_(addFnDn) ( cc->di, "<unknown_file>", NULL );
+       VG_(addToXA)( fndn_ix_Table, &fndn_ix );
+-      (void)get_ULEB128( &c ); /* skip last mod time */
+-      (void)get_ULEB128( &c ); /* file size */
++      while (peek_UChar(&c) != 0) {
++         DiCursor cur = get_AsciiZ(&c);
++         str = ML_(addStrFromCursor)( cc->di, cur );
++         dir_xa_ix = get_ULEB128( &c );
++         if (dirname_xa != NULL
++             && dir_xa_ix >= 0 && dir_xa_ix < VG_(sizeXA) (dirname_xa))
++            dirname = *(HChar**)VG_(indexXA) ( dirname_xa, dir_xa_ix );
++         else
++            dirname = NULL;
++         fndn_ix = ML_(addFnDn)( cc->di, str, dirname);
++         TRACE_D3("  read_filename_table: %ld fndn_ix %u %s %s\n",
++                  VG_(sizeXA)(fndn_ix_Table), fndn_ix,
++                  dirname, str);
++         VG_(addToXA)( fndn_ix_Table, &fndn_ix );
++         (void)get_ULEB128( &c ); /* skip last mod time */
++         (void)get_ULEB128( &c ); /* file size */
++      }
++   } else {
++      UChar forms[256];
++      UChar p_ndx = 0, d_ndx = 0;
++      UInt file_names_count;
++      UChar file_names_entry_format_count;
++      UInt n;
++      DiSlice debugstr_img = cc->escn_debug_str;
++      DiSlice debuglinestr_img = cc->escn_debug_line_str;
++      file_names_entry_format_count = get_UChar( &c );
++      for (n = 0; n < file_names_entry_format_count; n++) {
++         UInt lnct = get_ULEB128( &c );
++         UInt form = get_ULEB128( &c );
++         if (lnct == DW_LNCT_path)
++            p_ndx = n;
++         if (lnct == DW_LNCT_directory_index)
++            d_ndx = n;
++         forms[n] = form;
++      }
++      file_names_count = get_ULEB128( &c );
++      for (n = 0; n < file_names_count; n++) {
++         UInt f;
++         dir_xa_ix  = 0;
++         str = NULL;
++         for (f = 0; f < file_names_entry_format_count; f++) {
++            UInt form = forms[f];
++            if (f == p_ndx)
++               str = get_line_str (cc->di, cc->is_dw64, &c, form,
++                                   debugstr_img, debuglinestr_img);
++            else if (n == d_ndx)
++               dir_xa_ix = get_line_ndx (cc->di, &c, form);
++            else
++               skip_line_form (cc->di, cc->is_dw64, &c, form);
++         }
++
++         if (dirname_xa != NULL
++             && dir_xa_ix >= 0 && dir_xa_ix < VG_(sizeXA) (dirname_xa))
++            dirname = *(HChar**)VG_(indexXA) ( dirname_xa, dir_xa_ix );
++         else
++            dirname = NULL;
++         fndn_ix = ML_(addFnDn)( cc->di, str, dirname);
++         TRACE_D3("  read_filename_table: %ld fndn_ix %u %s %s\n",
++                  VG_(sizeXA)(fndn_ix_Table), fndn_ix,
++                  dirname, str);
++         VG_(addToXA)( fndn_ix_Table, &fndn_ix );
++      }
+    }
+    /* We're done!  The rest of it is not interesting. */
+    if (dirname_xa != NULL)
+@@ -2011,11 +2424,12 @@ static void trace_DIE(
+    while (True) {
+       DW_AT   attr = (DW_AT)  abbv->nf[nf_i].at_name;
+       DW_FORM form = (DW_FORM)abbv->nf[nf_i].at_form;
++      const name_form *nf = &abbv->nf[nf_i];
+       nf_i++;
+       if (attr == 0 && form == 0) break;
+       VG_(printf)("     %-18s: ", ML_(pp_DW_AT)(attr));
+       /* Get the form contents, so as to print them */
+-      get_Form_contents( &cts, cc, &c, True, form );
++      get_Form_contents( &cts, cc, &c, True, nf );
+       if (attr == DW_AT_sibling && cts.szB > 0) {
+          sibling = cts.u.val;
+       }
+@@ -2094,9 +2508,10 @@ static void parse_var_DIE (
+       while (True) {
+          DW_AT   attr = (DW_AT)  abbv->nf[nf_i].at_name;
+          DW_FORM form = (DW_FORM)abbv->nf[nf_i].at_form;
++         const name_form *nf = &abbv->nf[nf_i];
+          nf_i++;
+          if (attr == 0 && form == 0) break;
+-         get_Form_contents( &cts, cc, c_die, False/*td3*/, form );
++         get_Form_contents( &cts, cc, c_die, False/*td3*/, nf );
+          if (attr == DW_AT_low_pc && cts.szB > 0) {
+             ip_lo   = cts.u.val;
+             have_lo = True;
+@@ -2196,9 +2611,10 @@ static void parse_var_DIE (
+       while (True) {
+          DW_AT   attr = (DW_AT)  abbv->nf[nf_i].at_name;
+          DW_FORM form = (DW_FORM)abbv->nf[nf_i].at_form;
++         const name_form *nf = &abbv->nf[nf_i];
+          nf_i++;
+          if (attr == 0 && form == 0) break;
+-         get_Form_contents( &cts, cc, c_die, False/*td3*/, form );
++         get_Form_contents( &cts, cc, c_die, False/*td3*/, nf );
+          if (attr == DW_AT_low_pc && cts.szB > 0) {
+             ip_lo   = cts.u.val;
+             have_lo = True;
+@@ -2282,9 +2698,10 @@ static void parse_var_DIE (
+       while (True) {
+          DW_AT   attr = (DW_AT)  abbv->nf[nf_i].at_name;
+          DW_FORM form = (DW_FORM)abbv->nf[nf_i].at_form;
++         const name_form *nf = &abbv->nf[nf_i];
+          nf_i++;
+          if (attr == 0 && form == 0) break;
+-         get_Form_contents( &cts, cc, c_die, False/*td3*/, form );
++         get_Form_contents( &cts, cc, c_die, False/*td3*/, nf );
+          n_attrs++;
+          if (attr == DW_AT_name && cts.szB < 0) {
+             name = ML_(addStrFromCursor)( cc->di, cts.u.cur );
+@@ -2646,9 +3063,10 @@ static const HChar* get_inlFnName (Int absori, const CUConst* cc, Bool td3)
+    while (True) {
+       DW_AT   attr = (DW_AT)  abbv->nf[nf_i].at_name;
+       DW_FORM form = (DW_FORM)abbv->nf[nf_i].at_form;
++      const name_form *nf = &abbv->nf[nf_i];
+       nf_i++;
+       if (attr == 0 && form == 0) break;
+-      get_Form_contents( &cts, cc, &c, False/*td3*/, form );
++      get_Form_contents( &cts, cc, &c, False/*td3*/, nf );
+       if (attr == DW_AT_name) {
+          HChar *fnname;
+          if (cts.szB >= 0)
+@@ -2720,9 +3138,10 @@ static Bool parse_inl_DIE (
+       while (True) {
+          DW_AT   attr = (DW_AT)  abbv->nf[nf_i].at_name;
+          DW_FORM form = (DW_FORM)abbv->nf[nf_i].at_form;
++         const name_form *nf = &abbv->nf[nf_i];
+          nf_i++;
+          if (attr == 0 && form == 0) break;
+-         get_Form_contents( &cts, cc, c_die, False/*td3*/, form );
++         get_Form_contents( &cts, cc, c_die, False/*td3*/, nf );
+          if (attr == DW_AT_low_pc && cts.szB > 0) {
+             ip_lo   = cts.u.val;
+             have_lo = True;
+@@ -2764,9 +3183,10 @@ static Bool parse_inl_DIE (
+       while (True) {
+          DW_AT   attr = (DW_AT)  abbv->nf[nf_i].at_name;
+          DW_FORM form = (DW_FORM)abbv->nf[nf_i].at_form;
++         const name_form *nf = &abbv->nf[nf_i];
+          nf_i++;
+          if (attr == 0 && form == 0) break;
+-         get_Form_contents( &cts, cc, c_die, False/*td3*/, form );
++         get_Form_contents( &cts, cc, c_die, False/*td3*/, nf );
+          if (attr == DW_AT_call_file && cts.szB > 0) {
+             Int ftabIx = (Int)cts.u.val;
+             if (ftabIx >= 1
+@@ -3090,9 +3510,10 @@ static void parse_type_DIE ( /*MOD*/XArray* /* of TyEnt */ tyents,
+       while (True) {
+          DW_AT   attr = (DW_AT)  abbv->nf[nf_i].at_name;
+          DW_FORM form = (DW_FORM)abbv->nf[nf_i].at_form;
++         const name_form *nf = &abbv->nf[nf_i];
+          nf_i++;
+          if (attr == 0 && form == 0) break;
+-         get_Form_contents( &cts, cc, c_die, False/*td3*/, form );
++         get_Form_contents( &cts, cc, c_die, False/*td3*/, nf );
+          if (attr != DW_AT_language)
+             continue;
+          if (cts.szB <= 0)
+@@ -3132,9 +3553,10 @@ static void parse_type_DIE ( /*MOD*/XArray* /* of TyEnt */ tyents,
+       while (True) {
+          DW_AT   attr = (DW_AT)  abbv->nf[nf_i].at_name;
+          DW_FORM form = (DW_FORM)abbv->nf[nf_i].at_form;
++         const name_form *nf = &abbv->nf[nf_i];
+          nf_i++;
+          if (attr == 0 && form == 0) break;
+-         get_Form_contents( &cts, cc, c_die, False/*td3*/, form );
++         get_Form_contents( &cts, cc, c_die, False/*td3*/, nf );
+          if (attr == DW_AT_name && cts.szB < 0) {
+             typeE.Te.TyBase.name
+                = ML_(cur_read_strdup)( cts.u.cur,
+@@ -3243,9 +3665,10 @@ static void parse_type_DIE ( /*MOD*/XArray* /* of TyEnt */ tyents,
+       while (True) {
+          DW_AT   attr = (DW_AT)  abbv->nf[nf_i].at_name;
+          DW_FORM form = (DW_FORM)abbv->nf[nf_i].at_form;
++         const name_form *nf = &abbv->nf[nf_i];
+          nf_i++;
+          if (attr == 0 && form == 0) break;
+-         get_Form_contents( &cts, cc, c_die, False/*td3*/, form );
++         get_Form_contents( &cts, cc, c_die, False/*td3*/, nf );
+          if (attr == DW_AT_byte_size && cts.szB > 0) {
+             typeE.Te.TyPorR.szB = cts.u.val;
+          }
+@@ -3275,9 +3698,10 @@ static void parse_type_DIE ( /*MOD*/XArray* /* of TyEnt */ tyents,
+       while (True) {
+          DW_AT   attr = (DW_AT)  abbv->nf[nf_i].at_name;
+          DW_FORM form = (DW_FORM)abbv->nf[nf_i].at_form;
++         const name_form *nf = &abbv->nf[nf_i];
+          nf_i++;
+          if (attr == 0 && form == 0) break;
+-         get_Form_contents( &cts, cc, c_die, False/*td3*/, form );
++         get_Form_contents( &cts, cc, c_die, False/*td3*/, nf );
+          if (attr == DW_AT_name && cts.szB < 0) {
+             typeE.Te.TyEnum.name
+                = ML_(cur_read_strdup)( cts.u.cur,
+@@ -3356,9 +3780,10 @@ static void parse_type_DIE ( /*MOD*/XArray* /* of TyEnt */ tyents,
+       while (True) {
+          DW_AT   attr = (DW_AT)  abbv->nf[nf_i].at_name;
+          DW_FORM form = (DW_FORM)abbv->nf[nf_i].at_form;
++         const name_form *nf = &abbv->nf[nf_i];
+          nf_i++;
+          if (attr == 0 && form == 0) break;
+-         get_Form_contents( &cts, cc, c_die, False/*td3*/, form );
++         get_Form_contents( &cts, cc, c_die, False/*td3*/, nf );
+          if (attr == DW_AT_name && cts.szB < 0) {
+             atomE.Te.Atom.name 
+               = ML_(cur_read_strdup)( cts.u.cur,
+@@ -3411,9 +3836,10 @@ static void parse_type_DIE ( /*MOD*/XArray* /* of TyEnt */ tyents,
+       while (True) {
+          DW_AT   attr = (DW_AT)  abbv->nf[nf_i].at_name;
+          DW_FORM form = (DW_FORM)abbv->nf[nf_i].at_form;
++         const name_form *nf = &abbv->nf[nf_i];
+          nf_i++;
+          if (attr == 0 && form == 0) break;
+-         get_Form_contents( &cts, cc, c_die, False/*td3*/, form );
++         get_Form_contents( &cts, cc, c_die, False/*td3*/, nf );
+          if (attr == DW_AT_name && cts.szB < 0) {
+             typeE.Te.TyStOrUn.name
+                = ML_(cur_read_strdup)( cts.u.cur,
+@@ -3498,9 +3924,10 @@ static void parse_type_DIE ( /*MOD*/XArray* /* of TyEnt */ tyents,
+       while (True) {
+          DW_AT   attr = (DW_AT)  abbv->nf[nf_i].at_name;
+          DW_FORM form = (DW_FORM)abbv->nf[nf_i].at_form;
++         const name_form *nf = &abbv->nf[nf_i];
+          nf_i++;
+          if (attr == 0 && form == 0) break;
+-         get_Form_contents( &cts, cc, c_die, False/*td3*/, form );
++         get_Form_contents( &cts, cc, c_die, False/*td3*/, nf );
+          if (attr == DW_AT_name && cts.szB < 0) {
+             fieldE.Te.Field.name
+                = ML_(cur_read_strdup)( cts.u.cur,
+@@ -3585,9 +4012,10 @@ static void parse_type_DIE ( /*MOD*/XArray* /* of TyEnt */ tyents,
+       while (True) {
+          DW_AT   attr = (DW_AT)  abbv->nf[nf_i].at_name;
+          DW_FORM form = (DW_FORM)abbv->nf[nf_i].at_form;
++         const name_form *nf = &abbv->nf[nf_i];
+          nf_i++;
+          if (attr == 0 && form == 0) break;
+-         get_Form_contents( &cts, cc, c_die, False/*td3*/, form );
++         get_Form_contents( &cts, cc, c_die, False/*td3*/, nf );
+          if (attr == DW_AT_type && cts.szB > 0) {
+             typeE.Te.TyArray.typeR
+                = cook_die_using_form( cc, (UWord)cts.u.val, form );
+@@ -3626,9 +4054,10 @@ static void parse_type_DIE ( /*MOD*/XArray* /* of TyEnt */ tyents,
+       while (True) {
+          DW_AT   attr = (DW_AT)  abbv->nf[nf_i].at_name;
+          DW_FORM form = (DW_FORM)abbv->nf[nf_i].at_form;
++         const name_form *nf = &abbv->nf[nf_i];
+          nf_i++;
+          if (attr == 0 && form == 0) break;
+-         get_Form_contents( &cts, cc, c_die, False/*td3*/, form );
++         get_Form_contents( &cts, cc, c_die, False/*td3*/, nf );
+          if (attr == DW_AT_lower_bound && cts.szB > 0 
+              && form_expected_for_bound (form)) {
+             lower      = (Long)cts.u.val;
+@@ -3714,9 +4143,10 @@ static void parse_type_DIE ( /*MOD*/XArray* /* of TyEnt */ tyents,
+       while (True) {
+          DW_AT   attr = (DW_AT)  abbv->nf[nf_i].at_name;
+          DW_FORM form = (DW_FORM)abbv->nf[nf_i].at_form;
++         const name_form *nf = &abbv->nf[nf_i];
+          nf_i++;
+          if (attr == 0 && form == 0) break;
+-         get_Form_contents( &cts, cc, c_die, False/*td3*/, form );
++         get_Form_contents( &cts, cc, c_die, False/*td3*/, nf );
+          if (attr == DW_AT_name && cts.szB < 0) {
+             typeE.Te.TyTyDef.name
+                = ML_(cur_read_strdup)( cts.u.cur,
+@@ -3764,9 +4194,10 @@ static void parse_type_DIE ( /*MOD*/XArray* /* of TyEnt */ tyents,
+       while (True) {
+          DW_AT   attr = (DW_AT)  abbv->nf[nf_i].at_name;
+          DW_FORM form = (DW_FORM)abbv->nf[nf_i].at_form;
++         const name_form *nf = &abbv->nf[nf_i];
+          nf_i++;
+          if (attr == 0 && form == 0) break;
+-         get_Form_contents( &cts, cc, c_die, False/*td3*/, form );
++         get_Form_contents( &cts, cc, c_die, False/*td3*/, nf );
+          if (attr == DW_AT_type && cts.szB > 0) {
+             typeE.Te.TyQual.typeR
+                = cook_die_using_form( cc, (UWord)cts.u.val, form );
+@@ -4486,6 +4917,9 @@ static void trace_debug_abbrev (const DebugInfo* di,
+             while (True) {
+                ULong at_name = get_ULEB128( &abbv );
+                ULong at_form = get_ULEB128( &abbv );
++               if (at_form == DW_FORM_implicit_const) {
++                  /* Long at_val = */ get_SLEB128 ( &abbv );
++               }
+                if (at_name == 0 && at_form == 0) break;
+                TRACE_D3("    %-18s %s\n", 
+                         ML_(pp_DW_AT)(at_name), ML_(pp_DW_FORM)(at_form));
+@@ -4502,9 +4936,10 @@ void new_dwarf3_reader_wrk (
+    DiSlice escn_debug_info,      DiSlice escn_debug_types,
+    DiSlice escn_debug_abbv,      DiSlice escn_debug_line,
+    DiSlice escn_debug_str,       DiSlice escn_debug_ranges,
++   DiSlice escn_debug_rnglists,  DiSlice escn_debug_loclists,
+    DiSlice escn_debug_loc,       DiSlice escn_debug_info_alt,
+    DiSlice escn_debug_abbv_alt,  DiSlice escn_debug_line_alt,
+-   DiSlice escn_debug_str_alt
++   DiSlice escn_debug_str_alt,   DiSlice escn_debug_line_str
+ )
+ {
+    XArray* /* of TyEnt */     tyents = NULL;
+@@ -4738,6 +5173,8 @@ void new_dwarf3_reader_wrk (
+          cc.escn_debug_str      = pass == 0 ? escn_debug_str_alt
+                                             : escn_debug_str;
+          cc.escn_debug_ranges   = escn_debug_ranges;
++         cc.escn_debug_rnglists = escn_debug_rnglists;
++         cc.escn_debug_loclists = escn_debug_loclists;
+          cc.escn_debug_loc      = escn_debug_loc;
+          cc.escn_debug_line     = pass == 0 ? escn_debug_line_alt
+                                             : escn_debug_line;
+@@ -4746,6 +5183,7 @@ void new_dwarf3_reader_wrk (
+          cc.escn_debug_types    = escn_debug_types;
+          cc.escn_debug_info_alt = escn_debug_info_alt;
+          cc.escn_debug_str_alt  = escn_debug_str_alt;
++         cc.escn_debug_line_str = escn_debug_line_str;
+          cc.types_cuOff_bias    = escn_debug_info.szB;
+          cc.alt_cuOff_bias      = escn_debug_info.szB + escn_debug_types.szB;
+          cc.cu_start_offset     = cu_start_offset;
+@@ -5216,9 +5654,10 @@ ML_(new_dwarf3_reader) (
+    DiSlice escn_debug_info,      DiSlice escn_debug_types,
+    DiSlice escn_debug_abbv,      DiSlice escn_debug_line,
+    DiSlice escn_debug_str,       DiSlice escn_debug_ranges,
++   DiSlice escn_debug_rnglists,  DiSlice escn_debug_loclists,
+    DiSlice escn_debug_loc,       DiSlice escn_debug_info_alt,
+    DiSlice escn_debug_abbv_alt,  DiSlice escn_debug_line_alt,
+-   DiSlice escn_debug_str_alt
++   DiSlice escn_debug_str_alt,   DiSlice escn_debug_line_str
+ )
+ {
+    volatile Int  jumped;
+@@ -5239,9 +5678,10 @@ ML_(new_dwarf3_reader) (
+                              escn_debug_info,     escn_debug_types,
+                              escn_debug_abbv,     escn_debug_line,
+                              escn_debug_str,      escn_debug_ranges,
++                             escn_debug_rnglists, escn_debug_loclists,
+                              escn_debug_loc,      escn_debug_info_alt,
+                              escn_debug_abbv_alt, escn_debug_line_alt,
+-                             escn_debug_str_alt );
++                             escn_debug_str_alt,  escn_debug_line_str );
+       d3rd_jmpbuf_valid = False;
+       TRACE_D3("\n------ .debug_info reading was successful ------\n");
+    } else {
+diff --git a/coregrind/m_debuginfo/readelf.c b/coregrind/m_debuginfo/readelf.c
+index bc5a732d7..404034df0 100644
+--- a/coregrind/m_debuginfo/readelf.c
++++ b/coregrind/m_debuginfo/readelf.c
+@@ -2577,7 +2577,10 @@ Bool ML_(read_elf_debug_info) ( struct _DebugInfo* di )
+       DiSlice debug_types_escn    = DiSlice_INVALID; // .debug_types  (dwarf4)
+       DiSlice debug_abbv_escn     = DiSlice_INVALID; // .debug_abbrev (dwarf2)
+       DiSlice debug_str_escn      = DiSlice_INVALID; // .debug_str    (dwarf2)
++      DiSlice debug_line_str_escn = DiSlice_INVALID; // .debug_line_str(dwarf5)
+       DiSlice debug_ranges_escn   = DiSlice_INVALID; // .debug_ranges (dwarf2)
++      DiSlice debug_rnglists_escn = DiSlice_INVALID; // .debug_rnglists(dwarf5)
++      DiSlice debug_loclists_escn = DiSlice_INVALID; // .debug_loclists(dwarf5)
+       DiSlice debug_loc_escn      = DiSlice_INVALID; // .debug_loc    (dwarf2)
+       DiSlice debug_frame_escn    = DiSlice_INVALID; // .debug_frame  (dwarf2)
+       DiSlice debug_line_alt_escn = DiSlice_INVALID; // .debug_line   (alt)
+@@ -2683,10 +2686,22 @@ Bool ML_(read_elf_debug_info) ( struct _DebugInfo* di )
+          if (!ML_(sli_is_valid)(debug_str_escn))
+             FIND(".zdebug_str",        debug_str_escn)
+ 
++         FIND(   ".debug_line_str",    debug_line_str_escn)
++         if (!ML_(sli_is_valid)(debug_line_str_escn))
++            FIND(".zdebug_str",        debug_line_str_escn)
++
+          FIND(   ".debug_ranges",      debug_ranges_escn)
+          if (!ML_(sli_is_valid)(debug_ranges_escn))
+             FIND(".zdebug_ranges",     debug_ranges_escn)
+ 
++         FIND(   ".debug_rnglists",    debug_rnglists_escn)
++         if (!ML_(sli_is_valid)(debug_rnglists_escn))
++            FIND(".zdebug_rnglists",   debug_rnglists_escn)
++
++         FIND(   ".debug_loclists",    debug_loclists_escn)
++         if (!ML_(sli_is_valid)(debug_loclists_escn))
++            FIND(".zdebug_loclists",   debug_loclists_escn)
++
+          FIND(   ".debug_loc",         debug_loc_escn)
+          if (!ML_(sli_is_valid)(debug_loc_escn))
+             FIND(".zdebug_loc",    debug_loc_escn)
+@@ -2994,10 +3009,22 @@ Bool ML_(read_elf_debug_info) ( struct _DebugInfo* di )
+             if (!ML_(sli_is_valid)(debug_str_escn))
+                FIND(need_dwarf2,     ".zdebug_str",       debug_str_escn)
+ 
++            FIND(   need_dwarf2,     ".debug_line_str",   debug_line_str_escn)
++            if (!ML_(sli_is_valid)(debug_line_str_escn))
++               FIND(need_dwarf2,     ".zdebug_line_str",  debug_line_str_escn)
++
+             FIND(   need_dwarf2,     ".debug_ranges",     debug_ranges_escn)
+             if (!ML_(sli_is_valid)(debug_ranges_escn))
+                FIND(need_dwarf2,     ".zdebug_ranges",    debug_ranges_escn)
+ 
++            FIND(   need_dwarf2,     ".debug_rnglists",   debug_rnglists_escn)
++            if (!ML_(sli_is_valid)(debug_rnglists_escn))
++               FIND(need_dwarf2,     ".zdebug_rnglists",  debug_rnglists_escn)
++
++            FIND(   need_dwarf2,     ".debug_loclists",   debug_loclists_escn)
++            if (!ML_(sli_is_valid)(debug_loclists_escn))
++               FIND(need_dwarf2,     ".zdebug_loclists",  debug_loclists_escn)
++
+             FIND(   need_dwarf2,     ".debug_loc",        debug_loc_escn)
+             if (!ML_(sli_is_valid)(debug_loc_escn))
+                FIND(need_dwarf2,     ".zdebug_loc",       debug_loc_escn)
+@@ -3231,7 +3258,8 @@ Bool ML_(read_elf_debug_info) ( struct _DebugInfo* di )
+                                       debug_abbv_escn,
+                                       debug_line_escn,
+                                       debug_str_escn,
+-                                      debug_str_alt_escn );
++                                      debug_str_alt_escn,
++                                      debug_line_str_escn);
+          /* The new reader: read the DIEs in .debug_info to acquire
+             information on variable types and locations or inline info.
+             But only if the tool asks for it, or the user requests it on
+@@ -3242,9 +3270,10 @@ Bool ML_(read_elf_debug_info) ( struct _DebugInfo* di )
+                di, debug_info_escn,     debug_types_escn,
+                    debug_abbv_escn,     debug_line_escn,
+                    debug_str_escn,      debug_ranges_escn,
++                   debug_rnglists_escn, debug_loclists_escn,
+                    debug_loc_escn,      debug_info_alt_escn,
+                    debug_abbv_alt_escn, debug_line_alt_escn,
+-                   debug_str_alt_escn
++                   debug_str_alt_escn,  debug_line_str_escn
+             );
+          }
+       }
+diff --git a/coregrind/m_debuginfo/readmacho.c b/coregrind/m_debuginfo/readmacho.c
+index f39ee006f..9153a74ca 100644
+--- a/coregrind/m_debuginfo/readmacho.c
++++ b/coregrind/m_debuginfo/readmacho.c
+@@ -1103,8 +1103,14 @@ Bool ML_(read_macho_debug_info)( struct _DebugInfo* di )
+          = getsectdata(dsli, "__DWARF", "__debug_line", NULL);
+       DiSlice debug_str_mscn
+          = getsectdata(dsli, "__DWARF", "__debug_str", NULL);
++      DiSlice debug_line_str_mscn
++         = getsectdata(dsli, "__DWARF", "__debug_line_str", NULL);
+       DiSlice debug_ranges_mscn
+          = getsectdata(dsli, "__DWARF", "__debug_ranges", NULL);
++      DiSlice debug_rnglists_mscn
++         = getsectdata(dsli, "__DWARF", "__debug_rnglists", NULL);
++      DiSlice debug_loclists_mscn
++         = getsectdata(dsli, "__DWARF", "__debug_loclists", NULL);
+       DiSlice debug_loc_mscn
+          = getsectdata(dsli, "__DWARF", "__debug_loc", NULL);
+ 
+@@ -1145,7 +1151,8 @@ Bool ML_(read_macho_debug_info)( struct _DebugInfo* di )
+                                       debug_abbv_mscn,
+                                       debug_line_mscn,
+                                       debug_str_mscn,
+-                                      DiSlice_INVALID /* ALT .debug_str */ );
++                                      DiSlice_INVALID, /* ALT .debug_str */
++                                      debug_line_str );
+ 
+          /* The new reader: read the DIEs in .debug_info to acquire
+             information on variable types and locations or inline info.
+@@ -1160,11 +1167,14 @@ Bool ML_(read_macho_debug_info)( struct _DebugInfo* di )
+                    debug_line_mscn,
+                    debug_str_mscn,
+                    debug_ranges_mscn,
++                   debug_rnglists_mscn,
++                   debug_loclists_mscn,
+                    debug_loc_mscn,
+                    DiSlice_INVALID, /* ALT .debug_info */
+                    DiSlice_INVALID, /* ALT .debug_abbv */
+                    DiSlice_INVALID, /* ALT .debug_line */
+-                   DiSlice_INVALID  /* ALT .debug_str */
++                   DiSlice_INVALID, /* ALT .debug_str */
++                   debug_line_str_mscn  /* .debug_line_str */
+             );
+          }
+       }
+-- 
+2.18.4
+
