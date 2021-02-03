@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.16.1
-Release: 15%{?dist}
+Release: 16%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -142,6 +142,10 @@ Patch21: valgrind-3.16.1-ppc64-scv-hwcap.patch
 
 # KDE#432102 Support DWARF5
 Patch22: valgrind-3.16.1-dwarf5.patch
+
+# KDE#410743 shmat() calls for 32-bit programs fail when running in 64-bit
+# RHBZ#1909548 shmctl(IPC_STAT) doesn't set shm_nattch on aarch64
+Patch23: valgrind-3.16.0-shmctl.patch
 
 BuildRequires: make
 BuildRequires: glibc-devel
@@ -294,6 +298,7 @@ Valgrind User Manual for details.
 %patch20 -p1
 %patch21 -p1
 %patch22 -p1
+%patch23 -p1
 
 %build
 # LTO triggers undefined symbols in valgrind.  Valgrind has a --enable-lto
@@ -518,6 +523,9 @@ fi
 %endif
 
 %changelog
+* Wed Feb  3 2021 Mark Wielaard <mjw@fedoraproject.org> - 3.16.1-16
+- Add valgrind-3.16.0-shmctl.patch
+
 * Wed Jan 27 2021 Fedora Release Engineering <releng@fedoraproject.org> - 1:3.16.1-15
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_34_Mass_Rebuild
 
