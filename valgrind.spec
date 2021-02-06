@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.16.1
-Release: 16%{?dist}
+Release: 17%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -146,6 +146,10 @@ Patch22: valgrind-3.16.1-dwarf5.patch
 # KDE#410743 shmat() calls for 32-bit programs fail when running in 64-bit
 # RHBZ#1909548 shmctl(IPC_STAT) doesn't set shm_nattch on aarch64
 Patch23: valgrind-3.16.0-shmctl.patch
+
+# KDE#140178 open("/proc/self/exe", ...); doesn't quite work
+# RHBZ#1925786 valgrind appears to only interject readlink on /proc/self/exe
+Patch24: valgrind-3.16.1-open-proc-self-exe.patch
 
 BuildRequires: make
 BuildRequires: glibc-devel
@@ -299,6 +303,7 @@ Valgrind User Manual for details.
 %patch21 -p1
 %patch22 -p1
 %patch23 -p1
+%patch24 -p1
 
 %build
 # LTO triggers undefined symbols in valgrind.  Valgrind has a --enable-lto
@@ -523,6 +528,9 @@ fi
 %endif
 
 %changelog
+* Sat Feb  6 2021 Mark Wielaard <mjw@fedoraproject.org> - 3.16.1-17
+- Add valgrind-3.16.1-open-proc-self-exe.patch
+
 * Wed Feb  3 2021 Mark Wielaard <mjw@fedoraproject.org> - 3.16.1-16
 - Add valgrind-3.16.0-shmctl.patch
 
