@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.16.1
-Release: 17%{?dist}
+Release: 18%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -528,6 +528,9 @@ fi
 %endif
 
 %changelog
+* Sat Feb  6 2021 Mark Wielaard <mjw@fedoraproject.org> - 3.16.1-18
+- Update valgrind-3.16.1-open-proc-self-exe.patch to handle openat
+
 * Sat Feb  6 2021 Mark Wielaard <mjw@fedoraproject.org> - 3.16.1-17
 - Add valgrind-3.16.1-open-proc-self-exe.patch
 
