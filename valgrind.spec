@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.16.1
-Release: 18%{?dist}
+Release: 19%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -150,6 +150,9 @@ Patch23: valgrind-3.16.0-shmctl.patch
 # KDE#140178 open("/proc/self/exe", ...); doesn't quite work
 # RHBZ#1925786 valgrind appears to only interject readlink on /proc/self/exe
 Patch24: valgrind-3.16.1-open-proc-self-exe.patch
+
+# RHBZ#1927153 -flto makes valgrind report non-existing paths to source files
+Patch25: valgrind-3.16.1-readdwarf-line.patch
 
 BuildRequires: make
 BuildRequires: glibc-devel
@@ -304,6 +307,7 @@ Valgrind User Manual for details.
 %patch22 -p1
 %patch23 -p1
 %patch24 -p1
+%patch25 -p1
 
 %build
 # LTO triggers undefined symbols in valgrind.  Valgrind has a --enable-lto
@@ -528,6 +532,9 @@ fi
 %endif
 
 %changelog
+* Sun Feb 21 2021 Mark Wielaard <mjw@fedoraproject.org> - 3.16.1-19
+- Add valgrind-3.16.1-readdwarf-line.patch
+
 * Sat Feb  6 2021 Mark Wielaard <mjw@fedoraproject.org> - 3.16.1-18
 - Update valgrind-3.16.1-open-proc-self-exe.patch to handle openat
 

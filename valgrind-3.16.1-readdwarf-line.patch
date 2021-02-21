@@ -1,0 +1,53 @@
+commit 67363912e9cdba83869a72ff8c4084e7a7e4ab85
+Author: Mark Wielaard <mark@klomp.org>
+Date:   Sun Feb 21 22:45:51 2021 +0100
+
+    Fix typo in DWARF 5 line table readers
+    
+    This typo meant the directory entry was most often zero, which
+    happened to be sometimes correct anyway (since zero is the compdir).
+    So for simple testcases it looked correct. But it would be wrong for
+    compilation units not in the current compdir. Like files compiled with
+    a relative of absolute path.
+    
+    The same typo was in both readdwarf.c (read_dwarf2_lineblock) and
+    readdwarf3.c (read_filename_table). read_dwarf2_lineblock also had
+    an extra "dwarf" string in the debug-line output.
+    
+    https://bugzilla.redhat.com/show_bug.cgi?id=1927153
+
+diff --git a/coregrind/m_debuginfo/readdwarf.c b/coregrind/m_debuginfo/readdwarf.c
+index 88d5d99f1..3996623ed 100644
+--- a/coregrind/m_debuginfo/readdwarf.c
++++ b/coregrind/m_debuginfo/readdwarf.c
+@@ -683,7 +683,7 @@ void read_dwarf2_lineblock ( struct _DebugInfo* di,
+       directories_count = step_leb128U(&data);
+       /* Read the contents of the Directory table.  */
+       if (di->ddump_line)
+-         VG_(printf)(" dwarf The Directory Table%s\n",
++         VG_(printf)(" The Directory Table%s\n",
+                      directories_count == 0 ? " is empty." : ":" );
+ 
+       for (n = 0; n < directories_count; n++) {
+@@ -796,7 +796,7 @@ void read_dwarf2_lineblock ( struct _DebugInfo* di,
+             if (f == p_ndx)
+                name = get_line_str (di, ui, &data, form,
+                                     debugstr_img, debuglinestr_img);
+-            else if (n == d_ndx)
++            else if (f == d_ndx)
+                diridx = get_line_ndx (di, &data, form);
+             else
+                data = skip_line_form (di, ui, data, form);
+diff --git a/coregrind/m_debuginfo/readdwarf3.c b/coregrind/m_debuginfo/readdwarf3.c
+index 82bc8f241..60fc40244 100644
+--- a/coregrind/m_debuginfo/readdwarf3.c
++++ b/coregrind/m_debuginfo/readdwarf3.c
+@@ -2323,7 +2323,7 @@ void read_filename_table( /*MOD*/XArray* /* of UInt* */ fndn_ix_Table,
+             if (f == p_ndx)
+                str = get_line_str (cc->di, cc->is_dw64, &c, form,
+                                    debugstr_img, debuglinestr_img);
+-            else if (n == d_ndx)
++            else if (f == d_ndx)
+                dir_xa_ix = get_line_ndx (cc->di, &c, form);
+             else
+                skip_line_form (cc->di, cc->is_dw64, &c, form);
