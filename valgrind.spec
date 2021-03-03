@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.16.1
-Release: 19%{?dist}
+Release: 20%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -153,6 +153,10 @@ Patch24: valgrind-3.16.1-open-proc-self-exe.patch
 
 # RHBZ#1927153 -flto makes valgrind report non-existing paths to source files
 Patch25: valgrind-3.16.1-readdwarf-line.patch
+
+# RHBZ#433898 netresolve: FTBFS in Fedora rawhide/f34 because arm64 valgrind
+# KDE#433898 arm64: Handle sp, lr, fp as DwReg in CfiExpr
+Patch26: valgrind-3.16.1-arm64_sp_lr_fp_DwReg.patch
 
 BuildRequires: make
 BuildRequires: glibc-devel
@@ -308,6 +312,7 @@ Valgrind User Manual for details.
 %patch23 -p1
 %patch24 -p1
 %patch25 -p1
+%patch26 -p1
 
 %build
 # LTO triggers undefined symbols in valgrind.  Valgrind has a --enable-lto
@@ -532,6 +537,9 @@ fi
 %endif
 
 %changelog
+* Wed Mar  3 2021 Mark Wielaard <mjw@fedoraproject.org> - 3.16.1-20
+- Add valgrind-3.16.1-arm64_sp_lr_fp_DwReg.patch
+
 * Sun Feb 21 2021 Mark Wielaard <mjw@fedoraproject.org> - 3.16.1-19
 - Add valgrind-3.16.1-readdwarf-line.patch
 
