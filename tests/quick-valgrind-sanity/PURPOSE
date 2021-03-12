@@ -1,0 +1,3 @@
+PURPOSE of /tools/valgrind/Sanity/quick-valgrind-sanity
+Description: Very fast check that valgrind is working
+Author: Miroslav Franc <mfranc@redhat.com>
