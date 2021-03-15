@@ -2,8 +2,8 @@
 
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
-Version: 3.16.1
-Release: 20%{?dist}
+Version: 3.17.0
+Release: 0.1.RC1%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -71,7 +71,7 @@ URL: http://www.valgrind.org/
 # So those will already have their full symbol table.
 %undefine _include_minidebuginfo
 
-Source0: ftp://sourceware.org/pub/valgrind/valgrind-%{version}.tar.bz2
+Source0: ftp://sourceware.org/pub/valgrind/valgrind-%{version}.RC1.tar.bz2
 
 # Needs investigation and pushing upstream
 Patch1: valgrind-3.9.0-cachegrind-improvements.patch
@@ -82,81 +82,11 @@ Patch2: valgrind-3.9.0-helgrind-race-supp.patch
 # Make ld.so supressions slightly less specific.
 Patch3: valgrind-3.9.0-ldso-supp.patch
 
-# We want all executables and libraries in libexec instead of lib
-# so they are only available for valgrind usage itself and so the
-# same directory is used independent of arch.
-Patch4: valgrind-3.16.0-pkglibexecdir.patch
-
 # Add some stack-protector
-Patch5: valgrind-3.16.0-some-stack-protector.patch
+Patch4: valgrind-3.16.0-some-stack-protector.patch
 
 # Add some -Wl,z,now.
-Patch6: valgrind-3.16.0-some-Wl-z-now.patch
-
-# KDE#422174  unhandled instruction bytes: 0x48 0xE9 (REX prefix JMP instr)
-Patch7: valgrind-3.16.1-REX-prefix-JMP.patch
-
-# KDE#422623  epoll_ctl warns for uninit padding on non-amd64 64bit arches
-Patch8: valgrind-3.16.1-epoll.patch
-
-# KDE#369029  handle linux syscalls sched_getattr and sched_setattr
-Patch9: valgrind-3.16.1-sched_getsetattr.patch
-
-# KDE#415293  Incorrect call-graph tracking due to new _dl_runtime_resolve*
-Patch10: valgrind-3.16.1-dl_runtime_resolve.patch
-
-# KDE#427787  Support new faccessat2 linux syscall (439)
-Patch11: valgrind-3.16.1-faccessat2.patch
-
-# KDE#427931 gdbserver_tests/nlcontrolc.vgtest hangs on fedora rawhide
-Patch12: valgrind-3.16.1-gdbserver_nlcontrolc.patch
-
-# KDE#427870 lmw, lswi and related PowerPC insns aren't allowed on ppc64le
-Patch13: valgrind-3.16.1-PPC64BE-lsw.patch
-
-# KDE#428909 helgrind: need to intercept duplicate libc definitions
-Patch14: valgrind-3.16.1-pthread-intercept.patch
-
-# KDE#428648 s390_emit_load_mem panics due to 20-bit offset for vector load
-Patch15: valgrind-3.16.1-s390_emit_load_mem.patch
-
-# KDE#133812 s390x: z14 vector instructions not implemented
-Patch16: valgrind-3.16.1-s390x-z14-vector.patch
-
-# KDE#430354 ppc stxsibx and stxsihx instructions write too much data
-Patch17: valgrind-3.16.1-stxsibx-stxsihx.patch
-
-# KDE#426014 arm64: implement fmadd and fmsub as Iop_MAdd/Sub
-# KDE#430485 expr_is_guardable doesn't handle Iex_Qop
-Patch18: valgrind-3.16.1-arm64-fma.patch
-
-# KDE#397605 Add support for Linux FICLONE ioctl
-Patch19: valgrind-3.16.1-ficlone.patch
-
-# rhbz#1909415 valgrind makes false complaint about strcmp() on aarch64
-# upstream git commit 359b98828
-Patch20: valgrind-3.16.1-arm64-expensive-cmp.patch
-
-# KDE#431157 PPC_FEATURE2_SCV needs to be masked in AT_HWCAP2
-Patch21: valgrind-3.16.1-ppc64-scv-hwcap.patch
-
-# KDE#432102 Support DWARF5
-Patch22: valgrind-3.16.1-dwarf5.patch
-
-# KDE#410743 shmat() calls for 32-bit programs fail when running in 64-bit
-# RHBZ#1909548 shmctl(IPC_STAT) doesn't set shm_nattch on aarch64
-Patch23: valgrind-3.16.0-shmctl.patch
-
-# KDE#140178 open("/proc/self/exe", ...); doesn't quite work
-# RHBZ#1925786 valgrind appears to only interject readlink on /proc/self/exe
-Patch24: valgrind-3.16.1-open-proc-self-exe.patch
-
-# RHBZ#1927153 -flto makes valgrind report non-existing paths to source files
-Patch25: valgrind-3.16.1-readdwarf-line.patch
-
-# RHBZ#433898 netresolve: FTBFS in Fedora rawhide/f34 because arm64 valgrind
-# KDE#433898 arm64: Handle sp, lr, fp as DwReg in CfiExpr
-Patch26: valgrind-3.16.1-arm64_sp_lr_fp_DwReg.patch
+Patch5: valgrind-3.16.0-some-Wl-z-now.patch
 
 BuildRequires: make
 BuildRequires: glibc-devel
@@ -190,6 +120,11 @@ BuildRequires: docbook-dtds
 
 # configure might use which
 BuildRequires: which
+
+# For testing the debuginfod
+%if 0%{?fedora} > 29 || 0%{?rhel} > 7
+BuildRequires: elfutils-debuginfod
+%endif
 
 %{?scl:Requires:%scl_runtime}
 
@@ -280,39 +215,17 @@ Valgrind User Manual for details.
 %endif
 
 %prep
-%setup -q -n %{?scl:%{pkg_name}}%{!?scl:%{name}}-%{version}
+%setup -q -n %{?scl:%{pkg_name}}%{!?scl:%{name}}-%{version}.RC1
 
 %patch1 -p1
 %patch2 -p1
 %patch3 -p1
-%patch4 -p1
 
 # Old rhel gcc doesn't have -fstack-protector-strong.
 %if 0%{?fedora} || 0%{?rhel} >= 7
+%patch4 -p1
 %patch5 -p1
-%patch6 -p1
 %endif
-
-%patch7 -p1
-%patch8 -p1
-%patch9 -p1
-%patch10 -p1
-%patch11 -p1
-%patch12 -p1
-%patch13 -p1
-%patch14 -p1
-%patch15 -p1
-%patch16 -p1
-%patch17 -p1
-%patch18 -p1
-%patch19 -p1
-%patch20 -p1
-%patch21 -p1
-%patch22 -p1
-%patch23 -p1
-%patch24 -p1
-%patch25 -p1
-%patch26 -p1
 
 %build
 # LTO triggers undefined symbols in valgrind.  Valgrind has a --enable-lto
@@ -505,6 +418,7 @@ echo ===============END TESTING===============
 %{_includedir}/valgrind/drd.h
 %{_includedir}/valgrind/helgrind.h
 %{_includedir}/valgrind/memcheck.h
+%{_includedir}/valgrind/dhat.h
 %{_libdir}/pkgconfig/valgrind.pc
 
 %if %{build_tools_devel}
@@ -537,6 +451,10 @@ fi
 %endif
 
 %changelog
+* Mon Mar 15 2021 Mark Wielaard <mjw@fedoraproject.org> - 3.17.0-0.1.RC1
+- Update to upstream 3.17.0-RC1
+- Drop all upstreamed patches
+
 * Wed Mar  3 2021 Mark Wielaard <mjw@fedoraproject.org> - 3.16.1-20
 - Add valgrind-3.16.1-arm64_sp_lr_fp_DwReg.patch
 

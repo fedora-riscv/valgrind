@@ -52,8 +52,8 @@ diff --git a/configure.ac b/configure.ac
 index f8c798b..ccc8f52 100755
 --- a/configure.ac
 +++ b/configure.ac
-@@ -2188,24 +2188,24 @@ AC_LANG(C)
- AC_SUBST(FLAG_FALIGNED_NEW)
+@@ -2352,24 +2352,24 @@
+ AM_CONDITIONAL([HAVE_ALIGNED_CXX_ALLOC], [test x$ac_have_aligned_cxx_alloc = xyes])
  
  # does this compiler support -fno-stack-protector ?
 -AC_MSG_CHECKING([if gcc accepts -fno-stack-protector])
