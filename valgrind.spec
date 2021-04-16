@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.17.0
-Release: 1%{?dist}
+Release: 2%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -451,6 +451,9 @@ fi
 %endif
 
 %changelog
+* Fri Apr 16 2021 Mark Wielaard <mjw@fedoraproject.org> - 3.17.0-2
+- Add CI gating
+
 * Mon Mar 22 2021 Mark Wielaard <mjw@fedoraproject.org> - 3.17.0-1
 - Update to upstream 3.17.0 final.
 
