@@ -1,0 +1,20 @@
+summary: Test for BZ#672959 ([RFE] Integrate valgrind with gdb possibly through)
+description: |
+    Bug summary: [RFE] Integrate valgrind with gdb possibly through gdbserver.
+    Bugzilla link: https://bugzilla.redhat.com/show_bug.cgi?id=672959
+
+    This is small sanity test to make sure gdb works with valgrind gdb server.
+contact: Miroslav Franc <mfranc@redhat.com>
+component:
+- valgrind
+test: ./runtest.sh
+framework: beakerlib
+recommend:
+- valgrind
+- gcc
+- gdb
+- glibc-debuginfo
+- glibc-devel
+duration: 30m
+extra-summary: /tools/valgrind/Sanity/bz672959-RFE-Integrate-valgrind-with-gdb-possibly-through
+extra-task: /tools/valgrind/Sanity/bz672959-RFE-Integrate-valgrind-with-gdb-possibly-through
