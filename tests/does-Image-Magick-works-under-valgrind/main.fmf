@@ -1,0 +1,14 @@
+summary: Testing sanity of valgrind by comparing outputs of ImageMagick utilities
+    with/without valgrind.
+description: ''
+contact: Alexandra Hajkova <ahajkova@redhat.com>
+component:
+- valgrind
+test: ./runtest.sh
+framework: beakerlib
+recommend:
+- valgrind
+- ImageMagick
+duration: 3h
+extra-summary: /tools/valgrind/Sanity/does-Image-Magick-works-under-valgrind
+extra-task: /tools/valgrind/Sanity/does-Image-Magick-works-under-valgrind

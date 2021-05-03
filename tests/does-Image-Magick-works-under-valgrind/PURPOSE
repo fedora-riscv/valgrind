@@ -1,0 +1,3 @@
+PURPOSE of /tools/valgrind/Sanity/does-Image-Magick-works-under-valgrind
+Description: Testing sanity of valgrind by comparing outputs of ImageMagick utilities with/without valgrind.
+Author: Miroslav Franc <mfranc@redhat.com>
