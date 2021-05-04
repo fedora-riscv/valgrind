@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.17.0
-Release: 2%{?dist}
+Release: 3%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -87,6 +87,24 @@ Patch4: valgrind-3.16.0-some-stack-protector.patch
 
 # Add some -Wl,z,now.
 Patch5: valgrind-3.16.0-some-Wl-z-now.patch
+
+# Upstream commits that provide additional ppc64le ISA 3.1 support
+# commit 3cc0232c46a5905b4a6c2fbd302b58bf5f90b3d5
+# PPC64: ISA 3.1 VSX PCV Generate Operations
+# commit 078f89e99b6f62e043f6138c6a7ae238befc1f2a
+# PPC64: Reduced-Precision bfloat16 Outer Product & Format Conversion Operations
+# commit e09fdaf569b975717465ed8043820d0198d4d47d
+# PPC64: Reduced-Precision: Missing Integer-based Outer Product Operations
+Patch6: valgrind-3.17.0-ppc64-isa-3.1.patch
+
+# Upstream commits that provide extra tests for ppc64le ISA 3.1 support
+# commit c8fa838be405d7ac43035dcf675bf490800c26ec
+# Reduced Precision bfloat16 outer product tests
+# commit 4bcc6c8a97c10c4dd41b35bd3b3035ec4037d524
+# VSX Permute Control Vector Generate Operation tests.
+# commit c589b652939655090c005a982a71f50c489fb5ce
+# Reduced precision Missing Integer based outer tests
+Patch7: valgrind-3.17.0-ppc64-isa-3.1-tests.patch
 
 BuildRequires: make
 BuildRequires: glibc-devel
@@ -226,6 +244,10 @@ Valgrind User Manual for details.
 %patch4 -p1
 %patch5 -p1
 %endif
+
+%patch6 -p1
+%patch7 -p1
+
 
 %build
 # LTO triggers undefined symbols in valgrind.  Valgrind has a --enable-lto
@@ -451,6 +473,9 @@ fi
 %endif
 
 %changelog
+* Tue May  4 2021 Mark Wielaard <mjw@fedoraproject.org> - 3.17.0-3
+- Add valgrind-3.17.0-ppc64-isa-3.1{,tests}.patch
+
 * Fri Apr 16 2021 Mark Wielaard <mjw@fedoraproject.org> - 3.17.0-2
 - Add CI gating
 
