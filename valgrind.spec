@@ -106,6 +106,10 @@ Patch6: valgrind-3.17.0-ppc64-isa-3.1.patch
 # Reduced precision Missing Integer based outer tests
 Patch7: valgrind-3.17.0-ppc64-isa-3.1-tests.patch
 
+# commit 45873298ff2d17accc65654d64758360616aade5
+# s390x: Add missing UNOP insns to s390_insn_as_string
+Patch8: valgrind-3.17.0-s390_insn_as_string.patch
+
 BuildRequires: make
 BuildRequires: glibc-devel
 
@@ -248,6 +252,7 @@ Valgrind User Manual for details.
 %patch6 -p1
 %patch7 -p1
 
+%patch8 -p1
 
 %build
 # LTO triggers undefined symbols in valgrind.  Valgrind has a --enable-lto
@@ -473,6 +478,9 @@ fi
 %endif
 
 %changelog
+* Tue May  4 2021 Mark Wielaard <mjw@fedoraproject.org>
+- Add valgrind-3.17.0-s390_insn_as_string.patch
+
 * Tue May  4 2021 Mark Wielaard <mjw@fedoraproject.org> - 3.17.0-3
 - Add valgrind-3.17.0-ppc64-isa-3.1{,tests}.patch
 
