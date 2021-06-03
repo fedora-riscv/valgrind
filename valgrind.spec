@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.17.0
-Release: 3%{?dist}
+Release: 4%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -488,7 +488,7 @@ fi
 %endif
 
 %changelog
-* Thu Jun  3 2021 Mark Wielaard <mjw@fedoraproject.org>
+* Thu Jun  3 2021 Mark Wielaard <mjw@fedoraproject.org> - 3.17.0-4
 - Add valgrind-3.17.0-s390_insn_as_string.patch
 - Add valgrind-3.17.0-debuginfod.patch
 - Add valgrind-3.17.0-clone-parent-res.patch
