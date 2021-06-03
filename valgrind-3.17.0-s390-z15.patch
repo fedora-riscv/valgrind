@@ -1,0 +1,2413 @@
+From 3fbde55a5696c9273084ee2c44daca752e407597 Mon Sep 17 00:00:00 2001
+From: Andreas Arnez <arnez@linux.ibm.com>
+Date: Tue, 26 Jan 2021 15:06:47 +0100
+Subject: [PATCH 01/13] s390x: Misc-insn-3, bitwise logical 3-way instructions
+
+Add support for the instructions NCRK, NCGRK, NNRK, NNGRK, NORK, NOGRK,
+NXRK, NXGRK, OCRK, and OCGRK.  Introduce a common helper and use it for
+the existing instructions NRK, NGRK, XRK, XGRK, ORK, and OGRK as well.
+---
+ VEX/priv/guest_s390_toIR.c | 154 ++++++++++++++++++++++++++-----------
+ 1 file changed, 109 insertions(+), 45 deletions(-)
+
+diff --git a/VEX/priv/guest_s390_toIR.c b/VEX/priv/guest_s390_toIR.c
+index a73dcfb14..f8afd5b96 100644
+--- a/VEX/priv/guest_s390_toIR.c
++++ b/VEX/priv/guest_s390_toIR.c
+@@ -5022,8 +5022,12 @@ s390_irgen_NGR(UChar r1, UChar r2)
+    return "ngr";
+ }
+ 
++/* Helper for bitwise logical instructions with two 32-bit input operands and a
++   32-bit output operand.  `inv3' and `inv' indicate whether to invert (build
++   bitwise complement of) operand 3 or the result, respectively. */
+ static const HChar *
+-s390_irgen_NRK(UChar r3, UChar r1, UChar r2)
++s390_irgen_logicalK32(UChar r3, UChar r1, UChar r2,
++                      const HChar *mnem, IROp op, Bool inv3, Bool inv)
+ {
+    IRTemp op2 = newTemp(Ity_I32);
+    IRTemp op3 = newTemp(Ity_I32);
+@@ -5031,15 +5035,19 @@ s390_irgen_NRK(UChar r3, UChar r1, UChar r2)
+ 
+    assign(op2, get_gpr_w1(r2));
+    assign(op3, get_gpr_w1(r3));
+-   assign(result, binop(Iop_And32, mkexpr(op2), mkexpr(op3)));
++   IRExpr* tmp = binop(op, mkexpr(op2),
++                       inv3 ? unop(Iop_Not32, mkexpr(op3)) : mkexpr(op3));
++   assign(result, inv ? unop(Iop_Not32, tmp) : tmp);
+    s390_cc_thunk_putZ(S390_CC_OP_BITWISE, result);
+    put_gpr_w1(r1, mkexpr(result));
+ 
+-   return "nrk";
++   return mnem;
+ }
+ 
++/* Same as s390_irgen_logicalK32, but for 64-bit operands. */
+ static const HChar *
+-s390_irgen_NGRK(UChar r3, UChar r1, UChar r2)
++s390_irgen_logicalK64(UChar r3, UChar r1, UChar r2,
++                      const HChar *mnem, IROp op, Bool inv3, Bool inv)
+ {
+    IRTemp op2 = newTemp(Ity_I64);
+    IRTemp op3 = newTemp(Ity_I64);
+@@ -5047,11 +5055,49 @@ s390_irgen_NGRK(UChar r3, UChar r1, UChar r2)
+ 
+    assign(op2, get_gpr_dw0(r2));
+    assign(op3, get_gpr_dw0(r3));
+-   assign(result, binop(Iop_And64, mkexpr(op2), mkexpr(op3)));
++   IRExpr* tmp = binop(op, mkexpr(op2),
++                       inv3 ? unop(Iop_Not64, mkexpr(op3)) : mkexpr(op3));
++   assign(result, inv ? unop(Iop_Not64, tmp) : tmp);
+    s390_cc_thunk_putZ(S390_CC_OP_BITWISE, result);
+    put_gpr_dw0(r1, mkexpr(result));
+ 
+-   return "ngrk";
++   return mnem;
++}
++
++static const HChar *
++s390_irgen_NRK(UChar r3, UChar r1, UChar r2)
++{
++   return s390_irgen_logicalK32(r3, r1, r2, "nrk", Iop_And32, False, False);
++}
++
++static const HChar *
++s390_irgen_NGRK(UChar r3, UChar r1, UChar r2)
++{
++   return s390_irgen_logicalK64(r3, r1, r2, "ngrk", Iop_And64, False, False);
++}
++
++static const HChar *
++s390_irgen_NCRK(UChar r3, UChar r1, UChar r2)
++{
++   return s390_irgen_logicalK32(r3, r1, r2, "ncrk", Iop_And32, True, False);
++}
++
++static const HChar *
++s390_irgen_NCGRK(UChar r3, UChar r1, UChar r2)
++{
++   return s390_irgen_logicalK64(r3, r1, r2, "ncgrk", Iop_And64, True, False);
++}
++
++static const HChar *
++s390_irgen_NNRK(UChar r3, UChar r1, UChar r2)
++{
++   return s390_irgen_logicalK32(r3, r1, r2, "nnrk", Iop_And32, False, True);
++}
++
++static const HChar *
++s390_irgen_NNGRK(UChar r3, UChar r1, UChar r2)
++{
++   return s390_irgen_logicalK64(r3, r1, r2, "nngrk", Iop_And64, False, True);
+ }
+ 
+ static const HChar *
+@@ -7071,33 +7117,25 @@ s390_irgen_XGR(UChar r1, UChar r2)
+ static const HChar *
+ s390_irgen_XRK(UChar r3, UChar r1, UChar r2)
+ {
+-   IRTemp op2 = newTemp(Ity_I32);
+-   IRTemp op3 = newTemp(Ity_I32);
+-   IRTemp result = newTemp(Ity_I32);
+-
+-   assign(op2, get_gpr_w1(r2));
+-   assign(op3, get_gpr_w1(r3));
+-   assign(result, binop(Iop_Xor32, mkexpr(op2), mkexpr(op3)));
+-   s390_cc_thunk_putZ(S390_CC_OP_BITWISE, result);
+-   put_gpr_w1(r1, mkexpr(result));
+-
+-   return "xrk";
++   return s390_irgen_logicalK32(r3, r1, r2, "xrk", Iop_Xor32, False, False);
+ }
+ 
+ static const HChar *
+ s390_irgen_XGRK(UChar r3, UChar r1, UChar r2)
+ {
+-   IRTemp op2 = newTemp(Ity_I64);
+-   IRTemp op3 = newTemp(Ity_I64);
+-   IRTemp result = newTemp(Ity_I64);
++   return s390_irgen_logicalK64(r3, r1, r2, "xgrk", Iop_Xor64, False, False);
++}
+ 
+-   assign(op2, get_gpr_dw0(r2));
+-   assign(op3, get_gpr_dw0(r3));
+-   assign(result, binop(Iop_Xor64, mkexpr(op2), mkexpr(op3)));
+-   s390_cc_thunk_putZ(S390_CC_OP_BITWISE, result);
+-   put_gpr_dw0(r1, mkexpr(result));
++static const HChar *
++s390_irgen_NXRK(UChar r3, UChar r1, UChar r2)
++{
++   return s390_irgen_logicalK32(r3, r1, r2, "nxrk", Iop_Xor32, False, True);
++}
+ 
+-   return "xgrk";
++static const HChar *
++s390_irgen_NXGRK(UChar r3, UChar r1, UChar r2)
++{
++   return s390_irgen_logicalK64(r3, r1, r2, "nxgrk", Iop_Xor64, False, True);
+ }
+ 
+ static const HChar *
+@@ -8920,33 +8958,37 @@ s390_irgen_OGR(UChar r1, UChar r2)
+ static const HChar *
+ s390_irgen_ORK(UChar r3, UChar r1, UChar r2)
+ {
+-   IRTemp op2 = newTemp(Ity_I32);
+-   IRTemp op3 = newTemp(Ity_I32);
+-   IRTemp result = newTemp(Ity_I32);
++   return s390_irgen_logicalK32(r3, r1, r2, "ork", Iop_Or32, False, False);
++}
+ 
+-   assign(op2, get_gpr_w1(r2));
+-   assign(op3, get_gpr_w1(r3));
+-   assign(result, binop(Iop_Or32, mkexpr(op2), mkexpr(op3)));
+-   s390_cc_thunk_putZ(S390_CC_OP_BITWISE, result);
+-   put_gpr_w1(r1, mkexpr(result));
++static const HChar *
++s390_irgen_OGRK(UChar r3, UChar r1, UChar r2)
++{
++   return s390_irgen_logicalK64(r3, r1, r2, "ogrk", Iop_Or64, False, False);
++}
+ 
+-   return "ork";
++static const HChar *
++s390_irgen_OCRK(UChar r3, UChar r1, UChar r2)
++{
++   return s390_irgen_logicalK32(r3, r1, r2, "ocrk", Iop_Or32, True, False);
+ }
+ 
+ static const HChar *
+-s390_irgen_OGRK(UChar r3, UChar r1, UChar r2)
++s390_irgen_OCGRK(UChar r3, UChar r1, UChar r2)
+ {
+-   IRTemp op2 = newTemp(Ity_I64);
+-   IRTemp op3 = newTemp(Ity_I64);
+-   IRTemp result = newTemp(Ity_I64);
++   return s390_irgen_logicalK64(r3, r1, r2, "ocgrk", Iop_Or64, True, False);
++}
+ 
+-   assign(op2, get_gpr_dw0(r2));
+-   assign(op3, get_gpr_dw0(r3));
+-   assign(result, binop(Iop_Or64, mkexpr(op2), mkexpr(op3)));
+-   s390_cc_thunk_putZ(S390_CC_OP_BITWISE, result);
+-   put_gpr_dw0(r1, mkexpr(result));
++static const HChar *
++s390_irgen_NORK(UChar r3, UChar r1, UChar r2)
++{
++   return s390_irgen_logicalK32(r3, r1, r2, "nork", Iop_Or32, False, True);
++}
+ 
+-   return "ogrk";
++static const HChar *
++s390_irgen_NOGRK(UChar r3, UChar r1, UChar r2)
++{
++   return s390_irgen_logicalK64(r3, r1, r2, "nogrk", Iop_Or64, False, True);
+ }
+ 
+ static const HChar *
+@@ -20031,12 +20073,28 @@ s390_decode_4byte_and_irgen(const UChar *bytes)
+    case 0xb961: s390_format_RRF_U0RR(s390_irgen_CLGRT, RRF2_m3(ovl),
+                                      RRF2_r1(ovl), RRF2_r2(ovl),
+                                      S390_XMNM_CAB); goto ok;
++   case 0xb964: s390_format_RRF_R0RR2(s390_irgen_NNGRK, RRF4_r3(ovl),
++                                      RRF4_r1(ovl), RRF4_r2(ovl)); goto ok;
++   case 0xb965: s390_format_RRF_R0RR2(s390_irgen_OCGRK, RRF4_r3(ovl),
++                                      RRF4_r1(ovl), RRF4_r2(ovl)); goto ok;
++   case 0xb966: s390_format_RRF_R0RR2(s390_irgen_NOGRK, RRF4_r3(ovl),
++                                      RRF4_r1(ovl), RRF4_r2(ovl)); goto ok;
++   case 0xb967: s390_format_RRF_R0RR2(s390_irgen_NXGRK, RRF4_r3(ovl),
++                                      RRF4_r1(ovl), RRF4_r2(ovl)); goto ok;
+    case 0xb972: s390_format_RRF_U0RR(s390_irgen_CRT, RRF2_m3(ovl),
+                                      RRF2_r1(ovl), RRF2_r2(ovl),
+                                      S390_XMNM_CAB); goto ok;
+    case 0xb973: s390_format_RRF_U0RR(s390_irgen_CLRT, RRF2_m3(ovl),
+                                      RRF2_r1(ovl), RRF2_r2(ovl),
+                                      S390_XMNM_CAB); goto ok;
++   case 0xb974: s390_format_RRF_R0RR2(s390_irgen_NNRK, RRF4_r3(ovl),
++                                      RRF4_r1(ovl), RRF4_r2(ovl)); goto ok;
++   case 0xb975: s390_format_RRF_R0RR2(s390_irgen_OCRK, RRF4_r3(ovl),
++                                      RRF4_r1(ovl), RRF4_r2(ovl)); goto ok;
++   case 0xb976: s390_format_RRF_R0RR2(s390_irgen_NORK, RRF4_r3(ovl),
++                                      RRF4_r1(ovl), RRF4_r2(ovl)); goto ok;
++   case 0xb977: s390_format_RRF_R0RR2(s390_irgen_NXRK, RRF4_r3(ovl),
++                                      RRF4_r1(ovl), RRF4_r2(ovl)); goto ok;
+    case 0xb980: s390_format_RRE_RR(s390_irgen_NGR, RRE_r1(ovl),
+                                    RRE_r2(ovl));  goto ok;
+    case 0xb981: s390_format_RRE_RR(s390_irgen_OGR, RRE_r1(ovl),
+@@ -20148,6 +20206,9 @@ s390_decode_4byte_and_irgen(const UChar *bytes)
+    case 0xb9e4: s390_format_RRF_R0RR2(s390_irgen_NGRK, RRF4_r3(ovl),
+                                       RRF4_r1(ovl), RRF4_r2(ovl));
+                                       goto ok;
++   case 0xb9e5: s390_format_RRF_R0RR2(s390_irgen_NCGRK, RRF4_r3(ovl),
++                                      RRF4_r1(ovl), RRF4_r2(ovl));
++                                      goto ok;
+    case 0xb9e6: s390_format_RRF_R0RR2(s390_irgen_OGRK, RRF4_r3(ovl),
+                                       RRF4_r1(ovl), RRF4_r2(ovl));
+                                       goto ok;
+@@ -20178,6 +20239,9 @@ s390_decode_4byte_and_irgen(const UChar *bytes)
+    case 0xb9f4: s390_format_RRF_R0RR2(s390_irgen_NRK, RRF4_r3(ovl),
+                                       RRF4_r1(ovl), RRF4_r2(ovl));
+                                       goto ok;
++   case 0xb9f5: s390_format_RRF_R0RR2(s390_irgen_NCRK, RRF4_r3(ovl),
++                                      RRF4_r1(ovl), RRF4_r2(ovl));
++                                      goto ok;
+    case 0xb9f6: s390_format_RRF_R0RR2(s390_irgen_ORK, RRF4_r3(ovl),
+                                       RRF4_r1(ovl), RRF4_r2(ovl));
+                                       goto ok;
+-- 
+2.23.0
+
+From 748421b31ab6b15cc849bd6b9588ad759b807324 Mon Sep 17 00:00:00 2001
+From: Andreas Arnez <arnez@linux.ibm.com>
+Date: Wed, 27 Jan 2021 18:11:06 +0100
+Subject: [PATCH 02/13] s390x: Misc-insn-3, "select" instructions
+
+Add support for the instructions SELR, SELGR, and SELFHR.
+---
+ VEX/priv/guest_s390_toIR.c | 43 ++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 43 insertions(+)
+
+diff --git a/VEX/priv/guest_s390_toIR.c b/VEX/priv/guest_s390_toIR.c
+index f8afd5b96..41265631b 100644
+--- a/VEX/priv/guest_s390_toIR.c
++++ b/VEX/priv/guest_s390_toIR.c
+@@ -3113,6 +3113,16 @@ s390_format_RRF_FUFF2(const HChar *(*irgen)(UChar, UChar, UChar, UChar),
+       s390_disasm(ENC5(MNM, FPR, FPR, FPR, UINT), mnm, r1, r2, r3, m4);
+ }
+ 
++static void
++s390_format_RRF_RURR(const HChar *(*irgen)(UChar, UChar, UChar, UChar),
++                     UChar r3, UChar m4, UChar r1, UChar r2)
++{
++   const HChar *mnm = irgen(r3, m4, r1, r2);
++
++   if (UNLIKELY(vex_traceflags & VEX_TRACE_FE))
++      s390_disasm(ENC5(MNM, GPR, GPR, GPR, UINT), mnm, r1, r3, r2, m4);
++}
++
+ static void
+ s390_format_RRF_R0RR2(const HChar *(*irgen)(UChar r3, UChar r1, UChar r2),
+                       UChar r3, UChar r1, UChar r2)
+@@ -19254,6 +19264,30 @@ s390_irgen_VBPERM(UChar v1, UChar v2, UChar v3)
+    return "vbperm";
+ }
+ 
++static const HChar *
++s390_irgen_SELR(UChar r3, UChar m4, UChar r1, UChar r2)
++{
++   IRExpr* cond = binop(Iop_CmpNE32, s390_call_calculate_cond(m4), mkU32(0));
++   put_gpr_w1(r1, mkite(cond, get_gpr_w1(r2), get_gpr_w1(r3)));
++   return "selr";
++}
++
++static const HChar *
++s390_irgen_SELGR(UChar r3, UChar m4, UChar r1, UChar r2)
++{
++   IRExpr* cond = binop(Iop_CmpNE32, s390_call_calculate_cond(m4), mkU32(0));
++   put_gpr_dw0(r1, mkite(cond, get_gpr_dw0(r2), get_gpr_dw0(r3)));
++   return "selgr";
++}
++
++static const HChar *
++s390_irgen_SELFHR(UChar r3, UChar m4, UChar r1, UChar r2)
++{
++   IRExpr* cond = binop(Iop_CmpNE32, s390_call_calculate_cond(m4), mkU32(0));
++   put_gpr_w0(r1, mkite(cond, get_gpr_w0(r2), get_gpr_w0(r3)));
++   return "selfhr";
++}
++
+ /* New insns are added here.
+    If an insn is contingent on a facility being installed also
+    check whether the list of supported facilities in function
+@@ -20163,6 +20197,9 @@ s390_decode_4byte_and_irgen(const UChar *bytes)
+    case 0xb9bd: /* TRTRE */ goto unimplemented;
+    case 0xb9be: /* SRSTU */ goto unimplemented;
+    case 0xb9bf: /* TRTE */ goto unimplemented;
++   case 0xb9c0: s390_format_RRF_RURR(s390_irgen_SELFHR, RRF4_r3(ovl),
++                                     RRF4_m4(ovl), RRF4_r1(ovl),
++                                     RRF4_r2(ovl)); goto ok;
+    case 0xb9c8: s390_format_RRF_R0RR2(s390_irgen_AHHHR, RRF4_r3(ovl),
+                                       RRF4_r1(ovl), RRF4_r2(ovl));
+                                       goto ok;
+@@ -20203,6 +20240,9 @@ s390_decode_4byte_and_irgen(const UChar *bytes)
+    case 0xb9e2: s390_format_RRF_U0RR(s390_irgen_LOCGR, RRF3_r3(ovl),
+                                      RRF3_r1(ovl), RRF3_r2(ovl),
+                                      S390_XMNM_LOCGR);  goto ok;
++   case 0xb9e3: s390_format_RRF_RURR(s390_irgen_SELGR, RRF4_r3(ovl),
++                                     RRF4_m4(ovl), RRF4_r1(ovl),
++                                     RRF4_r2(ovl)); goto ok;
+    case 0xb9e4: s390_format_RRF_R0RR2(s390_irgen_NGRK, RRF4_r3(ovl),
+                                       RRF4_r1(ovl), RRF4_r2(ovl));
+                                       goto ok;
+@@ -20233,6 +20273,9 @@ s390_decode_4byte_and_irgen(const UChar *bytes)
+    case 0xb9ed: s390_format_RRF_R0RR2(s390_irgen_MSGRKC, RRF4_r3(ovl),
+                                       RRF4_r1(ovl), RRF4_r2(ovl));
+                                       goto ok;
++   case 0xb9f0: s390_format_RRF_RURR(s390_irgen_SELR, RRF4_r3(ovl),
++                                     RRF4_m4(ovl), RRF4_r1(ovl),
++                                     RRF4_r2(ovl)); goto ok;
+    case 0xb9f2: s390_format_RRF_U0RR(s390_irgen_LOCR, RRF3_r3(ovl),
+                                      RRF3_r1(ovl), RRF3_r2(ovl),
+                                      S390_XMNM_LOCR);  goto ok;
+-- 
+2.23.0
+
+From 31cbd583e858f47a86ada087d21a6abc13ba04f2 Mon Sep 17 00:00:00 2001
+From: Andreas Arnez <arnez@linux.ibm.com>
+Date: Thu, 28 Jan 2021 19:47:00 +0100
+Subject: [PATCH 03/13] s390x: Misc-insn-3, new POPCNT variant
+
+Add support for the new POPCNT variant that has bit 0 of the M3 field set
+and yields the total number of one bits in its 64-bit operand.
+---
+ VEX/priv/guest_s390_toIR.c | 44 ++++++++++++++++++++++++++------------
+ 1 file changed, 30 insertions(+), 14 deletions(-)
+
+diff --git a/VEX/priv/guest_s390_toIR.c b/VEX/priv/guest_s390_toIR.c
+index 41265631b..ca9e6dc03 100644
+--- a/VEX/priv/guest_s390_toIR.c
++++ b/VEX/priv/guest_s390_toIR.c
+@@ -3073,6 +3073,20 @@ s390_format_RRF_U0RR(const HChar *(*irgen)(UChar m3, UChar r1, UChar r2),
+       s390_disasm(ENC3(XMNM, GPR, GPR), xmnm_kind, m3, r1, r2);
+ }
+ 
++static void
++s390_format_RRFa_U0RR(const HChar *(*irgen)(UChar m3, UChar r1, UChar r2),
++                      UChar m3, UChar r1, UChar r2)
++{
++   const HChar *mnm = irgen(m3, r1, r2);
++
++   if (UNLIKELY(vex_traceflags & VEX_TRACE_FE)) {
++      if (m3 != 0)
++         s390_disasm(ENC4(MNM, GPR, GPR, UINT), mnm, r1, r2, m3);
++      else
++         s390_disasm(ENC3(MNM, GPR, GPR), mnm, r1, r2);
++   }
++}
++
+ static void
+ s390_format_RRF_F0FF2(const HChar *(*irgen)(UChar, UChar, UChar),
+                       UChar r3, UChar r1, UChar r2)
+@@ -15112,30 +15126,32 @@ s390_irgen_FLOGR(UChar r1, UChar r2)
+ }
+ 
+ static const HChar *
+-s390_irgen_POPCNT(UChar r1, UChar r2)
++s390_irgen_POPCNT(UChar m3, UChar r1, UChar r2)
+ {
+-   Int i;
++   s390_insn_assert("popcnt", (m3 & 7) == 0);
++
++   static const ULong masks[] = {
++      0x5555555555555555, 0x3333333333333333, 0x0F0F0F0F0F0F0F0F,
++      0x00FF00FF00FF00FF, 0x0000FFFF0000FFFF, 0x00000000FFFFFFFF,
++   };
++   Int i, n;
+    IRTemp val = newTemp(Ity_I64);
+-   IRTemp mask[3];
+ 
+    assign(val, get_gpr_dw0(r2));
+-   for (i = 0; i < 3; i++) {
+-      mask[i] = newTemp(Ity_I64);
+-   }
+-   assign(mask[0], mkU64(0x5555555555555555ULL));
+-   assign(mask[1], mkU64(0x3333333333333333ULL));
+-   assign(mask[2], mkU64(0x0F0F0F0F0F0F0F0FULL));
+-   for (i = 0; i < 3; i++) {
++   n = (m3 & 8) ? 6 : 3;
++   for (i = 0; i < n; i++) {
++      IRTemp mask = newTemp(Ity_I64);
+       IRTemp tmp = newTemp(Ity_I64);
+ 
++      assign (mask, mkU64(masks[i]));
+       assign(tmp,
+              binop(Iop_Add64,
+                    binop(Iop_And64,
+                          mkexpr(val),
+-                         mkexpr(mask[i])),
++                         mkexpr(mask)),
+                    binop(Iop_And64,
+                          binop(Iop_Shr64, mkexpr(val), mkU8(1 << i)),
+-                         mkexpr(mask[i]))));
++                         mkexpr(mask))));
+       val = tmp;
+    }
+    s390_cc_thunk_putZ(S390_CC_OP_BITWISE, val);
+@@ -20235,8 +20251,8 @@ s390_decode_4byte_and_irgen(const UChar *bytes)
+    case 0xb9e0: s390_format_RRF_U0RR(s390_irgen_LOCFHR, RRF3_r3(ovl),
+                                      RRF3_r1(ovl), RRF3_r2(ovl),
+                                      S390_XMNM_LOCFHR);  goto ok;
+-   case 0xb9e1: s390_format_RRE_RR(s390_irgen_POPCNT, RRE_r1(ovl),
+-                                   RRE_r2(ovl));  goto ok;
++   case 0xb9e1: s390_format_RRFa_U0RR(s390_irgen_POPCNT, RRF3_r3(ovl),
++                                      RRF3_r1(ovl), RRF3_r2(ovl));  goto ok;
+    case 0xb9e2: s390_format_RRF_U0RR(s390_irgen_LOCGR, RRF3_r3(ovl),
+                                      RRF3_r1(ovl), RRF3_r2(ovl),
+                                      S390_XMNM_LOCGR);  goto ok;
+-- 
+2.23.0
+
+From 64352d57f93711ce76fd481558dcf6d65e26b19f Mon Sep 17 00:00:00 2001
+From: Andreas Arnez <arnez@linux.ibm.com>
+Date: Fri, 29 Jan 2021 20:13:05 +0100
+Subject: [PATCH 04/13] s390x: Misc-insn-3, MVCRL
+
+Add support for the "move right to left" instruction MVCRL.
+---
+ VEX/priv/guest_s390_toIR.c | 47 ++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 47 insertions(+)
+
+diff --git a/VEX/priv/guest_s390_toIR.c b/VEX/priv/guest_s390_toIR.c
+index ca9e6dc03..9f7d98f8c 100644
+--- a/VEX/priv/guest_s390_toIR.c
++++ b/VEX/priv/guest_s390_toIR.c
+@@ -3562,6 +3562,25 @@ s390_format_SS_L0RDRD(const HChar *(*irgen)(UChar, IRTemp, IRTemp),
+       s390_disasm(ENC3(MNM, UDLB, UDXB), mnm, d1, l, b1, d2, 0, b2);
+ }
+ 
++static void
++s390_format_SSE_RDRD(const HChar *(*irgen)(IRTemp, IRTemp),
++                     UChar b1, UShort d1, UChar b2, UShort d2)
++{
++   const HChar *mnm;
++   IRTemp op1addr = newTemp(Ity_I64);
++   IRTemp op2addr = newTemp(Ity_I64);
++
++   assign(op1addr, binop(Iop_Add64, mkU64(d1), b1 != 0 ? get_gpr_dw0(b1) :
++          mkU64(0)));
++   assign(op2addr, binop(Iop_Add64, mkU64(d2), b2 != 0 ? get_gpr_dw0(b2) :
++          mkU64(0)));
++
++   mnm = irgen(op1addr, op2addr);
++
++   if (UNLIKELY(vex_traceflags & VEX_TRACE_FE))
++      s390_disasm(ENC2(UDXB, UDXB), mnm, d1, 0, b1, d2, 0, b2);
++}
++
+ static void
+ s390_format_SIL_RDI(const HChar *(*irgen)(UShort i2, IRTemp op1addr),
+                     UChar b1, UShort d1, UShort i2)
+@@ -13667,6 +13686,31 @@ s390_irgen_MVCIN(UChar length, IRTemp start1, IRTemp start2)
+    return "mvcin";
+ }
+ 
++static const HChar *
++s390_irgen_MVCRL(IRTemp op1addr, IRTemp op2addr)
++{
++   IRTemp counter = newTemp(Ity_I64);
++   IRTemp offset = newTemp(Ity_I64);
++
++   assign(counter, get_counter_dw0());
++   /* offset = length - 1 - counter, where length-1 is specified in r0 */
++   assign(offset,
++          binop(Iop_Sub64,
++                unop(Iop_16Uto64,
++                     binop(Iop_And16, get_gpr_hw3(0), mkU16(0xfff))),
++                mkexpr(counter)));
++
++   store(binop(Iop_Add64, mkexpr(op1addr), mkexpr(offset)),
++         load(Ity_I8, binop(Iop_Add64, mkexpr(op2addr), mkexpr(offset))));
++
++   /* Check for end of field */
++   put_counter_dw0(binop(Iop_Add64, mkexpr(counter), mkU64(1)));
++   iterate_if(binop(Iop_CmpNE64, mkexpr(offset), mkU64(0)));
++   put_counter_dw0(mkU64(0));
++
++   return "mvcrl";
++}
++
+ static const HChar *
+ s390_irgen_MVCL(UChar r1, UChar r2)
+ {
+@@ -22217,6 +22261,9 @@ s390_decode_6byte_and_irgen(const UChar *bytes)
+    case 0xe500ULL: /* LASP */ goto unimplemented;
+    case 0xe501ULL: /* TPROT */ goto unimplemented;
+    case 0xe502ULL: /* STRAG */ goto unimplemented;
++   case 0xe50aULL: s390_format_SSE_RDRD(s390_irgen_MVCRL,
++                                        SS_b1(ovl), SS_d1(ovl),
++                                        SS_b2(ovl), SS_d2(ovl));  goto ok;
+    case 0xe50eULL: /* MVCSK */ goto unimplemented;
+    case 0xe50fULL: /* MVCDK */ goto unimplemented;
+    case 0xe544ULL: s390_format_SIL_RDI(s390_irgen_MVHHI, SIL_b1(ovl),
+-- 
+2.23.0
+
+From 6cc4d66cc3a999253d9a57e2b5c75aeb67f77918 Mon Sep 17 00:00:00 2001
+From: Andreas Arnez <arnez@linux.ibm.com>
+Date: Tue, 2 Feb 2021 20:15:02 +0100
+Subject: [PATCH 05/13] s390x: Misc-insn-3, test case
+
+Add a test case for the new instructions in the miscellaneous instruction
+extensions facitility 3.
+---
+ .gitignore                        |   1 +
+ none/tests/s390x/Makefile.am      |   3 +-
+ none/tests/s390x/misc3.c          | 182 ++++++++++++++++++++++++++++++
+ none/tests/s390x/misc3.stderr.exp |   2 +
+ none/tests/s390x/misc3.stdout.exp | 103 +++++++++++++++++
+ none/tests/s390x/misc3.vgtest     |   1 +
+ 6 files changed, 291 insertions(+), 1 deletion(-)
+ create mode 100644 none/tests/s390x/misc3.c
+ create mode 100644 none/tests/s390x/misc3.stderr.exp
+ create mode 100644 none/tests/s390x/misc3.stdout.exp
+ create mode 100644 none/tests/s390x/misc3.vgtest
+
+diff --git a/none/tests/s390x/Makefile.am b/none/tests/s390x/Makefile.am
+index a0fb92ef5..2fd45ec1e 100644
+--- a/none/tests/s390x/Makefile.am
++++ b/none/tests/s390x/Makefile.am
+@@ -19,7 +19,8 @@ INSN_TESTS = clc clcle cvb cvd icm lpr tcxb lam_stam xc mvst add sub mul \
+ 	     spechelper-ltr spechelper-or   \
+ 	     spechelper-icm-1  spechelper-icm-2 spechelper-tmll \
+ 	     spechelper-tm laa vector lsc2 ppno vector_string vector_integer \
+-	     vector_float add-z14 sub-z14 mul-z14 bic
++	     vector_float add-z14 sub-z14 mul-z14 bic \
++	     misc3
+ 
+ if BUILD_DFP_TESTS
+   INSN_TESTS += dfp-1 dfp-2 dfp-3 dfp-4 dfptest dfpext dfpconv srnmt pfpo
+diff --git a/none/tests/s390x/misc3.c b/none/tests/s390x/misc3.c
+new file mode 100644
+index 000000000..ae6e8d4c2
+--- /dev/null
++++ b/none/tests/s390x/misc3.c
+@@ -0,0 +1,182 @@
++#include <stdio.h>
++
++/* -- Logical instructions -- */
++
++#define TEST_GENERATE(opcode,insn)                              \
++   static void test_##insn(unsigned long a, unsigned long b)    \
++   {                                                            \
++      unsigned long out = 0xdecaffee42424242;                   \
++      int cc;                                                   \
++                                                                \
++      __asm__(                                                  \
++         "cr    0,0\n\t"               /* Clear CC */           \
++         ".insn rrf,0x" #opcode "0000,%[out],%[a],%[b],0\n\t"   \
++         "ipm   %[cc]\n\t"                                      \
++         "srl   %[cc],28\n"                                     \
++         : [out] "+d" (out),                                    \
++           [cc] "=d" (cc)                                       \
++         : [a] "d" (a),                                         \
++           [b] "d" (b)                                          \
++         : "cc");                                               \
++                                                                \
++      printf("\t%016lx %016lx -> %016lx cc=%d\n",               \
++             a, b, out, cc);                                    \
++   }
++
++#define TEST_EXEC(opcode,insn)                             \
++   do {                                                    \
++      puts(#insn);                                         \
++      test_##insn(0, 0);                                   \
++      test_##insn(0, -1);                                  \
++      test_##insn(-1, 0);                                  \
++      test_##insn(-1, -1);                                 \
++      test_##insn(0x012345678abcdef, 0);                   \
++      test_##insn(0x012345678abcdef, -1);                  \
++      test_##insn(0x55555555aaaaaaaa, 0xaaaaaaaa55555555); \
++   } while (0)
++
++#define INSNS                                    \
++   XTEST(b9f5,ncrk);                             \
++   XTEST(b9e5,ncgrk);                            \
++   XTEST(b974,nnrk);                             \
++   XTEST(b964,nngrk);                            \
++   XTEST(b976,nork);                             \
++   XTEST(b966,nogrk);                            \
++   XTEST(b977,nxrk);                             \
++   XTEST(b967,nxgrk);                            \
++   XTEST(b975,ocrk);                             \
++   XTEST(b965,ocgrk);
++
++#define XTEST TEST_GENERATE
++INSNS
++#undef XTEST
++
++static void test_all_logical_insns()
++{
++#define XTEST TEST_EXEC
++   INSNS
++#undef XTEST
++}
++#undef INSNS
++#undef TEST_GENERATE
++#undef TEST_EXEC
++
++
++/* -- Full population count -- */
++
++static void test_popcnt(unsigned long op2)
++{
++   unsigned long result;
++   int cc;
++
++   __asm__(".insn   rrf,0xb9e10000,%[result],%[op2],8,0\n\t"
++           "ipm     %[cc]\n\t"
++           "srl     %[cc],28\n"
++           : [result]"=d" (result),
++             [cc]"=d" (cc)
++           : [op2]"d" (op2)
++           : "cc");
++   printf("\t%016lx -> %2lu cc=%d\n", op2, result, cc);
++}
++
++static int test_all_popcnt()
++{
++   puts("popcnt");
++   test_popcnt(0);
++   test_popcnt(1);
++   test_popcnt(0x8000000000000000);
++   test_popcnt(-1UL);
++   test_popcnt(0xff427e3800556bcd);
++   return 0;
++}
++
++/* -- Select -- */
++
++#define TEST_GENERATE(opcode,insn)                              \
++   static void test_##insn(unsigned long a, unsigned long b)    \
++   {                                                            \
++      unsigned long out0 = 0x0cafebad0badcafe;                  \
++      unsigned long out1 = 0x0badcafe0cafebad;                  \
++                                                                \
++      __asm__(                                                  \
++         "cr    0,0\n\t"               /* Clear CC */           \
++         ".insn rrf,0x" #opcode "0000,%[out0],%[a],%[b],8\n\t"  \
++         ".insn rrf,0x" #opcode "0000,%[out1],%[a],%[b],7\n\t"  \
++         : [out0] "+d" (out0),                                  \
++           [out1] "+d" (out1)                                   \
++         : [a] "d" (a),                                         \
++           [b] "d" (b)                                          \
++         : );                                                   \
++                                                                \
++      printf("\t%016lx %016lx -> %016lx %016lx\n",              \
++             a, b, out0, out1);                                 \
++   }
++
++#define TEST_EXEC(opcode,insn)                             \
++   do {                                                    \
++      puts(#insn);                                         \
++      test_##insn(-1, 0);                                  \
++      test_##insn(0, -1);                                  \
++      test_##insn(0x1234567890abcdef, 0xfedcba9876543210); \
++   } while (0)
++
++#define INSNS                                    \
++   XTEST(b9f0,selr);                             \
++   XTEST(b9e3,selgr);                            \
++   XTEST(b9c0,selfhr);
++
++#define XTEST TEST_GENERATE
++INSNS
++#undef XTEST
++
++static void test_all_select()
++{
++#define XTEST TEST_EXEC
++   INSNS
++#undef XTEST
++}
++#undef INSNS
++#undef TEST_GENERATE
++#undef TEST_EXEC
++
++
++/* -- Move right to left -- */
++
++static void test_mvcrl(void *to, void *from, size_t len)
++{
++   len -= 1;
++   __asm__("lgr    0,%[len]\n\t"
++           ".insn  sse,0xe50a00000000,%[to],%[from]\n\t"
++           : [to] "+Q" (*(struct { char c[len]; } *) to)
++           : [from] "Q" (*(struct { char c[len]; } *) from),
++             [len] "d" (len)
++           : );
++}
++
++static void test_all_mvcrl()
++{
++   static const char pattern[] =
++      "abcdefghijklmnopqrstuvwxyz-0123456789.ABCDEFGHIJKLMNOPQRSTUVWXYZ";
++   char buf[4 * sizeof(pattern) - 2];
++
++   test_mvcrl(buf, (char *) pattern, sizeof(pattern));
++   test_mvcrl(buf + sizeof(pattern) - 1, buf, sizeof(pattern));
++   test_mvcrl(buf + 2 * sizeof(pattern) - 2, buf, 2 * sizeof(pattern) - 1);
++   test_mvcrl(buf + 32, buf + 10, 63);
++   test_mvcrl(buf + 2, buf + 1, 256);
++   test_mvcrl(buf + 254, buf + 256, 2);
++   puts("mvcrl");
++   for (int i = 0; i < 256; i += 64) {
++      printf("\t%.64s\n", buf + i);
++   }
++}
++
++
++int main()
++{
++   test_all_logical_insns();
++   test_all_popcnt();
++   test_all_select();
++   test_all_mvcrl();
++   return 0;
++}
+diff --git a/none/tests/s390x/misc3.stderr.exp b/none/tests/s390x/misc3.stderr.exp
+new file mode 100644
+index 000000000..139597f9c
+--- /dev/null
++++ b/none/tests/s390x/misc3.stderr.exp
+@@ -0,0 +1,2 @@
++
++
+diff --git a/none/tests/s390x/misc3.stdout.exp b/none/tests/s390x/misc3.stdout.exp
+new file mode 100644
+index 000000000..caaba4960
+--- /dev/null
++++ b/none/tests/s390x/misc3.stdout.exp
+@@ -0,0 +1,103 @@
++ncrk
++	0000000000000000 0000000000000000 -> decaffee00000000 cc=0
++	0000000000000000 ffffffffffffffff -> decaffee00000000 cc=0
++	ffffffffffffffff 0000000000000000 -> decaffeeffffffff cc=1
++	ffffffffffffffff ffffffffffffffff -> decaffee00000000 cc=0
++	0012345678abcdef 0000000000000000 -> decaffee78abcdef cc=1
++	0012345678abcdef ffffffffffffffff -> decaffee00000000 cc=0
++	55555555aaaaaaaa aaaaaaaa55555555 -> decaffeeaaaaaaaa cc=1
++ncgrk
++	0000000000000000 0000000000000000 -> 0000000000000000 cc=0
++	0000000000000000 ffffffffffffffff -> 0000000000000000 cc=0
++	ffffffffffffffff 0000000000000000 -> ffffffffffffffff cc=1
++	ffffffffffffffff ffffffffffffffff -> 0000000000000000 cc=0
++	0012345678abcdef 0000000000000000 -> 0012345678abcdef cc=1
++	0012345678abcdef ffffffffffffffff -> 0000000000000000 cc=0
++	55555555aaaaaaaa aaaaaaaa55555555 -> 55555555aaaaaaaa cc=1
++nnrk
++	0000000000000000 0000000000000000 -> decaffeeffffffff cc=1
++	0000000000000000 ffffffffffffffff -> decaffeeffffffff cc=1
++	ffffffffffffffff 0000000000000000 -> decaffeeffffffff cc=1
++	ffffffffffffffff ffffffffffffffff -> decaffee00000000 cc=0
++	0012345678abcdef 0000000000000000 -> decaffeeffffffff cc=1
++	0012345678abcdef ffffffffffffffff -> decaffee87543210 cc=1
++	55555555aaaaaaaa aaaaaaaa55555555 -> decaffeeffffffff cc=1
++nngrk
++	0000000000000000 0000000000000000 -> ffffffffffffffff cc=1
++	0000000000000000 ffffffffffffffff -> ffffffffffffffff cc=1
++	ffffffffffffffff 0000000000000000 -> ffffffffffffffff cc=1
++	ffffffffffffffff ffffffffffffffff -> 0000000000000000 cc=0
++	0012345678abcdef 0000000000000000 -> ffffffffffffffff cc=1
++	0012345678abcdef ffffffffffffffff -> ffedcba987543210 cc=1
++	55555555aaaaaaaa aaaaaaaa55555555 -> ffffffffffffffff cc=1
++nork
++	0000000000000000 0000000000000000 -> decaffeeffffffff cc=1
++	0000000000000000 ffffffffffffffff -> decaffee00000000 cc=0
++	ffffffffffffffff 0000000000000000 -> decaffee00000000 cc=0
++	ffffffffffffffff ffffffffffffffff -> decaffee00000000 cc=0
++	0012345678abcdef 0000000000000000 -> decaffee87543210 cc=1
++	0012345678abcdef ffffffffffffffff -> decaffee00000000 cc=0
++	55555555aaaaaaaa aaaaaaaa55555555 -> decaffee00000000 cc=0
++nogrk
++	0000000000000000 0000000000000000 -> ffffffffffffffff cc=1
++	0000000000000000 ffffffffffffffff -> 0000000000000000 cc=0
++	ffffffffffffffff 0000000000000000 -> 0000000000000000 cc=0
++	ffffffffffffffff ffffffffffffffff -> 0000000000000000 cc=0
++	0012345678abcdef 0000000000000000 -> ffedcba987543210 cc=1
++	0012345678abcdef ffffffffffffffff -> 0000000000000000 cc=0
++	55555555aaaaaaaa aaaaaaaa55555555 -> 0000000000000000 cc=0
++nxrk
++	0000000000000000 0000000000000000 -> decaffeeffffffff cc=1
++	0000000000000000 ffffffffffffffff -> decaffee00000000 cc=0
++	ffffffffffffffff 0000000000000000 -> decaffee00000000 cc=0
++	ffffffffffffffff ffffffffffffffff -> decaffeeffffffff cc=1
++	0012345678abcdef 0000000000000000 -> decaffee87543210 cc=1
++	0012345678abcdef ffffffffffffffff -> decaffee78abcdef cc=1
++	55555555aaaaaaaa aaaaaaaa55555555 -> decaffee00000000 cc=0
++nxgrk
++	0000000000000000 0000000000000000 -> ffffffffffffffff cc=1
++	0000000000000000 ffffffffffffffff -> 0000000000000000 cc=0
++	ffffffffffffffff 0000000000000000 -> 0000000000000000 cc=0
++	ffffffffffffffff ffffffffffffffff -> ffffffffffffffff cc=1
++	0012345678abcdef 0000000000000000 -> ffedcba987543210 cc=1
++	0012345678abcdef ffffffffffffffff -> 0012345678abcdef cc=1
++	55555555aaaaaaaa aaaaaaaa55555555 -> 0000000000000000 cc=0
++ocrk
++	0000000000000000 0000000000000000 -> decaffeeffffffff cc=1
++	0000000000000000 ffffffffffffffff -> decaffee00000000 cc=0
++	ffffffffffffffff 0000000000000000 -> decaffeeffffffff cc=1
++	ffffffffffffffff ffffffffffffffff -> decaffeeffffffff cc=1
++	0012345678abcdef 0000000000000000 -> decaffeeffffffff cc=1
++	0012345678abcdef ffffffffffffffff -> decaffee78abcdef cc=1
++	55555555aaaaaaaa aaaaaaaa55555555 -> decaffeeaaaaaaaa cc=1
++ocgrk
++	0000000000000000 0000000000000000 -> ffffffffffffffff cc=1
++	0000000000000000 ffffffffffffffff -> 0000000000000000 cc=0
++	ffffffffffffffff 0000000000000000 -> ffffffffffffffff cc=1
++	ffffffffffffffff ffffffffffffffff -> ffffffffffffffff cc=1
++	0012345678abcdef 0000000000000000 -> ffffffffffffffff cc=1
++	0012345678abcdef ffffffffffffffff -> 0012345678abcdef cc=1
++	55555555aaaaaaaa aaaaaaaa55555555 -> 55555555aaaaaaaa cc=1
++popcnt
++	0000000000000000 ->  0 cc=0
++	0000000000000001 ->  1 cc=1
++	8000000000000000 ->  1 cc=1
++	ffffffffffffffff -> 64 cc=1
++	ff427e3800556bcd -> 33 cc=1
++selr
++	ffffffffffffffff 0000000000000000 -> 0cafebadffffffff 0badcafe00000000
++	0000000000000000 ffffffffffffffff -> 0cafebad00000000 0badcafeffffffff
++	1234567890abcdef fedcba9876543210 -> 0cafebad90abcdef 0badcafe76543210
++selgr
++	ffffffffffffffff 0000000000000000 -> ffffffffffffffff 0000000000000000
++	0000000000000000 ffffffffffffffff -> 0000000000000000 ffffffffffffffff
++	1234567890abcdef fedcba9876543210 -> 1234567890abcdef fedcba9876543210
++selfhr
++	ffffffffffffffff 0000000000000000 -> ffffffff0badcafe 000000000cafebad
++	0000000000000000 ffffffffffffffff -> 000000000badcafe ffffffff0cafebad
++	1234567890abcdef fedcba9876543210 -> 123456780badcafe fedcba980cafebad
++mvcrl
++	abbcdefghijklmnopqrstuvwxyz-01234klmnopqrstuvwxyz-0123456789.ABC
++	DEFGHIJKLMNOPQRSTUVWXYZabcdefghi456789.ABCDEFGHIJKLMNOPQRSTUVWXY
++	Zabcdefghijklmnopqrstuvwxyz-0123456789.ABCDEFGHIJKLMNOPQRSTUVWXY
++	Zabcdefghijklmnopqrstuvwxyz-0123456789.ABCDEFGHIJKLMNOPQRSTUVWZ
+diff --git a/none/tests/s390x/misc3.vgtest b/none/tests/s390x/misc3.vgtest
+new file mode 100644
+index 000000000..d051a06bd
+--- /dev/null
++++ b/none/tests/s390x/misc3.vgtest
+@@ -0,0 +1 @@
++prog: misc3
+-- 
+2.23.0
+
+From 401b51d79886362d1962dc487db45ac91462eaa0 Mon Sep 17 00:00:00 2001
+From: Andreas Arnez <arnez@linux.ibm.com>
+Date: Wed, 7 Apr 2021 12:29:32 +0200
+Subject: [PATCH 06/13] s390x: Vec-enh-2, extend VSL, VSRA, and VSRL
+
+The vector-enhancements facility 2 extends the existing bitwise vector
+shift instructions VSL, VSRA, and VSRL.  Now they allow the shift
+vector (the third operand) to contain different shift amounts for each
+byte.  Add support for these new forms.
+---
+ VEX/priv/guest_s390_toIR.c | 58 ++++++++++++++++++++++++++++++--------
+ 1 file changed, 47 insertions(+), 11 deletions(-)
+
+diff --git a/VEX/priv/guest_s390_toIR.c b/VEX/priv/guest_s390_toIR.c
+index 9f7d98f8c..622d5a02e 100644
+--- a/VEX/priv/guest_s390_toIR.c
++++ b/VEX/priv/guest_s390_toIR.c
+@@ -17983,30 +17983,66 @@ s390_irgen_VERLL(UChar v1, IRTemp op2addr, UChar v3, UChar m4)
+ static const HChar *
+ s390_irgen_VSL(UChar v1, UChar v2, UChar v3)
+ {
+-   IRTemp shift_amount = newTemp(Ity_I8);
+-   assign(shift_amount, binop(Iop_And8, get_vr_b7(v3), mkU8(0b00000111)));
+-
+-   put_vr_qw(v1, binop(Iop_ShlV128, get_vr_qw(v2), mkexpr(shift_amount)));
++   IRTemp a = newTemp(Ity_V128);
++   IRTemp b = newTemp(Ity_V128);
++
++   assign(a, get_vr_qw(v2));
++   assign(b, get_vr_qw(v3));
++
++   put_vr_qw(v1,
++             binop(Iop_OrV128,
++                   binop(Iop_Shl8x16, mkexpr(a), mkexpr(b)),
++                   binop(Iop_Shr8x16,
++                         binop(Iop_Shr8x16,
++                               binop(Iop_ShlV128, mkexpr(a), mkU8(8)),
++                               unop(Iop_NotV128, mkexpr(b))),
++                         unop(Iop_Dup8x16, mkU8(1)))));
+    return "vsl";
+ }
+ 
+ static const HChar *
+ s390_irgen_VSRL(UChar v1, UChar v2, UChar v3)
+ {
+-   IRTemp shift_amount = newTemp(Ity_I8);
+-   assign(shift_amount, binop(Iop_And8, get_vr_b7(v3), mkU8(0b00000111)));
++   IRTemp a = newTemp(Ity_V128);
++   IRTemp b = newTemp(Ity_V128);
+ 
+-   put_vr_qw(v1, binop(Iop_ShrV128, get_vr_qw(v2), mkexpr(shift_amount)));
++   assign(a, get_vr_qw(v2));
++   assign(b, get_vr_qw(v3));
++
++   put_vr_qw(v1,
++             binop(Iop_OrV128,
++                   binop(Iop_Shr8x16, mkexpr(a), mkexpr(b)),
++                   binop(Iop_Shl8x16,
++                         binop(Iop_Shl8x16,
++                               binop(Iop_ShrV128, mkexpr(a), mkU8(8)),
++                               unop(Iop_NotV128, mkexpr(b))),
++                         unop(Iop_Dup8x16, mkU8(1)))));
+    return "vsrl";
+ }
+ 
+ static const HChar *
+ s390_irgen_VSRA(UChar v1, UChar v2, UChar v3)
+ {
+-   IRTemp shift_amount = newTemp(Ity_I8);
+-   assign(shift_amount, binop(Iop_And8, get_vr_b7(v3), mkU8(0b00000111)));
+-
+-   put_vr_qw(v1, binop(Iop_SarV128, get_vr_qw(v2), mkexpr(shift_amount)));
++   IRTemp a = newTemp(Ity_V128);
++   IRTemp b = newTemp(Ity_V128);
++
++   assign(a, get_vr_qw(v2));
++   assign(b, get_vr_qw(v3));
++
++   /* Shift-right: first byte arithmetically, all others logically */
++   IRExpr* elems_shifted =
++      binop(Iop_Sar8x16,
++            binop(Iop_Shr8x16, mkexpr(a),
++                  binop(Iop_AndV128, mkexpr(b), mkV128(0x7fff))),
++            binop(Iop_AndV128, mkexpr(b), mkV128(0x8000)));
++   /* Then OR the appropriate bits from the byte to the left */
++   put_vr_qw(v1,
++             binop(Iop_OrV128, elems_shifted,
++                   binop(Iop_Shl8x16,
++                         binop(Iop_Shl8x16,
++                               binop(Iop_ShrV128, mkexpr(a), mkU8(8)),
++                               unop(Iop_NotV128, mkexpr(b))),
++                         unop(Iop_Dup8x16, mkU8(1)))));
+    return "vsra";
+ }
+ 
+-- 
+2.23.0
+
+From 3fdf065d0bf26a02d6d93a812a6571a287379c36 Mon Sep 17 00:00:00 2001
+From: Andreas Arnez <arnez@linux.ibm.com>
+Date: Thu, 11 Feb 2021 20:02:03 +0100
+Subject: [PATCH 07/13] s390x: Vec-enh-2, extend VCDG, VCDLG, VCGD, and VCLGD
+
+The vector-enhancements facility 2 extends the vector floating-point
+conversion instructions VCDG, VCDLG, VCGD, and VCLGD.  In addition to
+64-bit elements, they now also handle 32-bit elements.  Add support for
+these new forms.
+---
+ VEX/priv/guest_s390_toIR.c | 36 ++++++++++++++++++++----------------
+ 1 file changed, 20 insertions(+), 16 deletions(-)
+
+diff --git a/VEX/priv/guest_s390_toIR.c b/VEX/priv/guest_s390_toIR.c
+index 622d5a02e..11271a1c9 100644
+--- a/VEX/priv/guest_s390_toIR.c
++++ b/VEX/priv/guest_s390_toIR.c
+@@ -18794,44 +18794,48 @@ s390_vector_fp_convert(IROp op, IRType fromType, IRType toType, Bool rounding,
+ static const HChar *
+ s390_irgen_VCDG(UChar v1, UChar v2, UChar m3, UChar m4, UChar m5)
+ {
+-   s390_insn_assert("vcdg", m3 == 3);
+-
+-   s390_vector_fp_convert(Iop_I64StoF64, Ity_I64, Ity_F64, True,
+-                          v1, v2, m3, m4, m5);
++   s390_insn_assert("vcdg", m3 == 2 || m3 == 3);
+ 
++   s390_vector_fp_convert(m3 == 2 ? Iop_I32StoF32 : Iop_I64StoF64,
++                          m3 == 2 ? Ity_I32       : Ity_I64,
++                          m3 == 2 ? Ity_F32       : Ity_F64,
++                          True, v1, v2, m3, m4, m5);
+    return "vcdg";
+ }
+ 
+ static const HChar *
+ s390_irgen_VCDLG(UChar v1, UChar v2, UChar m3, UChar m4, UChar m5)
+ {
+-   s390_insn_assert("vcdlg", m3 == 3);
+-
+-   s390_vector_fp_convert(Iop_I64UtoF64, Ity_I64, Ity_F64, True,
+-                          v1, v2, m3, m4, m5);
++   s390_insn_assert("vcdlg", m3 == 2 || m3 == 3);
+ 
++   s390_vector_fp_convert(m3 == 2 ? Iop_I32UtoF32 : Iop_I64UtoF64,
++                          m3 == 2 ? Ity_I32       : Ity_I64,
++                          m3 == 2 ? Ity_F32       : Ity_F64,
++                          True, v1, v2, m3, m4, m5);
+    return "vcdlg";
+ }
+ 
+ static const HChar *
+ s390_irgen_VCGD(UChar v1, UChar v2, UChar m3, UChar m4, UChar m5)
+ {
+-   s390_insn_assert("vcgd", m3 == 3);
+-
+-   s390_vector_fp_convert(Iop_F64toI64S, Ity_F64, Ity_I64, True,
+-                          v1, v2, m3, m4, m5);
++   s390_insn_assert("vcgd", m3 == 2 || m3 == 3);
+ 
++   s390_vector_fp_convert(m3 == 2 ? Iop_F32toI32S : Iop_F64toI64S,
++                          m3 == 2 ? Ity_F32       : Ity_F64,
++                          m3 == 2 ? Ity_I32       : Ity_I64,
++                          True, v1, v2, m3, m4, m5);
+    return "vcgd";
+ }
+ 
+ static const HChar *
+ s390_irgen_VCLGD(UChar v1, UChar v2, UChar m3, UChar m4, UChar m5)
+ {
+-   s390_insn_assert("vclgd", m3 == 3);
+-
+-   s390_vector_fp_convert(Iop_F64toI64U, Ity_F64, Ity_I64, True,
+-                          v1, v2, m3, m4, m5);
++   s390_insn_assert("vclgd", m3 == 2 || m3 == 3);
+ 
++   s390_vector_fp_convert(m3 == 2 ? Iop_F32toI32U : Iop_F64toI64U,
++                          m3 == 2 ? Ity_F32       : Ity_F64,
++                          m3 == 2 ? Ity_I32       : Ity_I64,
++                          True, v1, v2, m3, m4, m5);
+    return "vclgd";
+ }
+ 
+-- 
+2.23.0
+
+From d195bf17388572e85474c7ded4b5bd0e4774637d Mon Sep 17 00:00:00 2001
+From: Andreas Arnez <arnez@linux.ibm.com>
+Date: Tue, 16 Feb 2021 16:19:31 +0100
+Subject: [PATCH 08/13] s390x: Vec-enh-2, VLBR and friends
+
+Add support for the new byte- and element-swapping vector load/store
+instructions VLEBRH, VLEBRG, VLEBRF, VLLEBRZ, VLBRREP, VLBR, VLER,
+VSTEBRH, VSTEBRG, VSTEBRF, VSTBR, and VSTER.
+---
+ VEX/priv/guest_s390_toIR.c | 256 +++++++++++++++++++++++++++++++++++++
+ VEX/priv/host_s390_isel.c  |   9 ++
+ 2 files changed, 265 insertions(+)
+
+diff --git a/VEX/priv/guest_s390_toIR.c b/VEX/priv/guest_s390_toIR.c
+index 11271a1c9..f65b42705 100644
+--- a/VEX/priv/guest_s390_toIR.c
++++ b/VEX/priv/guest_s390_toIR.c
+@@ -19388,6 +19388,209 @@ s390_irgen_SELFHR(UChar r3, UChar m4, UChar r1, UChar r2)
+    return "selfhr";
+ }
+ 
++/* Helper function that byte-swaps each element of its V128 input operand */
++static IRExpr *
++s390_byteswap_elements(IRExpr* v, UChar m)
++{
++   static const ULong perm[4][2] = {
++      { 0x0100030205040706, 0x09080b0a0d0c0f0e }, /* 2-byte elements */
++      { 0x0302010007060504, 0x0b0a09080f0e0d0c }, /* 4-byte elements */
++      { 0x0706050403020100, 0x0f0e0d0c0b0a0908 }, /* 8-byte elements */
++      { 0x0f0e0d0c0b0a0908, 0x0706050403020100 }, /* whole vector */
++   };
++   return binop(Iop_Perm8x16, v, binop(Iop_64HLtoV128,
++                                       mkU64(perm[m - 1][0]),
++                                       mkU64(perm[m - 1][1])));
++}
++
++/* Helper function that reverses the elements of its V128 input operand */
++static IRExpr *
++s390_reverse_elements(IRExpr* v, UChar m)
++{
++   static const ULong perm[3][2] = {
++      { 0x0e0f0c0d0a0b0809, 0x0607040502030001 }, /* 2-byte elements */
++      { 0x0c0d0e0f08090a0b, 0x0405060700010203 }, /* 4-byte elements */
++      { 0x08090a0b0c0d0e0f, 0x0001020304050607 }, /* 8-byte elements */
++   };
++   return binop(Iop_Perm8x16, v, binop(Iop_64HLtoV128,
++                                       mkU64(perm[m - 1][0]),
++                                       mkU64(perm[m - 1][1])));
++}
++
++static const HChar *
++s390_irgen_VLBR(UChar v1, IRTemp op2addr, UChar m3)
++{
++   s390_insn_assert("vlbr", m3 >= 1 && m3 <= 4);
++   put_vr_qw(v1, s390_byteswap_elements(load(Ity_V128, mkexpr(op2addr)), m3));
++   return "vlbr";
++}
++
++static const HChar *
++s390_irgen_VSTBR(UChar v1, IRTemp op2addr, UChar m3)
++{
++   s390_insn_assert("vstbr", m3 >= 1 && m3 <= 4);
++   store(mkexpr(op2addr), s390_byteswap_elements(get_vr_qw(v1), m3));
++   return "vstbr";
++}
++
++static const HChar *
++s390_irgen_VLER(UChar v1, IRTemp op2addr, UChar m3)
++{
++   s390_insn_assert("vler", m3 >= 1 && m3 <= 3);
++   put_vr_qw(v1, s390_reverse_elements(load(Ity_V128, mkexpr(op2addr)), m3));
++   return "vler";
++}
++
++static const HChar *
++s390_irgen_VSTER(UChar v1, IRTemp op2addr, UChar m3)
++{
++   s390_insn_assert("vstbr", m3 >= 1 && m3 <= 4);
++   store(mkexpr(op2addr), s390_reverse_elements(get_vr_qw(v1), m3));
++   return "vstbr";
++}
++
++/* Helper function that combines its two V128 operands by replacing element 'to'
++   in 'a' by byte-swapped element 'from' in 'b' */
++static IRExpr *
++s390_insert_byteswapped(IRExpr* a, IRExpr* b, UChar m, UChar to, UChar from)
++{
++   UInt elem_size = 1U << m;
++   UInt start = elem_size * to;
++   UInt end = start + elem_size - 1;
++   UInt offs = end + elem_size * from + 16;
++   UInt i;
++
++   ULong permH = 0;
++   for (i = 0; i < 8; i++) {
++      permH = (permH << 8) | (i >= start && i <= end ? offs - i : i);
++   }
++   ULong permL = 0;
++   for (i = 8; i < 16; i++) {
++      permL = (permL << 8) | (i >= start && i <= end ? offs - i : i);
++   }
++   return triop(Iop_Perm8x16x2, a, b, binop(Iop_64HLtoV128,
++                                            mkU64(permH), mkU64(permL)));
++}
++
++static const HChar *
++s390_irgen_VLEBRH(UChar v1, IRTemp op2addr, UChar m3)
++{
++   s390_insn_assert("vlebrh", m3 <= 7);
++   IRTemp op2 = newTemp(Ity_I16);
++   assign(op2, load(Ity_I16, mkexpr(op2addr)));
++   put_vr(v1, Ity_I16, m3, binop(Iop_Or16,
++                                 binop(Iop_Shl16, mkexpr(op2), mkU8(8)),
++                                 binop(Iop_Shr16, mkexpr(op2), mkU8(8))));
++   return "vlebrh";
++}
++
++static const HChar *
++s390_irgen_VLEBRF(UChar v1, IRTemp op2addr, UChar m3)
++{
++   s390_insn_assert("vlebrf", m3 <= 3);
++   IRTemp op1 = newTemp(Ity_V128);
++   assign(op1, get_vr_qw(v1));
++   IRTemp op2 = newTemp(Ity_I64);
++   assign(op2, unop(Iop_32Uto64, load(Ity_I32, mkexpr(op2addr))));
++   IRExpr* b = binop(Iop_64HLtoV128, mkexpr(op2), mkexpr(op2));
++   put_vr_qw(v1, s390_insert_byteswapped(mkexpr(op1), b, 2, m3, 3));
++   return "vlebrf";
++}
++
++static const HChar *
++s390_irgen_VLEBRG(UChar v1, IRTemp op2addr, UChar m3)
++{
++   s390_insn_assert("vlebrg", m3 <= 1);
++   IRTemp op1 = newTemp(Ity_V128);
++   assign(op1, get_vr_qw(v1));
++   IRTemp op2 = newTemp(Ity_I64);
++   assign(op2, load(Ity_I64, mkexpr(op2addr)));
++   IRExpr* b = binop(Iop_64HLtoV128, mkexpr(op2), mkexpr(op2));
++   put_vr_qw(v1, s390_insert_byteswapped(mkexpr(op1), b, 3, m3, 1));
++   return "vlebrg";
++}
++
++static const HChar *
++s390_irgen_VLBRREP(UChar v1, IRTemp op2addr, UChar m3)
++{
++   s390_insn_assert("vlbrrep", m3 >= 1 && m3 <= 3);
++   static const ULong perm[3] = {
++      0x0f0e0f0e0f0e0f0e,       /* 2-byte element */
++      0x0f0e0d0c0f0e0d0c,       /* 4-byte element */
++      0x0f0e0d0c0b0a0908        /* 8-byte element */
++   };
++   IRExpr* permHL = mkU64(perm[m3 - 1]);
++   IRTemp op2 = newTemp(Ity_I64);
++   if (m3 == 3)
++      assign(op2, load(Ity_I64, mkexpr(op2addr)));
++   else
++      assign(op2, unop(m3 == 2 ? Iop_32Uto64 : Iop_16Uto64,
++                       load(s390_vr_get_type(m3), mkexpr(op2addr))));
++   put_vr_qw(v1, binop(Iop_Perm8x16,
++                       binop(Iop_64HLtoV128, mkexpr(op2), mkexpr(op2)),
++                       binop(Iop_64HLtoV128, permHL, permHL)));
++   return "vlbrrep";
++}
++
++static const HChar *
++s390_irgen_VLLEBRZ(UChar v1, IRTemp op2addr, UChar m3)
++{
++   s390_insn_assert("vllebrz", (m3 >= 1 && m3 <= 3) || m3 == 6);
++   static const ULong perm[6] = {
++      0x0000000000000f0e,       /* 2-byte element */
++      0x000000000f0e0d0c,       /* 4-byte element */
++      0x0f0e0d0c0b0a0908,       /* 8-byte element */
++      0,                        /* invalid (4) */
++      0,                        /* invalid (5) */
++      0x0f0e0d0c00000000,       /* 4-byte element, left-aligned */
++   };
++   IRExpr* permH = mkU64(perm[m3 - 1]);
++   IRTemp op2 = newTemp(Ity_I64);
++   if (m3 == 3)
++      assign(op2, load(Ity_I64, mkexpr(op2addr)));
++   else
++      assign(op2, unop((m3 & 3) == 2 ? Iop_32Uto64 : Iop_16Uto64,
++                       load(s390_vr_get_type(m3 & 3), mkexpr(op2addr))));
++   put_vr_qw(v1, binop(Iop_Perm8x16,
++                       binop(Iop_64HLtoV128, mkU64(0), mkexpr(op2)),
++                       binop(Iop_64HLtoV128, permH, mkU64(0))));
++   return "vllebrz";
++}
++
++static const HChar *
++s390_irgen_VSTEBRH(UChar v1, IRTemp op2addr, UChar m3)
++{
++   s390_insn_assert("vstebrh", m3 <= 7);
++   IRTemp op1 = newTemp(Ity_I16);
++   assign(op1, get_vr(v1, Ity_I16, m3));
++   store(mkexpr(op2addr), binop(Iop_Or16,
++                                binop(Iop_Shl16, mkexpr(op1), mkU8(8)),
++                                binop(Iop_Shr16, mkexpr(op1), mkU8(8))));
++   return "vstebrh";
++}
++
++static const HChar *
++s390_irgen_VSTEBRF(UChar v1, IRTemp op2addr, UChar m3)
++{
++   s390_insn_assert("vstebrf", m3 <= 3);
++   IRTemp op1 = newTemp(Ity_V128);
++   assign(op1, get_vr_qw(v1));
++   IRExpr* b = s390_insert_byteswapped(mkexpr(op1), mkexpr(op1), 2, 3, m3);
++   store(mkexpr(op2addr), unop(Iop_V128to32, b));
++   return "vstebrf";
++}
++
++static const HChar *
++s390_irgen_VSTEBRG(UChar v1, IRTemp op2addr, UChar m3)
++{
++   s390_insn_assert("vstebrg", m3 <= 1);
++   IRTemp op1 = newTemp(Ity_V128);
++   assign(op1, get_vr_qw(v1));
++   IRExpr* b = s390_insert_byteswapped(mkexpr(op1), mkexpr(op1), 3, 1, m3);
++   store(mkexpr(op2addr), unop(Iop_V128to64, b));
++   return "vstebrg";
++}
++
+ /* New insns are added here.
+    If an insn is contingent on a facility being installed also
+    check whether the list of supported facilities in function
+@@ -21003,6 +21206,59 @@ s390_decode_6byte_and_irgen(const UChar *bytes)
+                                                 RXY_x2(ovl), RXY_b2(ovl),
+                                                 RXY_dl2(ovl),
+                                                 RXY_dh2(ovl));  goto ok;
++   case 0xe60000000001ULL: s390_format_VRX_VRRDM(s390_irgen_VLEBRH, VRX_v1(ovl),
++                                                 VRX_x2(ovl), VRX_b2(ovl),
++                                                 VRX_d2(ovl), VRX_m3(ovl),
++                                                 VRX_rxb(ovl));  goto ok;
++   case 0xe60000000002ULL: s390_format_VRX_VRRDM(s390_irgen_VLEBRG, VRX_v1(ovl),
++                                                 VRX_x2(ovl), VRX_b2(ovl),
++                                                 VRX_d2(ovl), VRX_m3(ovl),
++                                                 VRX_rxb(ovl));  goto ok;
++   case 0xe60000000003ULL: s390_format_VRX_VRRDM(s390_irgen_VLEBRF, VRX_v1(ovl),
++                                                 VRX_x2(ovl), VRX_b2(ovl),
++                                                 VRX_d2(ovl), VRX_m3(ovl),
++                                                 VRX_rxb(ovl));  goto ok;
++   case 0xe60000000004ULL: s390_format_VRX_VRRDM(s390_irgen_VLLEBRZ,
++                                                 VRX_v1(ovl),
++                                                 VRX_x2(ovl), VRX_b2(ovl),
++                                                 VRX_d2(ovl), VRX_m3(ovl),
++                                                 VRX_rxb(ovl));  goto ok;
++   case 0xe60000000005ULL: s390_format_VRX_VRRDM(s390_irgen_VLBRREP,
++                                                 VRX_v1(ovl),
++                                                 VRX_x2(ovl), VRX_b2(ovl),
++                                                 VRX_d2(ovl), VRX_m3(ovl),
++                                                 VRX_rxb(ovl));  goto ok;
++   case 0xe60000000006ULL: s390_format_VRX_VRRDM(s390_irgen_VLBR, VRX_v1(ovl),
++                                                 VRX_x2(ovl), VRX_b2(ovl),
++                                                 VRX_d2(ovl), VRX_m3(ovl),
++                                                 VRX_rxb(ovl));  goto ok;
++   case 0xe60000000007ULL: s390_format_VRX_VRRDM(s390_irgen_VLER, VRX_v1(ovl),
++                                                 VRX_x2(ovl), VRX_b2(ovl),
++                                                 VRX_d2(ovl), VRX_m3(ovl),
++                                                 VRX_rxb(ovl));  goto ok;
++   case 0xe60000000009ULL: s390_format_VRX_VRRDM(s390_irgen_VSTEBRH,
++                                                 VRX_v1(ovl),
++                                                 VRX_x2(ovl), VRX_b2(ovl),
++                                                 VRX_d2(ovl), VRX_m3(ovl),
++                                                 VRX_rxb(ovl));  goto ok;
++   case 0xe6000000000aULL: s390_format_VRX_VRRDM(s390_irgen_VSTEBRG,
++                                                 VRX_v1(ovl),
++                                                 VRX_x2(ovl), VRX_b2(ovl),
++                                                 VRX_d2(ovl), VRX_m3(ovl),
++                                                 VRX_rxb(ovl));  goto ok;
++   case 0xe6000000000bULL: s390_format_VRX_VRRDM(s390_irgen_VSTEBRF,
++                                                 VRX_v1(ovl),
++                                                 VRX_x2(ovl), VRX_b2(ovl),
++                                                 VRX_d2(ovl), VRX_m3(ovl),
++                                                 VRX_rxb(ovl));  goto ok;
++   case 0xe6000000000eULL: s390_format_VRX_VRRDM(s390_irgen_VSTBR, VRX_v1(ovl),
++                                                 VRX_x2(ovl), VRX_b2(ovl),
++                                                 VRX_d2(ovl), VRX_m3(ovl),
++                                                 VRX_rxb(ovl));  goto ok;
++   case 0xe6000000000fULL: s390_format_VRX_VRRDM(s390_irgen_VSTER, VRX_v1(ovl),
++                                                 VRX_x2(ovl), VRX_b2(ovl),
++                                                 VRX_d2(ovl), VRX_m3(ovl),
++                                                 VRX_rxb(ovl));  goto ok;
+    case 0xe60000000034ULL: /* VPKZ */ goto unimplemented;
+    case 0xe60000000035ULL: s390_format_VSI_URDV(s390_irgen_VLRL, VSI_v1(ovl),
+                                                 VSI_b2(ovl), VSI_d2(ovl),
+diff --git a/VEX/priv/host_s390_isel.c b/VEX/priv/host_s390_isel.c
+index ee20c6711..06e195957 100644
+--- a/VEX/priv/host_s390_isel.c
++++ b/VEX/priv/host_s390_isel.c
+@@ -4189,6 +4189,15 @@ s390_isel_vec_expr_wrk(ISelEnv *env, IRExpr *expr)
+          return dst;
+       }
+ 
++      case Iop_Perm8x16:
++         size = 16;
++         reg1 = s390_isel_vec_expr(env, arg1);
++         reg2 = s390_isel_vec_expr(env, arg2);
++
++         addInstr(env, s390_insn_vec_triop(size, S390_VEC_PERM,
++                                           dst, reg1, reg1, reg2));
++         return dst;
++
+       case Iop_CmpEQ8x16:
+          size = 1;
+          vec_binop = S390_VEC_COMPARE_EQUAL;
+-- 
+2.23.0
+
+From f7447f4c73b2d0fb4eb3827c3709f378f6c9c656 Mon Sep 17 00:00:00 2001
+From: Andreas Arnez <arnez@linux.ibm.com>
+Date: Tue, 23 Feb 2021 19:10:37 +0100
+Subject: [PATCH 09/13] s390x: Vec-enh-2, VSLD and VSRD
+
+Support the new "vector shift left/right double by bit" instructions VSLD
+and VSRD.
+---
+ VEX/priv/guest_s390_toIR.c | 50 ++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 50 insertions(+)
+
+diff --git a/VEX/priv/guest_s390_toIR.c b/VEX/priv/guest_s390_toIR.c
+index f65b42705..aa429d085 100644
+--- a/VEX/priv/guest_s390_toIR.c
++++ b/VEX/priv/guest_s390_toIR.c
+@@ -18228,6 +18228,48 @@ s390_irgen_VSLDB(UChar v1, UChar v2, UChar v3, UChar i4)
+    return "vsldb";
+ }
+ 
++static const HChar *
++s390_irgen_VSLD(UChar v1, UChar v2, UChar v3, UChar i4)
++{
++   s390_insn_assert("vsld", i4 <= 7);
++
++   if (i4 == 0) {
++      /* Just copy v2. */
++      put_vr_qw(v1, get_vr_qw(v2));
++   } else {
++      /* Concatenate v2's tail with v3's head. */
++      put_vr_qw(v1,
++                binop(Iop_OrV128,
++                      binop(Iop_ShlV128, get_vr_qw(v2), mkU8(i4)),
++                      binop(Iop_ShrV128, get_vr_qw(v3), mkU8(128 - i4))
++                     )
++               );
++   }
++
++   return "vsld";
++}
++
++static const HChar *
++s390_irgen_VSRD(UChar v1, UChar v2, UChar v3, UChar i4)
++{
++   s390_insn_assert("vsrd", i4 <= 7);
++
++   if (i4 == 0) {
++      /* Just copy v3. */
++      put_vr_qw(v1, get_vr_qw(v3));
++   } else {
++      /* Concatenate v2's tail with v3's head. */
++      put_vr_qw(v1,
++                binop(Iop_OrV128,
++                      binop(Iop_ShlV128, get_vr_qw(v2), mkU8(128 - i4)),
++                      binop(Iop_ShrV128, get_vr_qw(v3), mkU8(i4))
++                     )
++               );
++   }
++
++   return "vsrd";
++}
++
+ static const HChar *
+ s390_irgen_VMO(UChar v1, UChar v2, UChar v3, UChar m4)
+ {
+@@ -21541,6 +21583,14 @@ s390_decode_6byte_and_irgen(const UChar *bytes)
+    case 0xe70000000085ULL: s390_format_VRR_VVV(s390_irgen_VBPERM, VRR_v1(ovl),
+                                                VRR_v2(ovl), VRR_r3(ovl),
+                                                VRR_rxb(ovl));  goto ok;
++   case 0xe70000000086ULL: s390_format_VRId_VVVI(s390_irgen_VSLD, VRId_v1(ovl),
++                                                 VRId_v2(ovl), VRId_v3(ovl),
++                                                 VRId_i4(ovl),
++                                                 VRId_rxb(ovl));  goto ok;
++   case 0xe70000000087ULL: s390_format_VRId_VVVI(s390_irgen_VSRD, VRId_v1(ovl),
++                                                 VRId_v2(ovl), VRId_v3(ovl),
++                                                 VRId_i4(ovl),
++                                                 VRId_rxb(ovl));  goto ok;
+    case 0xe7000000008aULL: s390_format_VRR_VVVVMM(s390_irgen_VSTRC, VRRd_v1(ovl),
+                                                   VRRd_v2(ovl), VRRd_v3(ovl),
+                                                   VRRd_v4(ovl), VRRd_m5(ovl),
+-- 
+2.23.0
+
+From 388082bca7146f8a15814798dbfe570af2aab2a9 Mon Sep 17 00:00:00 2001
+From: Andreas Arnez <arnez@linux.ibm.com>
+Date: Wed, 10 Mar 2021 19:22:51 +0100
+Subject: [PATCH 10/13] s390x: Vec-enh-2, VSTRS
+
+Support the new "vector string search" instruction VSTRS.  The
+implementation is a full emulation and follows a similar approach as for
+the other vector string instructions.
+---
+ VEX/priv/guest_s390_toIR.c | 104 +++++++++++++++++++++++++++++++++++++
+ 1 file changed, 104 insertions(+)
+
+diff --git a/VEX/priv/guest_s390_toIR.c b/VEX/priv/guest_s390_toIR.c
+index aa429d085..46a867475 100644
+--- a/VEX/priv/guest_s390_toIR.c
++++ b/VEX/priv/guest_s390_toIR.c
+@@ -17601,6 +17601,105 @@ s390_irgen_VSTRC(UChar v1, UChar v2, UChar v3, UChar v4, UChar m5, UChar m6)
+    return "vstrc";
+ }
+ 
++static const HChar *
++s390_irgen_VSTRS(UChar v1, UChar v2, UChar v3, UChar v4, UChar m5, UChar m6)
++{
++   s390_insn_assert("vstrs", m5 <= 2 && m6 == (m6 & 2));
++
++   IRTemp op2 = newTemp(Ity_V128);
++   IRTemp op3 = newTemp(Ity_V128);
++   IRTemp op4 = newTemp(Ity_I8);
++   IRTemp op2clean = newTemp(Ity_V128);
++   IRTemp op3mask = newTemp(Ity_V128);
++   IRTemp result = newTemp(Ity_V128);
++   IRTemp ccnomatch = newTemp(Ity_I64);
++   IRExpr* tmp;
++   IRExpr* match = NULL;
++   UChar elem_bits = 8 << m5;
++   IROp cmpeq_op = S390_VEC_OP3(m5, Iop_CmpEQ8x16,
++                                Iop_CmpEQ16x8, Iop_CmpEQ32x4);
++
++   assign(op2, get_vr_qw(v2));
++   assign(op3, get_vr_qw(v3));
++   assign(op4, get_vr_b7(v4));
++
++   tmp = unop(Iop_Dup32x4,
++              unop(Iop_1Sto32, binop(Iop_CmpNE8, mkexpr(op4), mkU8(16))));
++   tmp = binop(Iop_ShrV128, tmp, binop(Iop_Shl8, mkexpr(op4), mkU8(3)));
++
++   if (s390_vr_is_zs_set(m6)) {
++      IRTemp op2eos = newTemp(Ity_V128);
++      IRExpr* t;
++      t = binop(cmpeq_op, mkexpr(op2), mkV128(0));
++      for (UChar i = m5; i < 4; i++) {
++         IRTemp s = newTemp(Ity_V128);
++         assign(s, t);
++         t = binop(Iop_OrV128, mkexpr(s), binop(Iop_ShrV128, mkexpr(s),
++                                                mkU8(8 << i)));
++      }
++      assign(op2eos, t);
++      assign(op2clean, binop(Iop_AndV128, mkexpr(op2),
++                             unop(Iop_NotV128, mkexpr(op2eos))));
++      assign(ccnomatch, binop(Iop_And64, mkU64(1),
++                              unop(Iop_V128to64, mkexpr(op2eos))));
++
++      t = binop(cmpeq_op, mkexpr(op3), mkV128(0));
++      for (UChar i = m5; i < 4; i++) {
++         IRTemp s = newTemp(Ity_V128);
++         assign(s, t);
++         t = binop(Iop_OrV128, mkexpr(s), binop(Iop_ShrV128, mkexpr(s),
++                                                mkU8(8 << i)));
++      }
++      tmp = binop(Iop_OrV128, tmp, t);
++   } else {
++      assign(op2clean, mkexpr(op2));
++   }
++   assign(op3mask, unop(Iop_NotV128, tmp));
++
++   for (UChar shift = 0; shift < 128; shift += elem_bits) {
++      IRTemp s = newTemp(Ity_V128);
++      tmp = unop(Iop_NotV128,
++                 binop(cmpeq_op, mkexpr(op2clean),
++                       binop(Iop_ShrV128, mkexpr(op3), mkU8(shift))));
++      assign(s, binop(Iop_CmpEQ64x2, mkV128(0),
++                      binop(Iop_AndV128, mkexpr(op3mask),
++                            binop(Iop_ShlV128, tmp, mkU8(shift)))));
++      tmp = mkexpr(s);
++      if (shift < 64) {
++         tmp = binop(Iop_AndV128, tmp,
++                     unop(Iop_Dup16x8, binop(Iop_GetElem16x8, tmp, mkU8(4))));
++      }
++      tmp = binop(Iop_AndV128, tmp,
++                  unop(Iop_Dup16x8, mkU16(1 << (15 - shift / 8))));
++      if (shift)
++         match = binop(Iop_OrV128, mkexpr(mktemp(Ity_V128, match)), tmp);
++      else
++         match = tmp;
++   }
++   assign(result, unop(Iop_ClzNat64,
++                       binop(Iop_Or64,
++                             unop(Iop_V128HIto64, match),
++                             mkU64((1UL << 48) - 1))));
++   put_vr_qw(v1, binop(Iop_64HLtoV128, mkexpr(result), mkU64(0)));
++
++   /* Set condition code.
++      0: no match, no string terminator in op2
++      1: no match, string terminator found
++      2: full match
++      3: partial match */
++   IRTemp cc = newTemp(Ity_I64);
++   tmp = binop(Iop_CmpLE64U,
++               binop(Iop_Add64, mkexpr(result), unop(Iop_8Uto64, mkexpr(op4))),
++               mkU64(16));
++   assign(cc, mkite(binop(Iop_CmpEQ64, mkexpr(result), mkU64(16)),
++                    s390_vr_is_zs_set(m6) ? mkexpr(ccnomatch) : mkU64(0),
++                    mkite(tmp, mkU64(2), mkU64(3))));
++   s390_cc_set(cc);
++
++   dis_res->hint = Dis_HintVerbose;
++   return "vstrs";
++}
++
+ static const HChar *
+ s390_irgen_VNC(UChar v1, UChar v2, UChar v3)
+ {
+@@ -21596,6 +21695,11 @@ s390_decode_6byte_and_irgen(const UChar *bytes)
+                                                   VRRd_v4(ovl), VRRd_m5(ovl),
+                                                   VRRd_m6(ovl),
+                                                   VRRd_rxb(ovl));  goto ok;
++   case 0xe7000000008bULL: s390_format_VRR_VVVVMM(s390_irgen_VSTRS, VRRd_v1(ovl),
++                                                  VRRd_v2(ovl), VRRd_v3(ovl),
++                                                  VRRd_v4(ovl), VRRd_m5(ovl),
++                                                  VRRd_m6(ovl),
++                                                  VRRd_rxb(ovl));  goto ok;
+    case 0xe7000000008cULL: s390_format_VRR_VVVV(s390_irgen_VPERM, VRR_v1(ovl),
+                                                VRR_v2(ovl), VRR_r3(ovl),
+                                                VRR_m4(ovl), VRR_rxb(ovl));  goto ok;
+-- 
+2.23.0
+
+From 8a079b405467fa127c6c311d7ae3c649e76106c6 Mon Sep 17 00:00:00 2001
+From: Andreas Arnez <arnez@linux.ibm.com>
+Date: Tue, 16 Feb 2021 17:52:09 +0100
+Subject: [PATCH 11/13] s390x: Mark arch13 features as supported
+
+Make the STFLE instruction report the miscellaneous-instruction-extensions
+facility 3 and the vector-enhancements facility 2 as supported.  Indicate
+support for the latter in the HWCAP vector as well.
+---
+ VEX/priv/guest_s390_helpers.c       | 9 +++------
+ coregrind/m_initimg/initimg-linux.c | 3 ++-
+ include/vki/vki-s390x-linux.h       | 1 +
+ 3 files changed, 6 insertions(+), 7 deletions(-)
+
+diff --git a/VEX/priv/guest_s390_helpers.c b/VEX/priv/guest_s390_helpers.c
+index 1e04f601a..804b92a29 100644
+--- a/VEX/priv/guest_s390_helpers.c
++++ b/VEX/priv/guest_s390_helpers.c
+@@ -356,9 +356,7 @@ s390x_dirtyhelper_STFLE(VexGuestS390XState *guest_state, ULong *addr)
+        | s390_stfle_range(51, 55)
+        /* 56: unassigned */
+        /* 57: MSA5, not supported */
+-       | s390_stfle_range(58, 60)
+-       /* 61: miscellaneous-instruction 3, not supported */
+-       | s390_stfle_range(62, 63)),
++       | s390_stfle_range(58, 63)),
+ 
+       /* ===  64 .. 127  === */
+       (s390_stfle_range(64, 72)
+@@ -384,11 +382,10 @@ s390x_dirtyhelper_STFLE(VexGuestS390XState *guest_state, ULong *addr)
+        /* 143: unassigned */
+        | s390_stfle_range(144, 145)
+        /* 146: MSA8, not supported */
+-       | s390_stfle_range(147, 147)
+-       /* 148: vector-enhancements 2, not supported */
+-       | s390_stfle_range(149, 149)
++       | s390_stfle_range(147, 149)
+        /* 150: unassigned */
+        /* 151: DEFLATE-conversion, not supported */
++       /* 152: vector packed decimal enhancement, not supported */
+        /* 153: unassigned */
+        /* 154: unassigned */
+        /* 155: MSA9, not supported */
+diff --git a/coregrind/m_initimg/initimg-linux.c b/coregrind/m_initimg/initimg-linux.c
+index fc1a32ecf..37d005168 100644
+--- a/coregrind/m_initimg/initimg-linux.c
++++ b/coregrind/m_initimg/initimg-linux.c
+@@ -703,7 +703,8 @@ Addr setup_client_stack( void*  init_sp,
+                   itself, is not supported by Valgrind. */
+                auxv->u.a_val &= ((VKI_HWCAP_S390_TE - 1)
+                                  | VKI_HWCAP_S390_VXRS
+-                                 | VKI_HWCAP_S390_VXRS_EXT);
++                                 | VKI_HWCAP_S390_VXRS_EXT
++                                 | VKI_HWCAP_S390_VXRS_EXT2);
+             }
+ #           elif defined(VGP_arm64_linux)
+             {
+diff --git a/include/vki/vki-s390x-linux.h b/include/vki/vki-s390x-linux.h
+index 4ab2d3334..71b363029 100644
+--- a/include/vki/vki-s390x-linux.h
++++ b/include/vki/vki-s390x-linux.h
+@@ -807,6 +807,7 @@ typedef vki_s390_regs vki_elf_gregset_t;
+ #define VKI_HWCAP_S390_TE           1024
+ #define VKI_HWCAP_S390_VXRS         2048
+ #define VKI_HWCAP_S390_VXRS_EXT     8192
++#define VKI_HWCAP_S390_VXRS_EXT2   32768
+ 
+ 
+ //----------------------------------------------------------------------
+-- 
+2.23.0
+
+From 1461d9b8d0b12e55b648fbf50c5dcee30785afa2 Mon Sep 17 00:00:00 2001
+From: Andreas Arnez <arnez@linux.ibm.com>
+Date: Mon, 17 May 2021 15:34:15 +0200
+Subject: [PATCH 12/13] s390x: Vec-enh-2, test cases
+
+Add test cases for verifying the new/enhanced instructions in the
+vector-enhancements facility 2.  For "vector string search" VSTRS add a
+memcheck test case.
+---
+ .gitignore                            |   2 +
+ memcheck/tests/s390x/Makefile.am      |   3 +-
+ memcheck/tests/s390x/vstrs.c          |  68 ++++++
+ memcheck/tests/s390x/vstrs.stderr.exp |  16 ++
+ memcheck/tests/s390x/vstrs.stdout.exp |   0
+ memcheck/tests/s390x/vstrs.vgtest     |   2 +
+ none/tests/s390x/Makefile.am          |   3 +-
+ none/tests/s390x/vec2.c               | 314 ++++++++++++++++++++++++++
+ none/tests/s390x/vec2.stderr.exp      |   2 +
+ none/tests/s390x/vec2.stdout.exp      | 168 ++++++++++++++
+ none/tests/s390x/vec2.vgtest          |   2 +
+ tests/s390x_features.c                |   4 +
+ 12 files changed, 582 insertions(+), 2 deletions(-)
+ create mode 100644 memcheck/tests/s390x/vstrs.c
+ create mode 100644 memcheck/tests/s390x/vstrs.stderr.exp
+ create mode 100644 memcheck/tests/s390x/vstrs.stdout.exp
+ create mode 100644 memcheck/tests/s390x/vstrs.vgtest
+ create mode 100644 none/tests/s390x/vec2.c
+ create mode 100644 none/tests/s390x/vec2.stderr.exp
+ create mode 100644 none/tests/s390x/vec2.stdout.exp
+ create mode 100644 none/tests/s390x/vec2.vgtest
+
+diff --git a/memcheck/tests/s390x/Makefile.am b/memcheck/tests/s390x/Makefile.am
+index d183841ef..668fd9933 100644
+--- a/memcheck/tests/s390x/Makefile.am
++++ b/memcheck/tests/s390x/Makefile.am
+@@ -2,7 +2,7 @@ include $(top_srcdir)/Makefile.tool-tests.am
+ 
+ dist_noinst_SCRIPTS = filter_stderr
+ 
+-INSN_TESTS = cdsg cu21 cu42 ltgjhe vstrc vfae vistr
++INSN_TESTS = cdsg cu21 cu42 ltgjhe vstrc vfae vistr vstrs
+ 
+ check_PROGRAMS = $(INSN_TESTS) 
+ 
+@@ -18,3 +18,4 @@ AM_CCASFLAGS += @FLAG_M64@
+ vstrc_CFLAGS  = $(AM_CFLAGS) -march=z13
+ vfae_CFLAGS   = $(AM_CFLAGS) -march=z13
+ vistr_CFLAGS  = $(AM_CFLAGS) -march=z13
++vstrs_CFLAGS  = $(AM_CFLAGS) -march=z13
+diff --git a/memcheck/tests/s390x/vstrs.c b/memcheck/tests/s390x/vstrs.c
+new file mode 100644
+index 000000000..3354c2e53
+--- /dev/null
++++ b/memcheck/tests/s390x/vstrs.c
+@@ -0,0 +1,68 @@
++#include <stdio.h>
++#include <string.h>
++
++#define VECTOR __attribute__ ((vector_size (16)))
++
++typedef char VECTOR char_v;
++
++volatile char tmp;
++static const char *hex_digit = "0123456789abcdefGHIJKLMNOPQRSTUV";
++
++static char_v to_char_vec(const char *str)
++{
++   char buf[17];
++   char_v v;
++
++   for (int i = 0; i < sizeof(buf); i++) {
++      char ch = str[i];
++      if (ch == '\0')
++         break;
++      else if (ch == '$')
++         buf[i] = '\0';
++      else if (ch != '~')
++         buf[i] = ch;
++   }
++   v = *(char_v *) buf;
++   return v;
++}
++
++static void test_vstrs_char(const char *haystack, const char *needle,
++                            int expect_res, int expect_cc)
++{
++   int cc;
++   char_v v2val = to_char_vec(haystack);
++   char_v v3val = to_char_vec(needle);
++
++   register unsigned long VECTOR v4 __asm__("v4") = { strlen(needle), 0 };
++   register char_v v1 __asm__("v1");
++   register char_v v2 __asm__("v2") = v2val;
++   register char_v v3 __asm__("v3") = v3val;
++
++   __asm__(
++      "cr     0,0\n\t"                  /* Clear CC */
++      ".short 0xe712,0x3020,0x408b\n\t" /* vstrs %v1,%v2,%v3,%v4,0,2 */
++      "ipm    %[cc]\n\t"
++      "srl    %[cc],28"
++      : "=v" (v1), [cc] "=d" (cc)
++      : "v" (v2), "v" (v3), "v" (v4)
++      : "cc");
++
++   tmp = hex_digit[v1[7] & 0x1f];
++   if (expect_res >= 0  && v1[7] != expect_res)
++      printf("result %u != %d\n", v1[7], expect_res);
++
++   tmp = hex_digit[cc & 0xf];
++   if (expect_cc >= 0 && cc != expect_cc)
++      printf("CC %d != %d\n", cc, expect_cc);
++}
++
++int main()
++{
++   test_vstrs_char("haystack$needle", "needle$haystack", 16, 1);
++   test_vstrs_char("haystack, needle", "needle, haystack", 10, 3);
++   test_vstrs_char("ABCDEFGH", "DEFGHI", -1, -1);
++   test_vstrs_char("match in UNDEF", "UN", 9, 2);
++   test_vstrs_char("after ~ UNDEF", "DEF", -1, -1);
++   test_vstrs_char("", "", 0, 2);
++   return 0;
++}
+diff --git a/memcheck/tests/s390x/vstrs.stderr.exp b/memcheck/tests/s390x/vstrs.stderr.exp
+new file mode 100644
+index 000000000..c5c3ef705
+--- /dev/null
++++ b/memcheck/tests/s390x/vstrs.stderr.exp
+@@ -0,0 +1,16 @@
++Use of uninitialised value of size 8
++   at 0x........: test_vstrs_char (vstrs.c:50)
++   by 0x........: main (vstrs.c:63)
++
++Use of uninitialised value of size 8
++   at 0x........: test_vstrs_char (vstrs.c:54)
++   by 0x........: main (vstrs.c:63)
++
++Use of uninitialised value of size 8
++   at 0x........: test_vstrs_char (vstrs.c:50)
++   by 0x........: main (vstrs.c:65)
++
++Use of uninitialised value of size 8
++   at 0x........: test_vstrs_char (vstrs.c:54)
++   by 0x........: main (vstrs.c:65)
++
+diff --git a/memcheck/tests/s390x/vstrs.stdout.exp b/memcheck/tests/s390x/vstrs.stdout.exp
+new file mode 100644
+index 000000000..e69de29bb
+diff --git a/memcheck/tests/s390x/vstrs.vgtest b/memcheck/tests/s390x/vstrs.vgtest
+new file mode 100644
+index 000000000..fd2a29873
+--- /dev/null
++++ b/memcheck/tests/s390x/vstrs.vgtest
+@@ -0,0 +1,2 @@
++prog: vstrs
++vgopts: -q
+diff --git a/none/tests/s390x/Makefile.am b/none/tests/s390x/Makefile.am
+index 2fd45ec1e..ca38db935 100644
+--- a/none/tests/s390x/Makefile.am
++++ b/none/tests/s390x/Makefile.am
+@@ -20,7 +20,7 @@ INSN_TESTS = clc clcle cvb cvd icm lpr tcxb lam_stam xc mvst add sub mul \
+ 	     spechelper-icm-1  spechelper-icm-2 spechelper-tmll \
+ 	     spechelper-tm laa vector lsc2 ppno vector_string vector_integer \
+ 	     vector_float add-z14 sub-z14 mul-z14 bic \
+-	     misc3
++	     misc3 vec2
+ 
+ if BUILD_DFP_TESTS
+   INSN_TESTS += dfp-1 dfp-2 dfp-3 dfp-4 dfptest dfpext dfpconv srnmt pfpo
+@@ -74,3 +74,4 @@ lsc2_CFLAGS       = -march=z13 -DS390_TESTS_NOCOLOR
+ vector_string_CFLAGS = $(AM_CFLAGS) -march=z13 -DS390_TEST_COUNT=5
+ vector_integer_CFLAGS    = $(AM_CFLAGS) -march=z13 -DS390_TEST_COUNT=4
+ vector_float_CFLAGS    = $(AM_CFLAGS) -march=z13 -DS390_TEST_COUNT=4
++vec2_CFLAGS      = $(AM_CFLAGS) -march=z13
+diff --git a/none/tests/s390x/vec2.c b/none/tests/s390x/vec2.c
+new file mode 100644
+index 000000000..73b04dee4
+--- /dev/null
++++ b/none/tests/s390x/vec2.c
+@@ -0,0 +1,314 @@
++#include <stdio.h>
++
++#define VECTOR __attribute__ ((vector_size (16)))
++
++typedef unsigned long VECTOR ulong_v;
++typedef float VECTOR float_v;
++
++static const ulong_v vec_a   = { 0x0123456789abcdef, 0xfedcba9876543210 };
++static const ulong_v vec_b   = { 0xfedcba9876543210, 0x0123456789abcdef };
++static const ulong_v vec_c   = { 0x8040201008040201, 0x7fbfdfeff7fbfdfe };
++static const ulong_v vec_one = { -1, -1 };
++static const ulong_v vec_ini = { 0x0112233445566778, 0x899aabbccddeeff0 };
++
++static const float_v vec_fa  = { 16777215., -16777215., 42.5, 10000. };
++static const float_v vec_fb  = { 4., 3., 2., 1. };
++
++/* -- Vector shift -- */
++
++#define TEST_GENERATE(insn)                             \
++   static void test_##insn(ulong_v a, ulong_v b)        \
++   {                                                    \
++      ulong_v out;                                      \
++      __asm__(                                          \
++         #insn " %[out],%[a],%[b]"                      \
++         : [out] "=v" (out)                             \
++         : [a] "v" (a),                                 \
++           [b] "v" (b)                                  \
++         : );                                           \
++      printf("\t%016lx %016lx\n", out[0], out[1]);      \
++   }
++
++#define TEST_EXEC(insn)                         \
++   do {                                         \
++      puts(#insn);                              \
++      test_##insn(vec_a, vec_b);                \
++      test_##insn(vec_b, vec_a);                \
++      test_##insn(vec_c, vec_a);                \
++      test_##insn(vec_one, vec_b);              \
++   } while (0)
++
++#define INSNS                                   \
++   XTEST(vsl);                                  \
++   XTEST(vsrl);                                 \
++   XTEST(vsra);
++
++#define XTEST TEST_GENERATE
++INSNS
++#undef XTEST
++
++static void test_all_single_bitshifts()
++{
++#define XTEST TEST_EXEC
++   INSNS
++#undef XTEST
++}
++#undef INSNS
++#undef TEST_EXEC
++#undef TEST_GENERATE
++
++/* -- Vector load element-/byte-swapped -- */
++
++#define TEST_EXEC(opc1,opc2,insn,m3)            \
++   do {                                         \
++      puts(#insn " " #m3);                      \
++      test_##insn##_##m3(vec_a);                \
++      test_##insn##_##m3(vec_b);                \
++   } while (0)
++
++#define TEST_GENERATE(opc1,opc2,insn,m3)                                \
++   static void test_##insn##_##m3(ulong_v a)                            \
++   {                                                                    \
++      ulong_v out = vec_ini;                                            \
++      __asm__(                                                          \
++         ".insn vrx,0x" #opc1 "00000000" #opc2 ",%[out],%[a]," #m3      \
++         : [out] "+v" (out)                                             \
++         : [a] "R" (a)                                                  \
++         : );                                                           \
++      printf("\t%016lx %016lx\n", out[0], out[1]);                      \
++   }
++
++#define INSNS                                   \
++   XTEST(e6,01, vlebrh, 0);                     \
++   XTEST(e6,01, vlebrh, 7);                     \
++   XTEST(e6,01, vlebrh, 2);                     \
++   XTEST(e6,03, vlebrf, 0);                     \
++   XTEST(e6,03, vlebrf, 3);                     \
++   XTEST(e6,03, vlebrf, 1);                     \
++   XTEST(e6,02, vlebrg, 0);                     \
++   XTEST(e6,02, vlebrg, 1);                     \
++   XTEST(e6,04, vllebrz, 1);                    \
++   XTEST(e6,04, vllebrz, 2);                    \
++   XTEST(e6,04, vllebrz, 3);                    \
++   XTEST(e6,04, vllebrz, 6);                    \
++   XTEST(e6,05, vlbrrep, 1);                    \
++   XTEST(e6,05, vlbrrep, 2);                    \
++   XTEST(e6,05, vlbrrep, 3);                    \
++   XTEST(e6,06, vlbr, 1);                       \
++   XTEST(e6,06, vlbr, 2);                       \
++   XTEST(e6,06, vlbr, 3);                       \
++   XTEST(e6,06, vlbr, 4);                       \
++   XTEST(e6,07, vler, 1);                       \
++   XTEST(e6,07, vler, 2);                       \
++   XTEST(e6,07, vler, 3);
++
++#define XTEST TEST_GENERATE
++INSNS
++#undef XTEST
++
++static void test_all_swapped_loads()
++{
++#define XTEST TEST_EXEC
++   INSNS
++#undef XTEST
++}
++
++#undef INSNS
++#undef TEST_GENERATE
++
++/* -- Vector store element-/byte-swapped -- */
++
++#define TEST_GENERATE(opc1,opc2,insn,m3)                                \
++   static void test_##insn##_##m3(ulong_v a)                            \
++   {                                                                    \
++      ulong_v out = vec_ini;                                            \
++      __asm__(                                                          \
++         ".insn vrx,0x" #opc1 "00000000" #opc2 ",%[a],%[out]," #m3      \
++         : [out] "+R" (out)                                             \
++         : [a] "v" (a)                                                  \
++         : );                                                           \
++      printf("\t%016lx %016lx\n", out[0], out[1]);                      \
++   }
++
++#define INSNS                                   \
++   XTEST(e6,09, vstebrh, 0);                    \
++   XTEST(e6,09, vstebrh, 7);                    \
++   XTEST(e6,09, vstebrh, 2);                    \
++   XTEST(e6,0b, vstebrf, 0);                    \
++   XTEST(e6,0b, vstebrf, 3);                    \
++   XTEST(e6,0b, vstebrf, 1);                    \
++   XTEST(e6,0a, vstebrg, 0);                    \
++   XTEST(e6,0a, vstebrg, 1);                    \
++   XTEST(e6,0e, vstbr, 1);                      \
++   XTEST(e6,0e, vstbr, 2);                      \
++   XTEST(e6,0e, vstbr, 3);                      \
++   XTEST(e6,0e, vstbr, 4);                      \
++   XTEST(e6,0f, vster, 1);                      \
++   XTEST(e6,0f, vster, 2);                      \
++   XTEST(e6,0f, vster, 3);
++
++#define XTEST TEST_GENERATE
++INSNS
++#undef XTEST
++
++static void test_all_swapped_stores()
++{
++#define XTEST TEST_EXEC
++   INSNS
++#undef XTEST
++}
++
++#undef INSNS
++#undef TEST_EXEC
++#undef TEST_GENERATE
++
++/* -- Vector shift double by bit -- */
++
++#define TEST_GENERATE(opc1,opc2,insn,i4)                \
++   static void test_##insn##_##i4(ulong_v a, ulong_v b) \
++   {                                                    \
++      ulong_v out = vec_ini;                            \
++      __asm__(                                          \
++         ".insn vrr,0x" #opc1 "00000000" #opc2          \
++         ",%[out],%[a],%[b],0," #i4 ",0"                \
++         : [out] "+v" (out)                             \
++         : [a] "v" (a),                                 \
++           [b] "v" (b)                                  \
++         : );                                           \
++      printf("\t%016lx %016lx\n", out[0], out[1]);      \
++   }
++
++#define TEST_EXEC(opc1,opc2,insn,i4)            \
++   do {                                         \
++      puts(#insn " " #i4);                      \
++      test_##insn##_##i4(vec_a, vec_one);       \
++      test_##insn##_##i4(vec_b, vec_a);         \
++   } while (0)
++
++#define INSNS                                   \
++   XTEST(e7,86,vsld,0);                         \
++   XTEST(e7,86,vsld,7);                         \
++   XTEST(e7,86,vsld,4);                         \
++   XTEST(e7,87,vsrd,0);                         \
++   XTEST(e7,87,vsrd,7);                         \
++   XTEST(e7,87,vsrd,4);
++
++#define XTEST TEST_GENERATE
++INSNS
++#undef XTEST
++
++static void test_all_double_bitshifts()
++{
++#define XTEST TEST_EXEC
++   INSNS
++#undef XTEST
++}
++
++#undef INSNS
++#undef TEST_EXEC
++#undef TEST_GENERATE
++
++/* -- Vector integer -> FP conversions -- */
++
++#define TEST_GENERATE(opc1,opc2,insn,m4)                                \
++   static void test_##insn##_##m4(ulong_v a)                            \
++   {                                                                    \
++      float_v out;                                                      \
++      __asm__(                                                          \
++         ".insn vrr,0x" #opc1 "00000000" #opc2                          \
++         ",%[out],%[a],0,2," #m4 ",0"                                   \
++         : [out] "=v" (out)                                             \
++         : [a] "v" (a)                                                  \
++         : );                                                           \
++      if (m4 & 8)                                                       \
++         printf("\t%a - - -\n", out[0]);                                \
++      else                                                              \
++         printf("\t%a %a %a %a\n", out[0], out[1], out[2], out[3]);     \
++   }
++
++#define TEST_EXEC(opc1,opc2,insn,m4)            \
++   do {                                         \
++      puts(#insn " " #m4);                      \
++      test_##insn##_##m4(vec_a);                \
++      test_##insn##_##m4(vec_c);                \
++   } while (0)
++
++#define INSNS                                   \
++   XTEST(e7,c1,vcfpl,0);                        \
++   XTEST(e7,c1,vcfpl,8);                        \
++   XTEST(e7,c3,vcfps,0);                        \
++   XTEST(e7,c3,vcfps,8);
++
++#define XTEST TEST_GENERATE
++INSNS
++#undef XTEST
++
++static void test_all_int_fp_conversions()
++{
++#define XTEST TEST_EXEC
++   INSNS
++#undef XTEST
++}
++
++#undef INSNS
++#undef TEST_EXEC
++#undef TEST_GENERATE
++
++/* -- Vector FP -> integer conversions -- */
++
++#define TEST_GENERATE(opc1,opc2,insn,m4)                                \
++   static void test_##insn##_##m4(float_v a)                            \
++   {                                                                    \
++      unsigned int VECTOR out;                                          \
++      __asm__(                                                          \
++         ".insn vrr,0x" #opc1 "00000000" #opc2                          \
++         ",%[out],%[a],0,2," #m4 ",0"                                   \
++         : [out] "=v" (out)                                             \
++         : [a] "v" (a)                                                  \
++         : );                                                           \
++      if (m4 & 8)                                                       \
++         printf("\t%08x - - -\n", out[0]);                              \
++      else                                                              \
++         printf("\t%08x %08x %08x %08x\n",                              \
++                out[0], out[1], out[2], out[3]);                        \
++   }
++
++#define TEST_EXEC(opc1,opc2,insn,m4)            \
++   do {                                         \
++      puts(#insn " " #m4);                      \
++      test_##insn##_##m4(vec_fa);               \
++      test_##insn##_##m4(vec_fb);               \
++   } while (0)
++
++#define INSNS                                   \
++   XTEST(e7,c0,vclfp,0);                        \
++   XTEST(e7,c0,vclfp,8);                        \
++   XTEST(e7,c2,vcsfp,0);                        \
++   XTEST(e7,c2,vcsfp,8);
++
++#define XTEST TEST_GENERATE
++INSNS
++#undef XTEST
++
++static void test_all_fp_int_conversions()
++{
++#define XTEST TEST_EXEC
++   INSNS
++#undef XTEST
++}
++
++#undef INSNS
++#undef TEST_EXEC
++#undef TEST_GENERATE
++
++
++int main()
++{
++   test_all_single_bitshifts();
++   test_all_swapped_loads();
++   test_all_swapped_stores();
++   test_all_double_bitshifts();
++   test_all_int_fp_conversions();
++   test_all_fp_int_conversions();
++   return 0;
++}
+diff --git a/none/tests/s390x/vec2.stderr.exp b/none/tests/s390x/vec2.stderr.exp
+new file mode 100644
+index 000000000..139597f9c
+--- /dev/null
++++ b/none/tests/s390x/vec2.stderr.exp
+@@ -0,0 +1,2 @@
++
++
+diff --git a/none/tests/s390x/vec2.stdout.exp b/none/tests/s390x/vec2.stdout.exp
+new file mode 100644
+index 000000000..b32cbe1bc
+--- /dev/null
++++ b/none/tests/s390x/vec2.stdout.exp
+@@ -0,0 +1,168 @@
++vsl
++	483415676abc37ef fde5533beca14200
++	fde5533beca14200 483415676abc37ef
++	00010204102040bf effd7feffebff7fe
++	ffffffffffffffff ffffffffffffff80
++vsrl
++	0012d1679e9af3ef ffdbe5753bcaa164
++	7fdbe5753bcaa164 4012d1679e9af3ef
++	4008014004002004 05fbf7efbf7ffffe
++	03ffffffffffffff ffffffffffffffff
++vsra
++	0012d1679e9af3ef ffdbe5753bcaa164
++	ffdbe5753bcaa164 4012d1679e9af3ef
++	c008014004002004 05fbf7efbf7ffffe
++	ffffffffffffffff ffffffffffffffff
++vlebrh 0
++	2301233445566778 899aabbccddeeff0
++	dcfe233445566778 899aabbccddeeff0
++vlebrh 7
++	0112233445566778 899aabbccdde2301
++	0112233445566778 899aabbccddedcfe
++vlebrh 2
++	0112233423016778 899aabbccddeeff0
++	01122334dcfe6778 899aabbccddeeff0
++vlebrf 0
++	6745230145566778 899aabbccddeeff0
++	98badcfe45566778 899aabbccddeeff0
++vlebrf 3
++	0112233445566778 899aabbc67452301
++	0112233445566778 899aabbc98badcfe
++vlebrf 1
++	0112233467452301 899aabbccddeeff0
++	0112233498badcfe 899aabbccddeeff0
++vlebrg 0
++	efcdab8967452301 899aabbccddeeff0
++	1032547698badcfe 899aabbccddeeff0
++vlebrg 1
++	0112233445566778 efcdab8967452301
++	0112233445566778 1032547698badcfe
++vllebrz 1
++	0000000000002301 0000000000000000
++	000000000000dcfe 0000000000000000
++vllebrz 2
++	0000000067452301 0000000000000000
++	0000000098badcfe 0000000000000000
++vllebrz 3
++	efcdab8967452301 0000000000000000
++	1032547698badcfe 0000000000000000
++vllebrz 6
++	6745230100000000 0000000000000000
++	98badcfe00000000 0000000000000000
++vlbrrep 1
++	2301230123012301 2301230123012301
++	dcfedcfedcfedcfe dcfedcfedcfedcfe
++vlbrrep 2
++	6745230167452301 6745230167452301
++	98badcfe98badcfe 98badcfe98badcfe
++vlbrrep 3
++	efcdab8967452301 efcdab8967452301
++	1032547698badcfe 1032547698badcfe
++vlbr 1
++	23016745ab89efcd dcfe98ba54761032
++	dcfe98ba54761032 23016745ab89efcd
++vlbr 2
++	67452301efcdab89 98badcfe10325476
++	98badcfe10325476 67452301efcdab89
++vlbr 3
++	efcdab8967452301 1032547698badcfe
++	1032547698badcfe efcdab8967452301
++vlbr 4
++	1032547698badcfe efcdab8967452301
++	efcdab8967452301 1032547698badcfe
++vler 1
++	32107654ba98fedc cdef89ab45670123
++	cdef89ab45670123 32107654ba98fedc
++vler 2
++	76543210fedcba98 89abcdef01234567
++	89abcdef01234567 76543210fedcba98
++vler 3
++	fedcba9876543210 0123456789abcdef
++	0123456789abcdef fedcba9876543210
++vstebrh 0
++	2301233445566778 899aabbccddeeff0
++	dcfe233445566778 899aabbccddeeff0
++vstebrh 7
++	1032233445566778 899aabbccddeeff0
++	efcd233445566778 899aabbccddeeff0
++vstebrh 2
++	ab89233445566778 899aabbccddeeff0
++	5476233445566778 899aabbccddeeff0
++vstebrf 0
++	6745230145566778 899aabbccddeeff0
++	98badcfe45566778 899aabbccddeeff0
++vstebrf 3
++	1032547645566778 899aabbccddeeff0
++	efcdab8945566778 899aabbccddeeff0
++vstebrf 1
++	efcdab8945566778 899aabbccddeeff0
++	1032547645566778 899aabbccddeeff0
++vstebrg 0
++	efcdab8967452301 899aabbccddeeff0
++	1032547698badcfe 899aabbccddeeff0
++vstebrg 1
++	1032547698badcfe 899aabbccddeeff0
++	efcdab8967452301 899aabbccddeeff0
++vstbr 1
++	23016745ab89efcd dcfe98ba54761032
++	dcfe98ba54761032 23016745ab89efcd
++vstbr 2
++	67452301efcdab89 98badcfe10325476
++	98badcfe10325476 67452301efcdab89
++vstbr 3
++	efcdab8967452301 1032547698badcfe
++	1032547698badcfe efcdab8967452301
++vstbr 4
++	1032547698badcfe efcdab8967452301
++	efcdab8967452301 1032547698badcfe
++vster 1
++	32107654ba98fedc cdef89ab45670123
++	cdef89ab45670123 32107654ba98fedc
++vster 2
++	76543210fedcba98 89abcdef01234567
++	89abcdef01234567 76543210fedcba98
++vster 3
++	fedcba9876543210 0123456789abcdef
++	0123456789abcdef fedcba9876543210
++vsld 0
++	0123456789abcdef fedcba9876543210
++	fedcba9876543210 0123456789abcdef
++vsld 7
++	91a2b3c4d5e6f7ff 6e5d4c3b2a19087f
++	6e5d4c3b2a190800 91a2b3c4d5e6f780
++vsld 4
++	123456789abcdeff edcba9876543210f
++	edcba98765432100 123456789abcdef0
++vsrd 0
++	ffffffffffffffff ffffffffffffffff
++	0123456789abcdef fedcba9876543210
++vsrd 7
++	21ffffffffffffff ffffffffffffffff
++	de02468acf13579b dffdb97530eca864
++vsrd 4
++	0fffffffffffffff ffffffffffffffff
++	f0123456789abcde ffedcba987654321
++vcfpl 0
++	0x1.234568p+24 0x1.13579cp+31 0x1.fdb976p+31 0x1.d950c8p+30
++	0x1.00804p+31 0x1.00804p+27 0x1.feff8p+30 0x1.eff7fcp+31
++vcfpl 8
++	0x1.234568p+24 - - -
++	0x1.00804p+31 - - -
++vcfps 0
++	0x1.234568p+24 -0x1.d950c8p+30 -0x1.234568p+24 0x1.d950c8p+30
++	-0x1.feff8p+30 0x1.00804p+27 0x1.feff8p+30 -0x1.00804p+27
++vcfps 8
++	0x1.234568p+24 - - -
++	-0x1.feff8p+30 - - -
++vclfp 0
++	00ffffff 00000000 0000002a 00002710
++	00000004 00000003 00000002 00000001
++vclfp 8
++	00ffffff - - -
++	00000004 - - -
++vcsfp 0
++	00ffffff ff000001 0000002a 00002710
++	00000004 00000003 00000002 00000001
++vcsfp 8
++	00ffffff - - -
++	00000004 - - -
+diff --git a/none/tests/s390x/vec2.vgtest b/none/tests/s390x/vec2.vgtest
+new file mode 100644
+index 000000000..45e942e64
+--- /dev/null
++++ b/none/tests/s390x/vec2.vgtest
+@@ -0,0 +1,2 @@
++prog: vec2
++prereq: test -e vec2 && ../../../tests/s390x_features s390x-vx
+diff --git a/tests/s390x_features.c b/tests/s390x_features.c
+index 25b98f3a3..e7939c463 100644
+--- a/tests/s390x_features.c
++++ b/tests/s390x_features.c
+@@ -270,6 +270,10 @@ static int go(char *feature, char *cpu)
+       match = facilities[0] & FAC_BIT(57); /* message security assist 5 facility */
+    } else if (strcmp(feature, "s390x-mi2") == 0 ) {
+       match = facilities[0] & FAC_BIT(58);
++   } else if (strcmp(feature, "s390x-mi3") == 0 ) {
++      match = facilities[0] & FAC_BIT(61);
++   } else if (strcmp(feature, "s390x-vx2") == 0 ) {
++      match = facilities[2] & FAC_BIT(20);
+    } else {
+       return 2;          // Unrecognised feature.
+    }
+-- 
+2.23.0
+
+From d9364bc90ee894c43ee742840f806571edc08ab3 Mon Sep 17 00:00:00 2001
+From: Andreas Arnez <arnez@linux.ibm.com>
+Date: Tue, 18 May 2021 19:59:32 +0200
+Subject: [PATCH 13/13] s390x: Wrap up misc-insn-3 and vec-enh-2 support
+
+Wrap up support for the miscellaneous-instruction-extensions facility 3
+and the vector-enhancements facility 2: Add 'case' statements for the
+remaining unhandled arch13 instructions to 'guest_s390_toIR.c', document
+the new support in 's390-opcodes.csv', adjust 's390-check-opcodes.pl', and
+announce the new feature in 'NEWS'.
+---
+ NEWS                            |  5 ++
+ VEX/priv/guest_s390_toIR.c      |  5 +-
+ auxprogs/s390-check-opcodes.pl  | 22 ++++++++-
+ docs/internals/s390-opcodes.csv | 81 +++++++++++++++++++++++++++++++--
+ 4 files changed, 108 insertions(+), 5 deletions(-)
+
+diff --git a/VEX/priv/guest_s390_toIR.c b/VEX/priv/guest_s390_toIR.c
+index 46a867475..1bd18f760 100644
+--- a/VEX/priv/guest_s390_toIR.c
++++ b/VEX/priv/guest_s390_toIR.c
+@@ -8,7 +8,7 @@
+    This file is part of Valgrind, a dynamic binary instrumentation
+    framework.
+ 
+-   Copyright IBM Corp. 2010-2020
++   Copyright IBM Corp. 2010-2021
+ 
+    This program is free software; you can redistribute it and/or
+    modify it under the terms of the GNU General Public License as
+@@ -20503,6 +20503,9 @@ s390_decode_4byte_and_irgen(const UChar *bytes)
+                                    RRE_r2(ovl));  goto ok;
+    case 0xb931: s390_format_RRE_RR(s390_irgen_CLGFR, RRE_r1(ovl),
+                                    RRE_r2(ovl));  goto ok;
++   case 0xb938: /* SORTL */ goto unimplemented;
++   case 0xb939: /* DFLTCC */ goto unimplemented;
++   case 0xb93a: /* KDSA */ goto unimplemented;
+    case 0xb93c: s390_format_RRE_RR(s390_irgen_PPNO, RRE_r1(ovl),
+                                    RRE_r2(ovl));  goto ok;
+    case 0xb93e: /* KIMD */ goto unimplemented;
+-- 
+2.23.0
+

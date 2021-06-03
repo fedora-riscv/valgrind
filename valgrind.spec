@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.17.0
-Release: 4%{?dist}
+Release: 5%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -115,6 +115,39 @@ Patch9: valgrind-3.17.0-debuginfod.patch
 
 # KDE#423963 Only process clone results in the parent thread
 Patch10: valgrind-3.17.0-clone-parent-res.patch
+
+# commit d74a637206ef5532ccd2ccb2e31ee2762f184e60
+# Bug 433863 - s390x: Remove memcheck test cases for cs, cds, and csg
+# commit 18ddcc47c951427efd3b790ba2481159b9bd1598
+# s390x: Support "expensive" comparisons Iop_ExpCmpNE32/64
+# commit 5db3f929c43bf46f4707178706cfe90f43acdd19
+# s390x: Add convenience function mkV128()
+# commit e78bd78d3043729033b426218ab8c6dae9c51e96
+# Bug 434296 - s390x: Rework IR conversion of VSTRC, VFAE, and VFEE
+# commit 4f17a067c4f8245c05611d6e8aa36e8841bab376
+# Bug 434296 - s390x: Rework IR conversion of VFENE
+# commit 9bd78ebd8bb5cd4ebb3f081ceba46836cc485551
+# Bug 434296 - s390x: Rework IR conversion of VISTR
+# commit 32312d588b77c5b5b5a0145bb0cc6f795b447790
+# Bug 434296 - s390x: Add memcheck test cases for vector string insns
+# commit a0bb049ace14ab52d386bb1d49a399f39eec4986
+# s390x: Improve handling of amodes without base register
+# commit fd935e238d907d9c523a311ba795077d95ad6912
+# s390x: Rework insn "v-vdup" and add "v-vrep"
+# commit 6c1cb1a0128b00858b973ef9344e12d6ddbaaf57
+# s390x: Add support for emitting "vector or with complement"
+# commit 0bd4263326b2d48f782339a9bbe1a069c7de45c7
+# s390x: Fix/optimize Iop_64HLtoV128
+# commit cae5062b05b95e0303b1122a0ea9aadc197e4f0a
+# s390x: Add missing stdout.exp for vector string memcheck test
+Patch11: valgrind-3.17.0-s390-prep.patch
+
+# KDE#432387 - s390x: z15 instructions support 
+Patch12: valgrind-3.17.0-s390-z15.patch
+
+# commit 124ae6cfa303f0cc71ffd685620cb57c4f8f02bb
+# s390x: Don't emit "vector or with complement" on z13
+Patch13: valgrind-3.17.0-s390-z13-vec-fix.patch
 
 BuildRequires: make
 BuildRequires: glibc-devel
@@ -263,6 +296,11 @@ Valgrind User Manual for details.
 %patch8 -p1
 %patch9 -p1
 %patch10 -p1
+
+%patch11 -p1
+touch memcheck/tests/s390x/vistr.stdout.exp
+%patch12 -p1
+%patch13 -p1
 
 %build
 # LTO triggers undefined symbols in valgrind.  Valgrind has a --enable-lto
@@ -488,6 +526,11 @@ fi
 %endif
 
 %changelog
+* Fri Jun 18 2021 Mark Wielaard <mjw@fedoraproject.org> - 3.17.0-5
+- Add valgrind-3.17.0-s390-prep.patch
+- Add valgrind-3.17.0-s390-z15.patch
+- Add valgrind-3.17.0-s390-z13-vec-fix.patch
+
 * Thu Jun  3 2021 Mark Wielaard <mjw@fedoraproject.org> - 3.17.0-4
 - Add valgrind-3.17.0-s390_insn_as_string.patch
 - Add valgrind-3.17.0-debuginfod.patch

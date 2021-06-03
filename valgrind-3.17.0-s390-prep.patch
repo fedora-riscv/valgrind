@@ -1,0 +1,2283 @@
+commit d74a637206ef5532ccd2ccb2e31ee2762f184e60
+Author: Andreas Arnez <arnez@linux.ibm.com>
+Date:   Wed Apr 28 18:52:30 2021 +0200
+
+    Bug 433863 - s390x: Remove memcheck test cases for cs, cds, and csg
+    
+    The fix for bug 429864 - "s390x: C++ atomic test_and_set yields
+    false-positive memcheck diagnostics" changes the memcheck behavior at
+    various compare-and-swap instructions.  The comparison between the old and
+    expected value now always yields a defined result, even if the input
+    values are (partially) undefined.  However, some existing test cases
+    explicitly verify that memcheck complains about the use of uninitialised
+    values here.  These test cases are no longer valid.  Remove them.
+
+diff --git a/memcheck/tests/s390x/Makefile.am b/memcheck/tests/s390x/Makefile.am
+index 67ae8c293..e4e69eb38 100644
+--- a/memcheck/tests/s390x/Makefile.am
++++ b/memcheck/tests/s390x/Makefile.am
+@@ -2,7 +2,7 @@ include $(top_srcdir)/Makefile.tool-tests.am
+ 
+ dist_noinst_SCRIPTS = filter_stderr
+ 
+-INSN_TESTS = cs csg cds cdsg cu21 cu42 ltgjhe
++INSN_TESTS = cdsg cu21 cu42 ltgjhe
+ 
+ check_PROGRAMS = $(INSN_TESTS) 
+ 
+@@ -14,7 +14,3 @@ EXTRA_DIST = \
+ AM_CFLAGS    += @FLAG_M64@
+ AM_CXXFLAGS  += @FLAG_M64@
+ AM_CCASFLAGS += @FLAG_M64@
+-
+-cs_CFLAGS     = $(AM_CFLAGS) @FLAG_W_NO_UNINITIALIZED@
+-csg_CFLAGS    = $(AM_CFLAGS) @FLAG_W_NO_UNINITIALIZED@
+-cds_CFLAGS    = $(AM_CFLAGS) @FLAG_W_NO_UNINITIALIZED@
+diff --git a/memcheck/tests/s390x/cds.c b/memcheck/tests/s390x/cds.c
+deleted file mode 100644
+index ec5c533e0..000000000
+--- a/memcheck/tests/s390x/cds.c
++++ /dev/null
+@@ -1,82 +0,0 @@
+-#include <stdint.h>
+-#include <stdio.h>
+-
+-typedef struct {
+-   uint64_t high;
+-   uint64_t low;
+-} quad_word;
+-
+-void 
+-test(quad_word op1_init, uint64_t op2_init, quad_word op3_init)
+-{
+-   int cc; // unused
+-   quad_word op1 = op1_init;
+-   uint64_t  op2 = op2_init;
+-   quad_word op3 = op3_init;
+-
+-   __asm__ volatile (
+-                     "lmg     %%r0,%%r1,%1\n\t"
+-                     "lmg     %%r2,%%r3,%3\n\t"
+-                     "cds     %%r0,%%r2,%2\n\t"  //  cds 1st,3rd,2nd
+-                     "stmg    %%r0,%%r1,%1\n"    // store r0,r1 to op1
+-                     "stmg    %%r2,%%r3,%3\n"    // store r2,r3 to op3
+-                     : "=d" (cc), "+QS" (op1), "+QS" (op2), "+QS" (op3)
+-                     :
+-                     : "r0", "r1", "r2", "r3", "cc");
+-
+-}
+-
+-// Return a quad-word that only bits low[32:63] are undefined
+-quad_word
+-make_undefined(void)
+-{
+-   quad_word val;
+-
+-   val.high = 0;
+-   val.low |= 0xFFFFFFFF00000000ull;
+-
+-   return val;
+-}
+-
+-void op1_undefined(void)
+-{
+-   quad_word op1, op3;
+-   uint64_t op2;
+-
+-   // op1 undefined
+-   op1 = make_undefined();
+-   op2 = 42;
+-   op3.high = op3.low = 0xdeadbeefdeadbabeull;
+-   test(op1, op2, op3);  // complaint
+-}
+-
+-void op2_undefined(void)
+-{
+-   quad_word op1, op3;
+-   uint64_t op2;
+-
+-   op1.high = op1.low = 42;
+-   // op2 undefined
+-   op3.high = op3.low = 0xdeadbeefdeadbabeull;
+-   test(op1, op2, op3);  // complaint
+-}
+-
+-void op3_undefined(void)
+-{
+-   quad_word op1, op3;
+-   uint64_t op2;
+-
+-   op1.high = op1.low = 42;
+-   op2 = 100;
+-   op3 = make_undefined();
+-   test(op1, op2, op3);  // no complaint; op3 is just copied around
+-}
+-
+-int main ()
+-{
+-   op1_undefined();
+-   op2_undefined();
+-   op3_undefined();
+-
+-   return 0;
+-}
+diff --git a/memcheck/tests/s390x/cds.stderr.exp b/memcheck/tests/s390x/cds.stderr.exp
+deleted file mode 100644
+index e72de94c8..000000000
+--- a/memcheck/tests/s390x/cds.stderr.exp
++++ /dev/null
+@@ -1,10 +0,0 @@
+-Conditional jump or move depends on uninitialised value(s)
+-   at 0x........: test (cds.c:17)
+-   by 0x........: op1_undefined (cds.c:50)
+-   by 0x........: main (cds.c:77)
+-
+-Conditional jump or move depends on uninitialised value(s)
+-   at 0x........: test (cds.c:17)
+-   by 0x........: op2_undefined (cds.c:61)
+-   by 0x........: main (cds.c:78)
+-
+diff --git a/memcheck/tests/s390x/cds.stdout.exp b/memcheck/tests/s390x/cds.stdout.exp
+deleted file mode 100644
+index e69de29bb..000000000
+diff --git a/memcheck/tests/s390x/cds.vgtest b/memcheck/tests/s390x/cds.vgtest
+deleted file mode 100644
+index 5195887e2..000000000
+--- a/memcheck/tests/s390x/cds.vgtest
++++ /dev/null
+@@ -1,2 +0,0 @@
+-prog: cds
+-vgopts: -q
+diff --git a/memcheck/tests/s390x/cs.c b/memcheck/tests/s390x/cs.c
+deleted file mode 100644
+index 9a298cef9..000000000
+--- a/memcheck/tests/s390x/cs.c
++++ /dev/null
+@@ -1,32 +0,0 @@
+-#include <stdint.h>
+-#include <stdio.h>
+-#include <string.h>
+-
+-void 
+-test(int32_t op1_init, int32_t op2_init, int32_t op3_init)
+-{
+-   register int32_t op1 asm("8") = op1_init;
+-   register int32_t op3 asm("9") = op3_init;
+-   
+-   int32_t op2 = op2_init;
+-   int cc = 1; 
+-
+-   __asm__ volatile (
+-           "cs      8,9,%1\n\t"
+-           "ipm     %0\n\t"
+-           "srl     %0,28\n\t"
+-           : "=d" (cc), "+Q" (op2), "+d"(op1), "+d"(op3)
+-           : 
+-           : "cc");
+-}
+-
+-int main ()
+-{
+-   int op1, op2, op3;
+-
+-   test(op1, 0x10000000, 0x12345678);   // complaint
+-   test(0x10000000, op2, 0x12345678);   // complaint
+-   test(0x10000000, 0x01000000, op3);   // no complaint
+-
+-   return 0;
+-}
+diff --git a/memcheck/tests/s390x/cs.stderr.exp b/memcheck/tests/s390x/cs.stderr.exp
+deleted file mode 100644
+index e45dc99cd..000000000
+--- a/memcheck/tests/s390x/cs.stderr.exp
++++ /dev/null
+@@ -1,8 +0,0 @@
+-Conditional jump or move depends on uninitialised value(s)
+-   at 0x........: test (cs.c:14)
+-   by 0x........: main (cs.c:27)
+-
+-Conditional jump or move depends on uninitialised value(s)
+-   at 0x........: test (cs.c:14)
+-   by 0x........: main (cs.c:28)
+-
+diff --git a/memcheck/tests/s390x/cs.stdout.exp b/memcheck/tests/s390x/cs.stdout.exp
+deleted file mode 100644
+index e69de29bb..000000000
+diff --git a/memcheck/tests/s390x/cs.vgtest b/memcheck/tests/s390x/cs.vgtest
+deleted file mode 100644
+index 323cce80c..000000000
+--- a/memcheck/tests/s390x/cs.vgtest
++++ /dev/null
+@@ -1,2 +0,0 @@
+-prog: cs
+-vgopts: -q
+diff --git a/memcheck/tests/s390x/csg.c b/memcheck/tests/s390x/csg.c
+deleted file mode 100644
+index 7f9d8c88e..000000000
+--- a/memcheck/tests/s390x/csg.c
++++ /dev/null
+@@ -1,32 +0,0 @@
+-#include <stdint.h>
+-#include <stdio.h>
+-#include <string.h>
+-
+-void 
+-test(int64_t op1_init, int64_t op2_init, int64_t op3_init)
+-{
+-   register int64_t op1 asm("8") = op1_init;
+-   register int64_t op3 asm("9") = op3_init;
+-   
+-   int64_t op2 = op2_init;
+-   int cc = 1; 
+-
+-   __asm__ volatile (
+-           "csg     8,9,%1\n\t"
+-           "ipm     %0\n\t"
+-           "srl     %0,28\n\t"
+-           : "=d" (cc), "+Q" (op2), "+d"(op1), "+d"(op3)
+-           : 
+-           : "cc");
+-}
+-
+-int main ()
+-{
+-   int64_t op1, op2, op3;
+-
+-   test(op1, 0x1000000000000000ull, 0x1234567887654321ull);  // complaint
+-   test(0x1000000000000000ull, op2, 0x1234567887654321ull);  // complaint
+-   test(0x1000000000000000ull, 0x1000000000000000ull, op3);  // no complaint
+-
+-   return 0;
+-}
+diff --git a/memcheck/tests/s390x/csg.stderr.exp b/memcheck/tests/s390x/csg.stderr.exp
+deleted file mode 100644
+index fda2021ce..000000000
+--- a/memcheck/tests/s390x/csg.stderr.exp
++++ /dev/null
+@@ -1,8 +0,0 @@
+-Conditional jump or move depends on uninitialised value(s)
+-   at 0x........: test (csg.c:14)
+-   by 0x........: main (csg.c:27)
+-
+-Conditional jump or move depends on uninitialised value(s)
+-   at 0x........: test (csg.c:14)
+-   by 0x........: main (csg.c:28)
+-
+diff --git a/memcheck/tests/s390x/csg.stdout.exp b/memcheck/tests/s390x/csg.stdout.exp
+deleted file mode 100644
+index e69de29bb..000000000
+diff --git a/memcheck/tests/s390x/csg.vgtest b/memcheck/tests/s390x/csg.vgtest
+deleted file mode 100644
+index 6de75c1d6..000000000
+--- a/memcheck/tests/s390x/csg.vgtest
++++ /dev/null
+@@ -1,2 +0,0 @@
+-prog: csg
+-vgopts: -q
+
+commit 18ddcc47c951427efd3b790ba2481159b9bd1598
+Author: Andreas Arnez <arnez@linux.ibm.com>
+Date:   Wed Apr 7 16:48:29 2021 +0200
+
+    s390x: Support "expensive" comparisons Iop_ExpCmpNE32/64
+    
+    Add support for Iop_ExpCmpNE32 and Iop_ExpCmpNE64 in the s390x instruction
+    selector.  Handle them exactly like the "inexpensive" variants Iop_CmpNE32
+    and Iop_CmpNE64.
+
+diff --git a/VEX/priv/host_s390_isel.c b/VEX/priv/host_s390_isel.c
+index 2000ec224..5f79280c0 100644
+--- a/VEX/priv/host_s390_isel.c
++++ b/VEX/priv/host_s390_isel.c
+@@ -3611,6 +3611,8 @@ s390_isel_cc(ISelEnv *env, IRExpr *cond)
+ 
+       case Iop_CmpNE32:
+       case Iop_CmpNE64:
++      case Iop_ExpCmpNE32:
++      case Iop_ExpCmpNE64:
+       case Iop_CasCmpNE32:
+       case Iop_CasCmpNE64:
+          result = S390_CC_NE;
+
+commit 5db3f929c43bf46f4707178706cfe90f43acdd19
+Author: Andreas Arnez <arnez@linux.ibm.com>
+Date:   Wed Apr 7 12:30:20 2021 +0200
+
+    s390x: Add convenience function mkV128()
+    
+    Provide mkV128() as a short-hand notation for creating a vector constant from
+    a bit pattern, similar to other such functions like mkU64().
+
+diff --git a/VEX/priv/guest_s390_toIR.c b/VEX/priv/guest_s390_toIR.c
+index 339377007..7d54cb551 100644
+--- a/VEX/priv/guest_s390_toIR.c
++++ b/VEX/priv/guest_s390_toIR.c
+@@ -376,6 +376,13 @@ mkU64(ULong value)
+    return IRExpr_Const(IRConst_U64(value));
+ }
+ 
++/* Create an expression node for a 128-bit vector constant */
++static __inline__ IRExpr *
++mkV128(UShort value)
++{
++   return IRExpr_Const(IRConst_V128(value));
++}
++
+ /* Create an expression node for a 32-bit floating point constant
+    whose value is given by a bit pattern. */
+ static __inline__ IRExpr *
+@@ -16249,7 +16256,7 @@ s390_irgen_VLGV(UChar r1, IRTemp op2addr, UChar v3, UChar m4)
+ static const HChar *
+ s390_irgen_VGBM(UChar v1, UShort i2, UChar m3 __attribute__((unused)))
+ {
+-   put_vr_qw(v1, IRExpr_Const(IRConst_V128(i2)));
++   put_vr_qw(v1, mkV128(i2));
+ 
+    return "vgbm";
+ }
+@@ -18160,11 +18167,11 @@ s390_irgen_VSUM(UChar v1, UChar v2, UChar v3, UChar m4)
+    switch(type) {
+    case Ity_I8:
+       sum = unop(Iop_PwAddL16Ux8, unop(Iop_PwAddL8Ux16, get_vr_qw(v2)));
+-      mask = IRExpr_Const(IRConst_V128(0b0001000100010001));
++      mask = mkV128(0b0001000100010001);
+       break;
+    case Ity_I16:
+       sum = unop(Iop_PwAddL16Ux8, get_vr_qw(v2));
+-      mask = IRExpr_Const(IRConst_V128(0b0011001100110011));
++      mask = mkV128(0b0011001100110011);
+       break;
+    default:
+       vpanic("s390_irgen_VSUM: invalid type ");
+@@ -18185,11 +18192,11 @@ s390_irgen_VSUMG(UChar v1, UChar v2, UChar v3, UChar m4)
+    switch(type) {
+    case Ity_I16:
+       sum = unop(Iop_PwAddL32Ux4, unop(Iop_PwAddL16Ux8, get_vr_qw(v2)));
+-      mask = IRExpr_Const(IRConst_V128(0b0000001100000011));
++      mask = mkV128(0b0000001100000011);
+       break;
+    case Ity_I32:
+       sum = unop(Iop_PwAddL32Ux4, get_vr_qw(v2));
+-      mask = IRExpr_Const(IRConst_V128(0b0000111100001111));
++      mask = mkV128(0b0000111100001111);
+       break;
+    default:
+       vpanic("s390_irgen_VSUMG: invalid type ");
+@@ -18210,11 +18217,11 @@ s390_irgen_VSUMQ(UChar v1, UChar v2, UChar v3, UChar m4)
+    switch(type) {
+    case Ity_I32:
+       sum = unop(Iop_PwAddL64Ux2, unop(Iop_PwAddL32Ux4, get_vr_qw(v2)));
+-      mask = IRExpr_Const(IRConst_V128(0b0000000000001111));
++      mask = mkV128(0b0000000000001111);
+       break;
+    case Ity_I64:
+       sum = unop(Iop_PwAddL64Ux2, get_vr_qw(v2));
+-      mask = IRExpr_Const(IRConst_V128(0b0000000011111111));
++      mask = mkV128(0b0000000011111111);
+       break;
+    default:
+       vpanic("s390_irgen_VSUMQ: invalid type ");
+@@ -18943,8 +18950,8 @@ s390_irgen_VFCx(UChar v1, UChar v2, UChar v3, UChar m4, UChar m5, UChar m6,
+          assign(cond, binop(Iop_CmpEQ32, mkexpr(result), mkU32(cmp)));
+       }
+       put_vr_qw(v1, mkite(mkexpr(cond),
+-                          IRExpr_Const(IRConst_V128(0xffff)),
+-                          IRExpr_Const(IRConst_V128(0))));
++                          mkV128(0xffff),
++                          mkV128(0)));
+       if (s390_vr_is_cs_set(m6)) {
+          IRTemp cc = newTemp(Ity_I64);
+          assign(cc, mkite(mkexpr(cond), mkU64(0), mkU64(3)));
+
+commit e78bd78d3043729033b426218ab8c6dae9c51e96
+Author: Andreas Arnez <arnez@linux.ibm.com>
+Date:   Thu Mar 18 18:01:10 2021 +0100
+
+    Bug 434296 - s390x: Rework IR conversion of VSTRC, VFAE, and VFEE
+    
+    The z/Architecture instructions "vector string range compare" (VSTRC),
+    "vector find any element equal" (VFAE), and "vector find element
+    equal" (VFEE) are each implemented with a dirty helper that executes the
+    instruction.  Unfortunately this approach leads to memcheck false
+    positives, because these instructions may yield a defined result even if
+    parts of the input vectors are undefined.  There are multiple ways this
+    can happen: Wherever the flags in the fourth operand to VSTRC indicate
+    "match always" or "match never", the corresponding elements in the third
+    operand don't affect the result.  The same is true for the elements
+    following the first zero-element in the second operand if the ZS flag is
+    set, or for the elements following the first matching element, if any.
+    
+    Re-implement the instructions without dirty helpers and transform into
+    lengthy IR instead.
+
+diff --git a/VEX/priv/guest_s390_defs.h b/VEX/priv/guest_s390_defs.h
+index 905429015..49b6cd5dd 100644
+--- a/VEX/priv/guest_s390_defs.h
++++ b/VEX/priv/guest_s390_defs.h
+@@ -265,11 +265,8 @@ typedef enum {
+    S390_VEC_OP_INVALID = 0,
+    S390_VEC_OP_VPKS,
+    S390_VEC_OP_VPKLS,
+-   S390_VEC_OP_VFAE,
+-   S390_VEC_OP_VFEE,
+    S390_VEC_OP_VFENE,
+    S390_VEC_OP_VISTR,
+-   S390_VEC_OP_VSTRC,
+    S390_VEC_OP_VCEQ,
+    S390_VEC_OP_VTM,
+    S390_VEC_OP_VGFM,
+diff --git a/VEX/priv/guest_s390_helpers.c b/VEX/priv/guest_s390_helpers.c
+index b71b621ae..63d2e8ce5 100644
+--- a/VEX/priv/guest_s390_helpers.c
++++ b/VEX/priv/guest_s390_helpers.c
+@@ -2538,11 +2538,8 @@ s390x_dirtyhelper_vec_op(VexGuestS390XState *guest_state,
+       {0x00, 0x00}, /* invalid */
+       [S390_VEC_OP_VPKS]  = {0xe7, 0x97},
+       [S390_VEC_OP_VPKLS] = {0xe7, 0x95},
+-      [S390_VEC_OP_VFAE]  = {0xe7, 0x82},
+-      [S390_VEC_OP_VFEE]  = {0xe7, 0x80},
+       [S390_VEC_OP_VFENE] = {0xe7, 0x81},
+       [S390_VEC_OP_VISTR] = {0xe7, 0x5c},
+-      [S390_VEC_OP_VSTRC] = {0xe7, 0x8a},
+       [S390_VEC_OP_VCEQ]  = {0xe7, 0xf8},
+       [S390_VEC_OP_VTM]   = {0xe7, 0xd8},
+       [S390_VEC_OP_VGFM]  = {0xe7, 0xb4},
+@@ -2630,8 +2627,6 @@ s390x_dirtyhelper_vec_op(VexGuestS390XState *guest_state,
+ 
+    case S390_VEC_OP_VPKS:
+    case S390_VEC_OP_VPKLS:
+-   case S390_VEC_OP_VFAE:
+-   case S390_VEC_OP_VFEE:
+    case S390_VEC_OP_VFENE:
+    case S390_VEC_OP_VCEQ:
+    case S390_VEC_OP_VGFM:
+@@ -2645,7 +2640,6 @@ s390x_dirtyhelper_vec_op(VexGuestS390XState *guest_state,
+       the_insn.VRR.m5 = d->m5;
+       break;
+ 
+-   case S390_VEC_OP_VSTRC:
+    case S390_VEC_OP_VGFMA:
+    case S390_VEC_OP_VMAH:
+    case S390_VEC_OP_VMALH:
+diff --git a/VEX/priv/guest_s390_toIR.c b/VEX/priv/guest_s390_toIR.c
+index 7d54cb551..26a947813 100644
+--- a/VEX/priv/guest_s390_toIR.c
++++ b/VEX/priv/guest_s390_toIR.c
+@@ -17156,90 +17156,205 @@ s390_irgen_PPNO(UChar r1, UChar r2)
+    return "ppno";
+ }
+ 
+-static const HChar *
+-s390_irgen_VFAE(UChar v1, UChar v2, UChar v3, UChar m4, UChar m5)
+-{
+-   IRDirty* d;
+-   IRTemp cc = newTemp(Ity_I64);
++enum s390_VStrX {
++   s390_VStrX_VSTRC,
++   s390_VStrX_VFAE,
++   s390_VStrX_VFEE
++};
+ 
+-   /* Check for specification exception */
+-   vassert(m4 < 3);
++#define S390_VEC_OP3(m, op0, op1, op2)                                  \
++   (m) == 0 ? op0 : (m) == 1 ? op1 : (m) == 2 ? op2 : Iop_INVALID;
+ 
+-   s390x_vec_op_details_t details = { .serialized = 0ULL };
+-   details.op = S390_VEC_OP_VFAE;
+-   details.v1 = v1;
+-   details.v2 = v2;
+-   details.v3 = v3;
+-   details.m4 = m4;
+-   details.m5 = m5;
+-
+-   d = unsafeIRDirty_1_N(cc, 0, "s390x_dirtyhelper_vec_op",
+-                         &s390x_dirtyhelper_vec_op,
+-                         mkIRExprVec_2(IRExpr_GSPTR(),
+-                                       mkU64(details.serialized)));
++/* Helper function for transforming VSTRC, VFAE, or VFEE.  These instructions
++   share much of the same logic. */
++static void
++s390_irgen_VStrX(UChar v1, UChar v2, UChar v3, UChar v4, UChar m5,
++                 UChar m6, enum s390_VStrX which_insn)
++{
++   IRTemp op2 = newTemp(Ity_V128);
++   IRTemp op3 = newTemp(Ity_V128);
++   IRExpr* tmp;
++   IRExpr* match = NULL;
++   UChar bitwidth = 8 << m5;
++   UChar n_elem = 16 >> m5;
++   IROp sub_op = S390_VEC_OP3(m5, Iop_Sub8x16, Iop_Sub16x8, Iop_Sub32x4);
++   IROp sar_op = S390_VEC_OP3(m5, Iop_SarN8x16, Iop_SarN16x8, Iop_SarN32x4);
++   IROp shl_op = S390_VEC_OP3(m5, Iop_ShlN8x16, Iop_ShlN16x8, Iop_ShlN32x4);
++   IROp dup_op = S390_VEC_OP3(m5, Iop_Dup8x16, Iop_Dup16x8, Iop_Dup32x4);
++   IROp cmpeq_op = S390_VEC_OP3(m5, Iop_CmpEQ8x16,
++                                    Iop_CmpEQ16x8, Iop_CmpEQ32x4);
++   IROp cmpgt_op = S390_VEC_OP3(m5, Iop_CmpGT8Ux16,
++                                    Iop_CmpGT16Ux8, Iop_CmpGT32Ux4);
++   IROp getelem_op = S390_VEC_OP3(m5, Iop_GetElem8x16,
++                                      Iop_GetElem16x8, Iop_GetElem32x4);
++
++   assign(op2, get_vr_qw(v2));
++   assign(op3, get_vr_qw(v3));
++
++   switch (which_insn) {
++
++   case s390_VStrX_VSTRC: {
++      IRTemp op4 = newTemp(Ity_V128);
++      assign(op4, get_vr_qw(v4));
++
++      /* Mask off insignificant range boundaries from op3, i.e., all those for
++         which the corresponding field in op4 has all or no bits set ("match
++         always" / "match never"). */
++      IRTemp bounds = newTemp(Ity_V128);
++      tmp = unop(Iop_NotV128,
++                 binop(cmpeq_op, mkV128(0),
++                       binop(sar_op,
++                             binop(sub_op,
++                                   binop(sar_op, mkexpr(op4),
++                                         mkU8(bitwidth - 3)),
++                                   mkV128(-1)),
++                             mkU8(1))));
++      assign(bounds, binop(Iop_AndV128, mkexpr(op3), tmp));
++
++      IRTemp flags_eq = newTemp(Ity_V128);
++      IRTemp flags_lt = newTemp(Ity_V128);
++      IRTemp flags_gt = newTemp(Ity_V128);
++      assign(flags_eq, binop(sar_op, mkexpr(op4), mkU8(bitwidth - 1)));
++      assign(flags_lt, binop(sar_op, binop(shl_op, mkexpr(op4), mkU8(1)),
++                             mkU8(bitwidth - 1)));
++      assign(flags_gt, binop(sar_op, binop(shl_op, mkexpr(op4), mkU8(2)),
++                             mkU8(bitwidth - 1)));
++
++      for (UChar idx = 0; idx < n_elem; idx += 2) {
++         /* Match according to the even/odd pairs in op3 and op4 at idx */
++         IRTemp part[2];
++
++         for (UChar j = 0; j < 2; j++) {
++            IRTemp a = newTemp(Ity_V128);
++            assign(a, unop(dup_op,
++                           binop(getelem_op, mkexpr(bounds), mkU8(idx + j))));
++
++            IRExpr* m[] = {
++               binop(cmpeq_op, mkexpr(op2), mkexpr(a)),
++               binop(cmpgt_op, mkexpr(a), mkexpr(op2)),
++               binop(cmpgt_op, mkexpr(op2), mkexpr(a))
++            };
++            IRExpr* f[] = {
++               unop(dup_op, binop(getelem_op, mkexpr(flags_eq), mkU8(idx + j))),
++               unop(dup_op, binop(getelem_op, mkexpr(flags_lt), mkU8(idx + j))),
++               unop(dup_op, binop(getelem_op, mkexpr(flags_gt), mkU8(idx + j)))
++            };
++            part[j] = newTemp(Ity_V128);
++            assign(part[j], binop(Iop_OrV128,
++                                  binop(Iop_OrV128,
++                                        binop(Iop_AndV128, f[0], m[0]),
++                                        binop(Iop_AndV128, f[1], m[1])),
++                                  binop(Iop_AndV128, f[2], m[2])));
++         }
++         tmp = binop(Iop_AndV128, mkexpr(part[0]), mkexpr(part[1]));
++         match = idx == 0 ? tmp : binop(Iop_OrV128, match, tmp);
++      }
++      break;
++   }
+ 
+-   d->nFxState = 3;
+-   vex_bzero(&d->fxState, sizeof(d->fxState));
+-   d->fxState[0].fx     = Ifx_Read;
+-   d->fxState[0].offset = S390X_GUEST_OFFSET(guest_v0) + v2 * sizeof(V128);
+-   d->fxState[0].size   = sizeof(V128);
+-   d->fxState[1].fx     = Ifx_Read;
+-   d->fxState[1].offset = S390X_GUEST_OFFSET(guest_v0) + v3 * sizeof(V128);
+-   d->fxState[1].size   = sizeof(V128);
+-   d->fxState[2].fx     = Ifx_Write;
+-   d->fxState[2].offset = S390X_GUEST_OFFSET(guest_v0) + v1 * sizeof(V128);
+-   d->fxState[2].size   = sizeof(V128);
++   case s390_VStrX_VFAE:
++      for (UChar idx = 0; idx < n_elem; idx++) {
++         IRTemp a = newTemp(Ity_V128);
++         assign(a, binop(cmpeq_op, mkexpr(op2),
++                         unop(dup_op,
++                              binop(getelem_op, mkexpr(op3), mkU8(idx)))));
++         match = idx == 0 ? mkexpr(a) : binop(Iop_OrV128, match, mkexpr(a));
++      }
++      break;
+ 
+-   stmt(IRStmt_Dirty(d));
++   case s390_VStrX_VFEE:
++      match = binop(cmpeq_op, mkexpr(op2), mkexpr(op3));
++      break;
+ 
+-   if (s390_vr_is_cs_set(m5)) {
+-      s390_cc_set(cc);
++   default:
++      vpanic("s390_irgen_VStrX: unknown insn");
+    }
+ 
+-   return "vfae";
+-}
++   /* Invert first intermediate result if requested */
++   if (m6 & 8)
++      match = unop(Iop_NotV128, match);
+ 
+-static const HChar *
+-s390_irgen_VFEE(UChar v1, UChar v2, UChar v3, UChar m4, UChar m5)
+-{
+-   IRDirty* d;
+-   IRTemp cc = newTemp(Ity_I64);
++   IRTemp inter1 = newTemp(Ity_V128);
++   IRTemp inter2 = newTemp(Ity_V128);
++   IRTemp accu = newTemp(Ity_V128);
++   assign(inter1, match);
+ 
+-   /* Check for specification exception */
+-   vassert(m4 < 3);
+-   vassert((m5 & 0b1100) == 0);
++   /* Determine second intermediate and accumulated result */
++   if (s390_vr_is_zs_set(m6)) {
++      assign(inter2, binop(cmpeq_op, mkexpr(op2), mkV128(0)));
++      assign(accu, binop(Iop_OrV128, mkexpr(inter1), mkexpr(inter2)));
++   } else {
++      assign(inter2, mkV128(0));
++      assign(accu, mkexpr(inter1));
++   }
+ 
+-   s390x_vec_op_details_t details = { .serialized = 0ULL };
+-   details.op = S390_VEC_OP_VFEE;
+-   details.v1 = v1;
+-   details.v2 = v2;
+-   details.v3 = v3;
+-   details.m4 = m4;
+-   details.m5 = m5;
++   IRTemp accu0 = newTemp(Ity_I64);
++   IRTemp is_match0 = newTemp(Ity_I1);
++   IRTemp mismatch_bits = newTemp(Ity_I64);
+ 
+-   d = unsafeIRDirty_1_N(cc, 0, "s390x_dirtyhelper_vec_op",
+-                         &s390x_dirtyhelper_vec_op,
+-                         mkIRExprVec_2(IRExpr_GSPTR(),
+-                                       mkU64(details.serialized)));
++   assign(accu0, unop(Iop_V128HIto64, mkexpr(accu)));
++   assign(is_match0, binop(Iop_ExpCmpNE64, mkexpr(accu0), mkU64(0)));
++   assign(mismatch_bits, unop(Iop_ClzNat64,
++                              mkite(mkexpr(is_match0), mkexpr(accu0),
++                                    unop(Iop_V128to64, mkexpr(accu)))));
+ 
+-   d->nFxState = 3;
+-   vex_bzero(&d->fxState, sizeof(d->fxState));
+-   d->fxState[0].fx     = Ifx_Read;
+-   d->fxState[0].offset = S390X_GUEST_OFFSET(guest_v0) + v2 * sizeof(V128);
+-   d->fxState[0].size   = sizeof(V128);
+-   d->fxState[1].fx     = Ifx_Read;
+-   d->fxState[1].offset = S390X_GUEST_OFFSET(guest_v0) + v3 * sizeof(V128);
+-   d->fxState[1].size   = sizeof(V128);
+-   d->fxState[2].fx     = Ifx_Write;
+-   d->fxState[2].offset = S390X_GUEST_OFFSET(guest_v0) + v1 * sizeof(V128);
+-   d->fxState[2].size   = sizeof(V128);
++   if (m6 & 4) {
++      put_vr_qw(v1, mkexpr(inter1));
++   } else {
++      /* Determine byte position of first match */
++      tmp = binop(Iop_Add64,
++                  binop(Iop_Shr64, mkexpr(mismatch_bits), mkU8(3)),
++                  mkite(mkexpr(is_match0), mkU64(0), mkU64(8)));
++      put_vr_qw(v1, binop(Iop_64HLtoV128, tmp, mkU64(0)));
++   }
+ 
+-   stmt(IRStmt_Dirty(d));
++   if (s390_vr_is_cs_set(m6)) {
++      /* Set condition code depending on...
++                   zero found
++                      n  y
++                    +------
++         match    n | 3  0
++          found   y | 1  2   */
+ 
+-   if (s390_vr_is_cs_set(m5)) {
++      IRTemp cc = newTemp(Ity_I64);
++
++      tmp = binop(Iop_Shr64,
++                  mkite(mkexpr(is_match0),
++                        unop(Iop_V128HIto64, mkexpr(inter1)),
++                        unop(Iop_V128to64, mkexpr(inter1))),
++                  unop(Iop_64to8,
++                       binop(Iop_Sub64, mkU64(63), mkexpr(mismatch_bits))));
++      tmp = binop(Iop_Shl64, tmp, mkU8(1));
++      if (s390_vr_is_zs_set(m6)) {
++         tmp = binop(Iop_Xor64, tmp,
++                     mkite(binop(Iop_ExpCmpNE64, mkU64(0),
++                                 binop(Iop_Or64,
++                                       unop(Iop_V128HIto64, mkexpr(inter2)),
++                                       unop(Iop_V128to64, mkexpr(inter2)))),
++                           mkU64(0),
++                           mkU64(3)));
++      } else {
++         tmp = binop(Iop_Xor64, tmp, mkU64(3));
++      }
++      assign(cc, tmp);
+       s390_cc_set(cc);
+    }
++   dis_res->hint = Dis_HintVerbose;
++}
+ 
++static const HChar *
++s390_irgen_VFAE(UChar v1, UChar v2, UChar v3, UChar m4, UChar m5)
++{
++   s390_insn_assert("vfae", m4 <= 2);
++   s390_irgen_VStrX(v1, v2, v3, 255, m4, m5, s390_VStrX_VFAE);
++   return "vfae";
++}
++
++static const HChar *
++s390_irgen_VFEE(UChar v1, UChar v2, UChar v3, UChar m4, UChar m5)
++{
++   s390_insn_assert("vfee", m4 < 3 && m5 == (m5 & 3));
++   s390_irgen_VStrX(v1, v2, v3, 255, m4, m5, s390_VStrX_VFEE);
+    return "vfee";
+ }
+ 
+@@ -17406,47 +17521,8 @@ s390_irgen_VISTR(UChar v1, UChar v2, UChar m3, UChar m5)
+ static const HChar *
+ s390_irgen_VSTRC(UChar v1, UChar v2, UChar v3, UChar v4, UChar m5, UChar m6)
+ {
+-   IRDirty* d;
+-   IRTemp cc = newTemp(Ity_I64);
+-
+-   /* Check for specification exception */
+-   vassert(m5 < 3);
+-
+-   s390x_vec_op_details_t details = { .serialized = 0ULL };
+-   details.op = S390_VEC_OP_VSTRC;
+-   details.v1 = v1;
+-   details.v2 = v2;
+-   details.v3 = v3;
+-   details.v4 = v4;
+-   details.m4 = m5;
+-   details.m5 = m6;
+-
+-   d = unsafeIRDirty_1_N(cc, 0, "s390x_dirtyhelper_vec_op",
+-                         &s390x_dirtyhelper_vec_op,
+-                         mkIRExprVec_2(IRExpr_GSPTR(),
+-                                       mkU64(details.serialized)));
+-
+-   d->nFxState = 4;
+-   vex_bzero(&d->fxState, sizeof(d->fxState));
+-   d->fxState[0].fx     = Ifx_Read;
+-   d->fxState[0].offset = S390X_GUEST_OFFSET(guest_v0) + v2 * sizeof(V128);
+-   d->fxState[0].size   = sizeof(V128);
+-   d->fxState[1].fx     = Ifx_Read;
+-   d->fxState[1].offset = S390X_GUEST_OFFSET(guest_v0) + v3 * sizeof(V128);
+-   d->fxState[1].size   = sizeof(V128);
+-   d->fxState[2].fx     = Ifx_Read;
+-   d->fxState[2].offset = S390X_GUEST_OFFSET(guest_v0) + v4 * sizeof(V128);
+-   d->fxState[2].size   = sizeof(V128);
+-   d->fxState[3].fx     = Ifx_Write;
+-   d->fxState[3].offset = S390X_GUEST_OFFSET(guest_v0) + v1 * sizeof(V128);
+-   d->fxState[3].size   = sizeof(V128);
+-
+-   stmt(IRStmt_Dirty(d));
+-
+-   if (s390_vr_is_cs_set(m6)) {
+-      s390_cc_set(cc);
+-   }
+-
++   s390_insn_assert("vstrc", m5 <= 2);
++   s390_irgen_VStrX(v1, v2, v3, v4, m5, m6, s390_VStrX_VSTRC);
+    return "vstrc";
+ }
+ 
+
+commit 4f17a067c4f8245c05611d6e8aa36e8841bab376
+Author: Andreas Arnez <arnez@linux.ibm.com>
+Date:   Tue Mar 2 14:12:29 2021 +0100
+
+    Bug 434296 - s390x: Rework IR conversion of VFENE
+    
+    So far the z/Architecture instruction "vector find element not
+    equal" (VFENE) is transformed to a loop.  This can cause spurious
+    "conditional jump or move depends on uninitialised value(s)" messages by
+    memcheck.  Re-implement without a loop.
+
+diff --git a/VEX/priv/guest_s390_defs.h b/VEX/priv/guest_s390_defs.h
+index 49b6cd5dd..caec3108e 100644
+--- a/VEX/priv/guest_s390_defs.h
++++ b/VEX/priv/guest_s390_defs.h
+@@ -265,7 +265,6 @@ typedef enum {
+    S390_VEC_OP_INVALID = 0,
+    S390_VEC_OP_VPKS,
+    S390_VEC_OP_VPKLS,
+-   S390_VEC_OP_VFENE,
+    S390_VEC_OP_VISTR,
+    S390_VEC_OP_VCEQ,
+    S390_VEC_OP_VTM,
+diff --git a/VEX/priv/guest_s390_helpers.c b/VEX/priv/guest_s390_helpers.c
+index 63d2e8ce5..2188ce5c1 100644
+--- a/VEX/priv/guest_s390_helpers.c
++++ b/VEX/priv/guest_s390_helpers.c
+@@ -2538,7 +2538,6 @@ s390x_dirtyhelper_vec_op(VexGuestS390XState *guest_state,
+       {0x00, 0x00}, /* invalid */
+       [S390_VEC_OP_VPKS]  = {0xe7, 0x97},
+       [S390_VEC_OP_VPKLS] = {0xe7, 0x95},
+-      [S390_VEC_OP_VFENE] = {0xe7, 0x81},
+       [S390_VEC_OP_VISTR] = {0xe7, 0x5c},
+       [S390_VEC_OP_VCEQ]  = {0xe7, 0xf8},
+       [S390_VEC_OP_VTM]   = {0xe7, 0xd8},
+@@ -2627,7 +2626,6 @@ s390x_dirtyhelper_vec_op(VexGuestS390XState *guest_state,
+ 
+    case S390_VEC_OP_VPKS:
+    case S390_VEC_OP_VPKLS:
+-   case S390_VEC_OP_VFENE:
+    case S390_VEC_OP_VCEQ:
+    case S390_VEC_OP_VGFM:
+    case S390_VEC_OP_VCH:
+diff --git a/VEX/priv/guest_s390_toIR.c b/VEX/priv/guest_s390_toIR.c
+index 26a947813..c8dc3ec18 100644
+--- a/VEX/priv/guest_s390_toIR.c
++++ b/VEX/priv/guest_s390_toIR.c
+@@ -17361,120 +17361,86 @@ s390_irgen_VFEE(UChar v1, UChar v2, UChar v3, UChar m4, UChar m5)
+ static const HChar *
+ s390_irgen_VFENE(UChar v1, UChar v2, UChar v3, UChar m4, UChar m5)
+ {
+-   const Bool negateComparison = True;
+-   const IRType type = s390_vr_get_type(m4);
++   s390_insn_assert("vfene", m4 < 3 && m5 == (m5 & 3));
+ 
+-   /* Check for specification exception */
+-   vassert(m4 < 3);
+-   vassert((m5 & 0b1100) == 0);
+-
+-   static const IROp elementGetters[] = {
+-      Iop_GetElem8x16, Iop_GetElem16x8, Iop_GetElem32x4
++   static const IROp compare_op[3] = {
++      Iop_CmpEQ8x16, Iop_CmpEQ16x8, Iop_CmpEQ32x4
+    };
+-   IROp getter = elementGetters[m4];
+-
+-   static const IROp elementComparators[] = {
+-      Iop_CmpEQ8, Iop_CmpEQ16, Iop_CmpEQ32
++   static const IROp abs_op[3] = {
++      Iop_Abs8x16, Iop_Abs16x8, Iop_Abs32x4
+    };
+-   IROp comparator = elementComparators[m4];
+-
+-   static const IROp resultConverter[] = {Iop_64to8, Iop_64to16, Iop_64to32};
+-   IROp converter = resultConverter[m4];
+-
+-   IRTemp isZeroElem;
+-
+-   IRTemp counter = newTemp(Ity_I64);
+-   assign(counter, get_counter_dw0());
+-
+-   IRTemp arg1 = newTemp(type);
+-   assign(arg1, binop(getter, get_vr_qw(v2), unop(Iop_64to8, mkexpr(counter))));
+-   IRTemp arg2 = newTemp(type);
+-   assign(arg2, binop(getter, get_vr_qw(v3), unop(Iop_64to8, mkexpr(counter))));
++   IRTemp op2 = newTemp(Ity_V128);
++   IRTemp op3 = newTemp(Ity_V128);
++   IRTemp op2zero = newTemp(Ity_V128);
++   IRTemp diff = newTemp(Ity_V128);
++   IRTemp diff0 = newTemp(Ity_I64);
++   IRTemp neq0 = newTemp(Ity_I1);
++   IRTemp samebits = newTemp(Ity_I64);
++   IRExpr* tmp;
+ 
+-   IRTemp isGoodPair = newTemp(Ity_I1);
+-   if(negateComparison) {
+-      assign(isGoodPair, unop(Iop_Not1, binop(comparator, mkexpr(arg1),
+-                                              mkexpr(arg2))));
+-   } else {
+-      assign(isGoodPair, binop(comparator, mkexpr(arg1), mkexpr(arg2)));
+-   }
++   assign(op2, get_vr_qw(v2));
++   assign(op3, get_vr_qw(v3));
+ 
+-   if(s390_vr_is_zs_set(m5)) {
+-      isZeroElem = newTemp(Ity_I1);
+-      assign(isZeroElem, binop(comparator, mkexpr(arg1),
+-                               unop(converter, mkU64(0))));
++   tmp = mkV128(0);
++   if (s390_vr_is_zs_set(m5)) {
++      tmp = binop(compare_op[m4], mkexpr(op2), tmp);
++      if (s390_vr_is_cs_set(m5) && v3 != v2) {
++         /* Count leading equal bits in the terminating element too */
++         tmp = unop(abs_op[m4], tmp);
++      }
++      assign(op2zero, tmp);
++      tmp = mkexpr(op2zero);
+    }
+-
+-   static const UChar invalidIndices[] = {16, 8, 4};
+-   const UChar invalidIndex = invalidIndices[m4];
+-   IRTemp endOfVectorIsReached = newTemp(Ity_I1);
+-   assign(endOfVectorIsReached, binop(Iop_CmpEQ64, mkexpr(counter),
+-                                      mkU64(invalidIndex)));
+-
+-   put_counter_dw0(binop(Iop_Add64, mkexpr(counter), mkU64(1)));
+-   IRExpr* shouldBreak = binop(Iop_Or32,
+-                               unop(Iop_1Uto32, mkexpr(isGoodPair)),
+-                               unop(Iop_1Uto32, mkexpr(endOfVectorIsReached))
+-                              );
+-   if(s390_vr_is_zs_set(m5)) {
+-      shouldBreak = binop(Iop_Or32,
+-                          shouldBreak,
+-                          unop(Iop_1Uto32, mkexpr(isZeroElem)));
+-   }
+-   iterate_if(binop(Iop_CmpEQ32, shouldBreak, mkU32(0)));
+-
+-   IRExpr* foundIndex = binop(Iop_Sub64, get_counter_dw0(), mkU64(1));
+-   if(m4 > 0) {
+-      /* We should return index of byte but we found index of element in
+-         general case.
+-            if byte elem (m4 == 0) then indexOfByte = indexOfElement
+-            if halfword elem (m4 == 1) then indexOfByte = 2 * indexOfElement
+-                                                        = indexOfElement << 1
+-            if word elem (m4 == 2) then indexOfByte = 4 * indexOfElement
+-                                                    = indexOfElement << 2
+-      */
+-      foundIndex = binop(Iop_Shl64, foundIndex, mkU8(m4));
++   if (v3 != v2) {
++      tmp = binop(Iop_XorV128, mkexpr(op2), mkexpr(op3));
++      if (s390_vr_is_zs_set(m5))
++         tmp = binop(Iop_OrV128, tmp, mkexpr(op2zero));
+    }
+ 
+-   IRTemp result = newTemp(Ity_I64);
+-   assign(result, mkite(mkexpr(endOfVectorIsReached),
+-                        mkU64(16),
+-                        foundIndex));
+-   put_vr_qw(v1, binop(Iop_64HLtoV128, mkexpr(result), mkU64(0)));
++   assign(diff, tmp);
++   assign(diff0, unop(Iop_V128HIto64, mkexpr(diff)));
++   assign(neq0, binop(Iop_ExpCmpNE64, mkexpr(diff0), mkU64(0)));
++   assign(samebits, unop(Iop_ClzNat64,
++                         mkite(mkexpr(neq0), mkexpr(diff0),
++                               unop(Iop_V128to64, mkexpr(diff)))));
+ 
++   /* Determine the byte size of the initial equal-elements sequence */
++   tmp = binop(Iop_Shr64, mkexpr(samebits), mkU8(m4 + 3));
++   if (m4 != 0)
++      tmp = binop(Iop_Shl64, tmp, mkU8(m4));
++   tmp = binop(Iop_Add64, tmp, mkite(mkexpr(neq0), mkU64(0), mkU64(8)));
++   put_vr_qw(v1, binop(Iop_64HLtoV128, tmp, mkU64(0)));
+ 
+    if (s390_vr_is_cs_set(m5)) {
+-      static const IROp to64Converters[] = {Iop_8Uto64, Iop_16Uto64, Iop_32Uto64};
+-      IROp to64Converter = to64Converters[m4];
+-
+-      IRExpr* arg1IsLessThanArg2 = binop(Iop_CmpLT64U,
+-                                         unop(to64Converter, mkexpr(arg1)),
+-                                         unop(to64Converter, mkexpr(arg2)));
+-
+-      IRExpr* ccexp = mkite(binop(Iop_CmpEQ32,
+-                                  unop(Iop_1Uto32, mkexpr(isGoodPair)),
+-                                  mkU32(1)),
+-                            mkite(arg1IsLessThanArg2, mkU64(1), mkU64(2)),
+-                            mkU64(3));
+-
+-      if(s390_vr_is_zs_set(m5)) {
+-         IRExpr* arg2IsZero = binop(comparator, mkexpr(arg2),
+-                                    unop(converter, mkU64(0)));
+-         IRExpr* bothArgsAreZero = binop(Iop_And32,
+-                                         unop(Iop_1Uto32, mkexpr(isZeroElem)),
+-                                         unop(Iop_1Uto32, arg2IsZero));
+-         ccexp = mkite(binop(Iop_CmpEQ32, bothArgsAreZero, mkU32(1)),
+-                       mkU64(0),
+-                       ccexp);
+-      }
++      /* Set condition code like follows --
++         0: operands equal up to and including zero element
++         1: op2 < op3    2: op2 > op3    3: op2 = op3 */
+       IRTemp cc = newTemp(Ity_I64);
+-      assign(cc, ccexp);
+-
++      if (v3 == v2) {
++         tmp = mkU64(0);
++      } else {
++         IRTemp shift = newTemp(Ity_I8);
++         IRExpr* op2half = mkite(mkexpr(neq0),
++                                 unop(Iop_V128HIto64, mkexpr(op2)),
++                                 unop(Iop_V128to64, mkexpr(op2)));
++         IRExpr* op3half = mkite(mkexpr(neq0),
++                                 unop(Iop_V128HIto64, mkexpr(op3)),
++                                 unop(Iop_V128to64, mkexpr(op3)));
++         assign(shift, unop(Iop_64to8,
++                            binop(Iop_Sub64, mkU64(63), mkexpr(samebits))));
++         tmp = binop(Iop_Or64,
++                     binop(Iop_Shl64,
++                           binop(Iop_And64, mkU64(1),
++                                 binop(Iop_Shr64, op2half, mkexpr(shift))),
++                           mkU8(1)),
++                     binop(Iop_And64, mkU64(1),
++                           binop(Iop_Shr64, op3half, mkexpr(shift))));
++      }
++      assign(cc, mkite(binop(Iop_CmpEQ64, mkexpr(samebits), mkU64(64)),
++                       mkU64(3), tmp));
+       s390_cc_set(cc);
+    }
+-
+-
+-   put_counter_dw0(mkU64(0));
++   dis_res->hint = Dis_HintVerbose;
+    return "vfene";
+ }
+ 
+
+commit 9bd78ebd8bb5cd4ebb3f081ceba46836cc485551
+Author: Andreas Arnez <arnez@linux.ibm.com>
+Date:   Tue Apr 27 20:13:26 2021 +0200
+
+    Bug 434296 - s390x: Rework IR conversion of VISTR
+    
+    The z/Architecture instruction VISTR is currently transformed to a dirty
+    helper that executes the instruction.  This can cause false positives with
+    memcheck if the input string contains undefined characters after the
+    string terminator.  Implement without a dirty helper and emulate the
+    instruction instead.
+
+diff --git a/VEX/priv/guest_s390_defs.h b/VEX/priv/guest_s390_defs.h
+index caec3108e..24f3798c1 100644
+--- a/VEX/priv/guest_s390_defs.h
++++ b/VEX/priv/guest_s390_defs.h
+@@ -265,7 +265,6 @@ typedef enum {
+    S390_VEC_OP_INVALID = 0,
+    S390_VEC_OP_VPKS,
+    S390_VEC_OP_VPKLS,
+-   S390_VEC_OP_VISTR,
+    S390_VEC_OP_VCEQ,
+    S390_VEC_OP_VTM,
+    S390_VEC_OP_VGFM,
+diff --git a/VEX/priv/guest_s390_helpers.c b/VEX/priv/guest_s390_helpers.c
+index 2188ce5c1..1e04f601a 100644
+--- a/VEX/priv/guest_s390_helpers.c
++++ b/VEX/priv/guest_s390_helpers.c
+@@ -2538,7 +2538,6 @@ s390x_dirtyhelper_vec_op(VexGuestS390XState *guest_state,
+       {0x00, 0x00}, /* invalid */
+       [S390_VEC_OP_VPKS]  = {0xe7, 0x97},
+       [S390_VEC_OP_VPKLS] = {0xe7, 0x95},
+-      [S390_VEC_OP_VISTR] = {0xe7, 0x5c},
+       [S390_VEC_OP_VCEQ]  = {0xe7, 0xf8},
+       [S390_VEC_OP_VTM]   = {0xe7, 0xd8},
+       [S390_VEC_OP_VGFM]  = {0xe7, 0xb4},
+@@ -2610,14 +2609,6 @@ s390x_dirtyhelper_vec_op(VexGuestS390XState *guest_state,
+    the_insn.VRR.op2 = opcodes[d->op][1];
+ 
+    switch(d->op) {
+-   case S390_VEC_OP_VISTR:
+-      the_insn.VRR.v1 = 1;
+-      the_insn.VRR.v2 = 2;
+-      the_insn.VRR.rxb = 0b1100;
+-      the_insn.VRR.m4 = d->m4;
+-      the_insn.VRR.m5 = d->m5;
+-      break;
+-
+    case S390_VEC_OP_VTM:
+       the_insn.VRR.v1 = 2;
+       the_insn.VRR.v2 = 3;
+diff --git a/VEX/priv/guest_s390_toIR.c b/VEX/priv/guest_s390_toIR.c
+index c8dc3ec18..dfea54259 100644
+--- a/VEX/priv/guest_s390_toIR.c
++++ b/VEX/priv/guest_s390_toIR.c
+@@ -17447,40 +17447,34 @@ s390_irgen_VFENE(UChar v1, UChar v2, UChar v3, UChar m4, UChar m5)
+ static const HChar *
+ s390_irgen_VISTR(UChar v1, UChar v2, UChar m3, UChar m5)
+ {
+-   IRDirty* d;
+-   IRTemp cc = newTemp(Ity_I64);
+-
+-   /* Check for specification exception */
+-   vassert(m3 < 3);
+-   vassert((m5 & 0b1110) == 0);
++   s390_insn_assert("vistr", m3 < 3 && m5 == (m5 & 1));
+ 
+-   s390x_vec_op_details_t details = { .serialized = 0ULL };
+-   details.op = S390_VEC_OP_VISTR;
+-   details.v1 = v1;
+-   details.v2 = v2;
+-   details.m4 = m3;
+-   details.m5 = m5;
+-
+-   d = unsafeIRDirty_1_N(cc, 0, "s390x_dirtyhelper_vec_op",
+-                         &s390x_dirtyhelper_vec_op,
+-                         mkIRExprVec_2(IRExpr_GSPTR(),
+-                                       mkU64(details.serialized)));
++   static const IROp compare_op[3] = {
++      Iop_CmpEQ8x16, Iop_CmpEQ16x8, Iop_CmpEQ32x4
++   };
++   IRExpr* t;
++   IRTemp op2 = newTemp(Ity_V128);
++   IRTemp op2term = newTemp(Ity_V128);
++   IRTemp mask = newTemp(Ity_V128);
+ 
+-   d->nFxState = 2;
+-   vex_bzero(&d->fxState, sizeof(d->fxState));
+-   d->fxState[0].fx     = Ifx_Read;
+-   d->fxState[0].offset = S390X_GUEST_OFFSET(guest_v0) + v2 * sizeof(V128);
+-   d->fxState[0].size   = sizeof(V128);
+-   d->fxState[1].fx     = Ifx_Write;
+-   d->fxState[1].offset = S390X_GUEST_OFFSET(guest_v0) + v1 * sizeof(V128);
+-   d->fxState[1].size   = sizeof(V128);
++   assign(op2, get_vr_qw(v2));
++   assign(op2term, binop(compare_op[m3], mkexpr(op2), mkV128(0)));
++   t = mkexpr(op2term);
+ 
+-   stmt(IRStmt_Dirty(d));
++   for (UChar i = m3; i < 4; i++) {
++      IRTemp s = newTemp(Ity_V128);
++      assign(s, binop(Iop_OrV128, t, binop(Iop_ShrV128, t, mkU8(8 << i))));
++      t = mkexpr(s);
++   }
++   assign(mask, unop(Iop_NotV128, t));
++   put_vr_qw(v1, binop(Iop_AndV128, mkexpr(op2), mkexpr(mask)));
+ 
+    if (s390_vr_is_cs_set(m5)) {
++      IRTemp cc = newTemp(Ity_I64);
++      assign(cc, binop(Iop_And64, mkU64(3), unop(Iop_V128to64, mkexpr(mask))));
+       s390_cc_set(cc);
+    }
+-
++   dis_res->hint = Dis_HintVerbose;
+    return "vistr";
+ }
+ 
+
+commit 32312d588b77c5b5b5a0145bb0cc6f795b447790
+Author: Andreas Arnez <arnez@linux.ibm.com>
+Date:   Fri Apr 16 12:44:44 2021 +0200
+
+    Bug 434296 - s390x: Add memcheck test cases for vector string insns
+    
+    Bug 434296 addresses memcheck false positives with the vector string
+    instructions VISTR, VSTRC, VFAE, VFEE, and VFENE.  Add test cases that
+    verify the fix for that bug.  Without the fix, memcheck yields many
+    complains with these tests, most of which are false positives.
+
+diff --git a/memcheck/tests/s390x/Makefile.am b/memcheck/tests/s390x/Makefile.am
+index e4e69eb38..d183841ef 100644
+--- a/memcheck/tests/s390x/Makefile.am
++++ b/memcheck/tests/s390x/Makefile.am
+@@ -2,7 +2,7 @@ include $(top_srcdir)/Makefile.tool-tests.am
+ 
+ dist_noinst_SCRIPTS = filter_stderr
+ 
+-INSN_TESTS = cdsg cu21 cu42 ltgjhe
++INSN_TESTS = cdsg cu21 cu42 ltgjhe vstrc vfae vistr
+ 
+ check_PROGRAMS = $(INSN_TESTS) 
+ 
+@@ -14,3 +14,7 @@ EXTRA_DIST = \
+ AM_CFLAGS    += @FLAG_M64@
+ AM_CXXFLAGS  += @FLAG_M64@
+ AM_CCASFLAGS += @FLAG_M64@
++
++vstrc_CFLAGS  = $(AM_CFLAGS) -march=z13
++vfae_CFLAGS   = $(AM_CFLAGS) -march=z13
++vistr_CFLAGS  = $(AM_CFLAGS) -march=z13
+diff --git a/memcheck/tests/s390x/vfae.c b/memcheck/tests/s390x/vfae.c
+new file mode 100644
+index 000000000..68781e7fb
+--- /dev/null
++++ b/memcheck/tests/s390x/vfae.c
+@@ -0,0 +1,72 @@
++#include <stdio.h>
++#include <string.h>
++
++#define VECTOR __attribute__ ((vector_size (16)))
++
++typedef char VECTOR char_v;
++
++volatile char tmp;
++static const char *hex_digit = "0123456789abcdefGHIJKLMNOPQRSTUV";
++
++static char_v to_char_vec(const char *str)
++{
++   char_v v;
++   char buf[17];
++   int len = strlen(str);
++
++   memcpy(buf, str, (len && str[len - 1] == '~') ? len - 1 : len + 1);
++   v = *(char_v *) buf;
++   return v;
++}
++
++#define GENERATE_TEST(mnem)                                          \
++static void test_ ## mnem ## _char(const char *str, const char *match, \
++                                   int expect_res, int expect_cc)    \
++{                                                                    \
++   int cc;                                                           \
++   char_v v1;                                                        \
++   char_v v2 = to_char_vec(str);                                     \
++   char_v v3 = to_char_vec(match);                                   \
++                                                                     \
++   __asm__(                                                          \
++      "cr    0,0\n\t"           /* Clear CC */                       \
++      #mnem "  %[v1],%[v2],%[v3],0,3\n\t"                            \
++      "ipm   %[cc]\n\t"                                              \
++      "srl   %[cc],28"                                               \
++      : [v1] "=v" (v1),                                              \
++        [cc] "=d" (cc)                                               \
++      : [v2] "v" (v2),                                               \
++        [v3] "v" (v3)                                                \
++      : "cc");                                                       \
++                                                                     \
++   tmp = hex_digit[v1[7] & 0x1f];                                    \
++   if (expect_res >= 0  && v1[7] != expect_res)                      \
++      printf("result %u != %d\n", v1[7], expect_res);                \
++                                                                     \
++   tmp = hex_digit[cc & 0xf];                                        \
++   if (expect_cc >= 0 && cc != expect_cc)                            \
++      printf("CC %d != %d\n", cc, expect_cc);                        \
++}
++
++GENERATE_TEST(vfae)
++
++GENERATE_TEST(vfee)
++
++GENERATE_TEST(vfene)
++
++int main()
++{
++   test_vfae_char("not found", "................", 9, 0);
++   test_vfae_char("xy", "zzzzzzzzyyyyyyyy", 1, 2);
++   test_vfae_char("incomplete~", "xxxxxxxxxxxxxxxx", -1, -1);
++
++   test_vfee_char("same char here", "..........here", 10, 2);
++   test_vfee_char("and here too ...", "_________t~", 9, 1);
++   test_vfee_char("equality!~", "========!!~", 8, -1);
++
++   test_vfene_char("strings equal", "strings equal", 13, 0);
++   test_vfene_char(hex_digit, hex_digit, 16, 3);
++   test_vfene_char("undef~", "undefined", -1, -1);
++   test_vfene_char("active~", "actually ok", 3, 1);
++   return 0;
++}
+diff --git a/memcheck/tests/s390x/vfae.stderr.exp b/memcheck/tests/s390x/vfae.stderr.exp
+new file mode 100644
+index 000000000..8aad3c87f
+--- /dev/null
++++ b/memcheck/tests/s390x/vfae.stderr.exp
+@@ -0,0 +1,20 @@
++Use of uninitialised value of size 8
++   at 0x........: test_vfae_char (vfae.c:51)
++   by 0x........: main (vfae.c:61)
++
++Use of uninitialised value of size 8
++   at 0x........: test_vfae_char (vfae.c:51)
++   by 0x........: main (vfae.c:61)
++
++Use of uninitialised value of size 8
++   at 0x........: test_vfee_char (vfae.c:53)
++   by 0x........: main (vfae.c:65)
++
++Use of uninitialised value of size 8
++   at 0x........: test_vfene_char (vfae.c:55)
++   by 0x........: main (vfae.c:69)
++
++Use of uninitialised value of size 8
++   at 0x........: test_vfene_char (vfae.c:55)
++   by 0x........: main (vfae.c:69)
++
+diff --git a/memcheck/tests/s390x/vfae.stdout.exp b/memcheck/tests/s390x/vfae.stdout.exp
+new file mode 100644
+index 000000000..e69de29bb
+diff --git a/memcheck/tests/s390x/vfae.vgtest b/memcheck/tests/s390x/vfae.vgtest
+new file mode 100644
+index 000000000..ae36c22fe
+--- /dev/null
++++ b/memcheck/tests/s390x/vfae.vgtest
+@@ -0,0 +1,2 @@
++prog: vfae
++vgopts: -q
+diff --git a/memcheck/tests/s390x/vistr.c b/memcheck/tests/s390x/vistr.c
+new file mode 100644
+index 000000000..7ed59b94b
+--- /dev/null
++++ b/memcheck/tests/s390x/vistr.c
+@@ -0,0 +1,76 @@
++#include <stdio.h>
++#include <string.h>
++
++#define VECTOR __attribute__ ((vector_size (16)))
++
++typedef char VECTOR char_v;
++
++volatile char tmp;
++static const char *hex_digit = "0123456789abcdef";
++
++static char_v to_char_vec(const char *str, char_v *maskp)
++{
++   char buf[17];
++   char_v v;
++   char_v mask = {0};
++
++   for (int i = 0; i < sizeof(buf); i++) {
++      char ch = str[i];
++      if (ch == '\0')
++         break;
++      else if (ch == '$') {
++         buf[i] = '\0';
++         mask[i] = -1;
++      } else if (ch != '~') {
++         buf[i] = ch;
++         mask[i] = -1;
++      }
++   }
++   v = *(char_v *) buf;
++   *maskp = mask;
++   return v;
++}
++
++static void test_vistr_char(const char *str, const char *expect_res,
++                            int expect_cc)
++{
++   int cc, count;
++   char_v v1, mask;
++   char_v v2 = to_char_vec(str, &mask);
++   char_v exp_v1 = to_char_vec(expect_res, &mask);
++   char equal[16];
++
++   __asm__(
++      "cr    0,0\n\t"           /* Clear CC */
++      "vistr %[v1],%[v2],0,1\n\t"
++      "ipm   %[cc]\n\t"
++      "srl   %[cc],28"
++      : [v1] "=v" (v1),
++        [cc] "=d" (cc)
++      : [v2] "v" (v2)
++      : "cc");
++
++   *(char_v *) equal = (v1 & mask) == (exp_v1 & mask);
++   if (memchr(equal, 0, sizeof(equal)))
++      printf("Result doesn't match `%s'\n", expect_res);
++
++   count = 0;
++   for (int i = 0; i < 16; i++) {
++      if (v1[i] == 0) count++;
++   }
++   tmp = hex_digit[count];
++
++   tmp = hex_digit[cc & 0xf];
++   if (expect_cc >= 0 && cc != expect_cc)
++      printf("CC %d != %d\n", cc, expect_cc);
++}
++
++int main()
++{
++   test_vistr_char("terminated$====~", "terminated$$$$$$", 0);
++   test_vistr_char("undef~~~~~~~~~~~", "undef", -1);
++   test_vistr_char("undef, 2nd half~", "undef, 2nd half", -1);
++   test_vistr_char("Not. Terminated.", "Not. Terminated.", 3);
++   test_vistr_char("partiallyOK~~$~~", "partiallyOK~~$$$", 0);
++   return 0;
++}
+diff --git a/memcheck/tests/s390x/vistr.stderr.exp b/memcheck/tests/s390x/vistr.stderr.exp
+new file mode 100644
+index 000000000..e4f35fd74
+--- /dev/null
++++ b/memcheck/tests/s390x/vistr.stderr.exp
+@@ -0,0 +1,20 @@
++Conditional jump or move depends on uninitialised value(s)
++   at 0x........: test_vistr_char (vistr.c:59)
++   by 0x........: main (vistr.c:71)
++
++Use of uninitialised value of size 8
++   at 0x........: test_vistr_char (vistr.c:63)
++   by 0x........: main (vistr.c:71)
++
++Conditional jump or move depends on uninitialised value(s)
++   at 0x........: test_vistr_char (vistr.c:59)
++   by 0x........: main (vistr.c:72)
++
++Use of uninitialised value of size 8
++   at 0x........: test_vistr_char (vistr.c:63)
++   by 0x........: main (vistr.c:72)
++
++Conditional jump or move depends on uninitialised value(s)
++   at 0x........: test_vistr_char (vistr.c:59)
++   by 0x........: main (vistr.c:74)
++
+diff --git a/memcheck/tests/s390x/vistr.vgtest b/memcheck/tests/s390x/vistr.vgtest
+new file mode 100644
+index 000000000..f99749d85
+--- /dev/null
++++ b/memcheck/tests/s390x/vistr.vgtest
+@@ -0,0 +1,2 @@
++prog: vistr
++vgopts: -q
+diff --git a/memcheck/tests/s390x/vstrc.c b/memcheck/tests/s390x/vstrc.c
+new file mode 100644
+index 000000000..268e2f858
+--- /dev/null
++++ b/memcheck/tests/s390x/vstrc.c
+@@ -0,0 +1,92 @@
++#include <stdio.h>
++#include <string.h>
++
++#define VECTOR __attribute__ ((vector_size (16)))
++
++typedef char VECTOR char_v;
++
++struct vstrc_char_rng {
++   unsigned char range[16];
++   unsigned char flags[16];
++};
++
++#define RNG_FLAG_EQ   0x80
++#define RNG_FLAG_LT   0x40
++#define RNG_FLAG_GT   0x20
++#define RNG_FLAG_ANY  0xe0
++#define RNG_FLAG_NONE 0x00
++
++volatile char tmp;
++static const char *hex_digit = "0123456789abcdefGHIJKLMNOPQRSTUV";
++
++static void test_vstrc_char(const char *str, const struct vstrc_char_rng *rng,
++                            int expect_res, int expect_cc)
++{
++   int cc;
++   char_v v1;
++   char_v v2 = *(const char_v *) str;
++   char_v v3 = *(const char_v *) rng->range;
++   char_v v4 = *(const char_v *) rng->flags;
++
++   __asm__(
++      "cr    0,0\n\t"           /* Clear CC */
++      "vstrc %[v1],%[v2],%[v3],%[v4],0,3\n\t"
++      "ipm   %[cc]\n\t"
++      "srl   %[cc],28"
++      : [v1] "=v" (v1),
++        [cc] "=d" (cc)
++      : [v2] "v" (v2),
++        [v3] "v" (v3),
++        [v4] "v" (v4)
++      : "cc");
++
++   tmp = hex_digit[v1[7] & 0x1f];
++   if (expect_res >= 0  && v1[7] != expect_res)
++      printf("result %u != %d\n", v1[7], expect_res);
++
++   tmp = hex_digit[cc & 0xf];
++   if (expect_cc >= 0 && cc != expect_cc)
++      printf("CC %d != %d\n", cc, expect_cc);
++}
++
++int main()
++{
++   struct vstrc_char_rng rng;
++   char buf[16];
++
++   memset(rng.flags, RNG_FLAG_NONE, 16);
++
++   rng.range[4] = 'z';
++   rng.flags[4] = RNG_FLAG_GT | RNG_FLAG_EQ;
++   rng.flags[5] = RNG_FLAG_ANY;
++   /* OK: match at the 'z' */
++   test_vstrc_char("find the z", &rng, 9, 2);
++
++   rng.flags[12] = RNG_FLAG_GT | RNG_FLAG_EQ;
++   rng.flags[13] = RNG_FLAG_LT | RNG_FLAG_EQ;
++   /* Bad: undefined range */
++   test_vstrc_char("undefined", &rng, -1, -1);
++
++   rng.range[12] = 'a';
++   rng.range[13] = 'c';
++   /* OK: match at the 'a' */
++   test_vstrc_char("get the abc", &rng, 8, 2);
++
++   rng.flags[12] = RNG_FLAG_LT;
++   rng.flags[13] = RNG_FLAG_GT;
++   /* OK: no match up to null terminator */
++   test_vstrc_char("no match", &rng, 8, 0);
++
++   /* OK: no match, no null terminator */
++   test_vstrc_char("0123456789abcdef", &rng, 16, 3);
++
++   buf[0] = 'x';
++   /* Bad: undefined string */
++   test_vstrc_char(buf, &rng, -1, -1);
++
++   buf[1] = 'z';
++   /* Bad: valid match, but CC undefined */
++   test_vstrc_char(buf, &rng, 1, -1);
++
++   return 0;
++}
+diff --git a/memcheck/tests/s390x/vstrc.stderr.exp b/memcheck/tests/s390x/vstrc.stderr.exp
+new file mode 100644
+index 000000000..c1125bea1
+--- /dev/null
++++ b/memcheck/tests/s390x/vstrc.stderr.exp
+@@ -0,0 +1,20 @@
++Use of uninitialised value of size 8
++   at 0x........: test_vstrc_char (vstrc.c:43)
++   by 0x........: main (vstrc.c:68)
++
++Use of uninitialised value of size 8
++   at 0x........: test_vstrc_char (vstrc.c:47)
++   by 0x........: main (vstrc.c:68)
++
++Use of uninitialised value of size 8
++   at 0x........: test_vstrc_char (vstrc.c:43)
++   by 0x........: main (vstrc.c:85)
++
++Use of uninitialised value of size 8
++   at 0x........: test_vstrc_char (vstrc.c:47)
++   by 0x........: main (vstrc.c:85)
++
++Use of uninitialised value of size 8
++   at 0x........: test_vstrc_char (vstrc.c:47)
++   by 0x........: main (vstrc.c:89)
++
+diff --git a/memcheck/tests/s390x/vstrc.stdout.exp b/memcheck/tests/s390x/vstrc.stdout.exp
+new file mode 100644
+index 000000000..e69de29bb
+diff --git a/memcheck/tests/s390x/vstrc.vgtest b/memcheck/tests/s390x/vstrc.vgtest
+new file mode 100644
+index 000000000..26f5db99b
+--- /dev/null
++++ b/memcheck/tests/s390x/vstrc.vgtest
+@@ -0,0 +1,2 @@
++prog: vstrc
++vgopts: -q
+
+commit a0bb049ace14ab52d386bb1d49a399f39eec4986
+Author: Andreas Arnez <arnez@linux.ibm.com>
+Date:   Tue Mar 23 14:55:09 2021 +0100
+
+    s390x: Improve handling of amodes without base register
+    
+    Addressing modes without a base or index register represent constants.
+    They can occur in some special cases such as shift operations and when
+    accessing individual vector elements.  Perform some minor improvements to
+    the handling of such amodes.
+
+diff --git a/VEX/priv/host_s390_defs.c b/VEX/priv/host_s390_defs.c
+index 6e0734ae0..2587f81a1 100644
+--- a/VEX/priv/host_s390_defs.c
++++ b/VEX/priv/host_s390_defs.c
+@@ -360,7 +360,8 @@ s390_amode_is_sane(const s390_amode *am)
+ {
+    switch (am->tag) {
+    case S390_AMODE_B12:
+-      return is_virtual_gpr(am->b) && fits_unsigned_12bit(am->d);
++      return (is_virtual_gpr(am->b) || sameHReg(am->b, s390_hreg_gpr(0))) &&
++             fits_unsigned_12bit(am->d);
+ 
+    case S390_AMODE_B20:
+       return is_virtual_gpr(am->b) && fits_signed_20bit(am->d);
+@@ -378,47 +379,31 @@ s390_amode_is_sane(const s390_amode *am)
+    }
+ }
+ 
++static Bool
++s390_amode_is_constant(const s390_amode *am)
++{
++   return am->tag == S390_AMODE_B12 && sameHReg(am->b, s390_hreg_gpr(0));
++}
++
+ 
+ /* Record the register use of an amode */
+ static void
+ s390_amode_get_reg_usage(HRegUsage *u, const s390_amode *am)
+ {
+-   switch (am->tag) {
+-   case S390_AMODE_B12:
+-   case S390_AMODE_B20:
+-      addHRegUse(u, HRmRead, am->b);
+-      return;
+-
+-   case S390_AMODE_BX12:
+-   case S390_AMODE_BX20:
++   if (!sameHReg(am->b, s390_hreg_gpr(0)))
+       addHRegUse(u, HRmRead, am->b);
++   if (!sameHReg(am->x, s390_hreg_gpr(0)))
+       addHRegUse(u, HRmRead, am->x);
+-      return;
+-
+-   default:
+-      vpanic("s390_amode_get_reg_usage");
+-   }
+ }
+ 
+ 
+ static void
+ s390_amode_map_regs(HRegRemap *m, s390_amode *am)
+ {
+-   switch (am->tag) {
+-   case S390_AMODE_B12:
+-   case S390_AMODE_B20:
+-      am->b = lookupHRegRemap(m, am->b);
+-      return;
+-
+-   case S390_AMODE_BX12:
+-   case S390_AMODE_BX20:
++   if (!sameHReg(am->b, s390_hreg_gpr(0)))
+       am->b = lookupHRegRemap(m, am->b);
++   if (!sameHReg(am->x, s390_hreg_gpr(0)))
+       am->x = lookupHRegRemap(m, am->x);
+-      return;
+-
+-   default:
+-      vpanic("s390_amode_map_regs");
+-   }
+ }
+ 
+ 
+@@ -653,6 +638,16 @@ directReload_S390(HInstr* i, HReg vreg, Short spill_off)
+                            insn->variant.alu.dst, vreg_opnd);
+    }
+ 
++   /* v-vgetelem <reg>,<vreg> */
++   if (insn->tag == S390_INSN_VEC_AMODEOP
++       && insn->variant.vec_amodeop.tag == S390_VEC_GET_ELEM
++       && insn->size == 8
++       && sameHReg(insn->variant.vec_amodeop.op1, vreg)
++       && s390_amode_is_constant(insn->variant.vec_amodeop.op2)) {
++      vreg_am->d += 8 * insn->variant.vec_amodeop.op2->d;
++      return s390_insn_load(insn->size, insn->variant.vec_amodeop.dst, vreg_am);
++   }
++
+    /* v-<unop> <reg>,<vreg> */
+    if (insn->tag == S390_INSN_UNOP
+        && insn->variant.unop.src.tag == S390_OPND_REG
+diff --git a/VEX/priv/host_s390_isel.c b/VEX/priv/host_s390_isel.c
+index 5f79280c0..ceca6836e 100644
+--- a/VEX/priv/host_s390_isel.c
++++ b/VEX/priv/host_s390_isel.c
+@@ -312,7 +312,18 @@ s390_isel_amode_wrk(ISelEnv *env, IRExpr *expr,
+                     Bool no_index __attribute__((unused)),
+                     Bool short_displacement)
+ {
+-   if (expr->tag == Iex_Binop && expr->Iex.Binop.op == Iop_Add64) {
++   if (expr->tag == Iex_Unop && expr->Iex.Unop.op == Iop_8Uto64 &&
++       expr->Iex.Unop.arg->tag == Iex_Const) {
++      UChar value = expr->Iex.Unop.arg->Iex.Const.con->Ico.U8;
++      return s390_amode_b12((Int)value, s390_hreg_gpr(0));
++
++   } else if (expr->tag == Iex_Const) {
++      ULong value = expr->Iex.Const.con->Ico.U64;
++      if (ulong_fits_unsigned_12bit(value)) {
++         return s390_amode_b12((Int)value, s390_hreg_gpr(0));
++      }
++
++   } else if (expr->tag == Iex_Binop && expr->Iex.Binop.op == Iop_Add64) {
+       IRExpr *arg1 = expr->Iex.Binop.arg1;
+       IRExpr *arg2 = expr->Iex.Binop.arg2;
+ 
+
+commit fd935e238d907d9c523a311ba795077d95ad6912
+Author: Andreas Arnez <arnez@linux.ibm.com>
+Date:   Fri Mar 26 19:27:47 2021 +0100
+
+    s390x: Rework insn "v-vdup" and add "v-vrep"
+    
+    So far the only s390x insn for filling a vector with copies of the same
+    element is "v-vdup" (S390_VEC_DUPLICATE), which replicates the first
+    element of its vector argument.  This is fairly restrictive and can lead
+    to unnecessarily long code sequences.
+    
+    Redefine "v-vdup" to replicate any scalar value instead.  And add
+    "v-vrep" (S390_INSN_VEC_REPLICATE) for replicating any given element of a
+    vector.  Select the latter for suitable expressions like
+    
+      Iop_Dup8x16(Iop_GetElem8x16(vector_expr, i))
+    
+    This improves the generated code for some vector string instructions,
+    where a lot of element replications are performed.
+
+diff --git a/VEX/priv/host_s390_defs.c b/VEX/priv/host_s390_defs.c
+index 2587f81a1..c764d6ef9 100644
+--- a/VEX/priv/host_s390_defs.c
++++ b/VEX/priv/host_s390_defs.c
+@@ -670,6 +670,14 @@ directReload_S390(HInstr* i, HReg vreg, Short spill_off)
+                             insn->variant.unop.dst, vreg_opnd);
+    }
+ 
++   /* v-vrep <reg>,<vreg>,<idx> */
++   if (insn->tag == S390_INSN_VEC_REPLICATE
++       && sameHReg(insn->variant.vec_replicate.op1, vreg)) {
++      vreg_am->d += insn->size * insn->variant.vec_replicate.idx;
++      return s390_insn_unop(insn->size, S390_VEC_DUPLICATE,
++                            insn->variant.vec_replicate.dst, vreg_opnd);
++   }
++
+ no_match:
+    return NULL;
+ }
+@@ -1050,6 +1058,11 @@ s390_insn_get_reg_usage(HRegUsage *u, const s390_insn *insn)
+       addHRegUse(u, HRmRead, insn->variant.vec_triop.op3);
+       break;
+ 
++   case S390_INSN_VEC_REPLICATE:
++      addHRegUse(u, HRmWrite, insn->variant.vec_replicate.dst);
++      addHRegUse(u, HRmRead, insn->variant.vec_replicate.op1);
++      break;
++
+    default:
+       vpanic("s390_insn_get_reg_usage");
+    }
+@@ -1433,6 +1446,14 @@ s390_insn_map_regs(HRegRemap *m, s390_insn *insn)
+       insn->variant.vec_triop.op3 =
+          lookupHRegRemap(m, insn->variant.vec_triop.op3);
+       break;
++
++   case S390_INSN_VEC_REPLICATE:
++      insn->variant.vec_replicate.dst =
++         lookupHRegRemap(m, insn->variant.vec_replicate.dst);
++      insn->variant.vec_replicate.op1 =
++         lookupHRegRemap(m, insn->variant.vec_replicate.op1);
++      break;
++
+    default:
+       vpanic("s390_insn_map_regs");
+    }
+@@ -1767,7 +1788,39 @@ emit_VRI_VI(UChar *p, ULong op, UChar v1, UShort i2)
+ 
+ 
+ static UChar *
+-emit_VRX(UChar *p, ULong op, UChar v1, UChar x2, UChar b2, UShort d2)
++emit_VRI_VIM(UChar *p, ULong op, UChar v1, UShort i2, UChar m3)
++{
++   ULong the_insn = op;
++   ULong rxb = s390_update_rxb(0, 1, &v1);
++
++   the_insn |= ((ULong)v1) << 36;
++   the_insn |= ((ULong)i2) << 16;
++   the_insn |= ((ULong)m3) << 12;
++   the_insn |= ((ULong)rxb)<< 8;
++
++   return emit_6bytes(p, the_insn);
++}
++
++
++static UChar *
++emit_VRI_VVMM(UChar *p, ULong op, UChar v1, UChar v3, UShort i2, UChar m4)
++{
++   ULong the_insn = op;
++   ULong rxb = s390_update_rxb(0, 1, &v1);
++   rxb = s390_update_rxb(rxb, 2, &v3);
++
++   the_insn |= ((ULong)v1) << 36;
++   the_insn |= ((ULong)v3) << 32;
++   the_insn |= ((ULong)i2) << 16;
++   the_insn |= ((ULong)m4) << 12;
++   the_insn |= ((ULong)rxb) << 8;
++
++   return emit_6bytes(p, the_insn);
++}
++
++
++static UChar *
++emit_VRX(UChar *p, ULong op, UChar v1, UChar x2, UChar b2, UShort d2, UChar m3)
+ {
+    ULong the_insn = op;
+    ULong rxb = s390_update_rxb(0, 1, &v1);
+@@ -1776,6 +1829,7 @@ emit_VRX(UChar *p, ULong op, UChar v1, UChar x2, UChar b2, UShort d2)
+    the_insn |= ((ULong)x2) << 32;
+    the_insn |= ((ULong)b2) << 28;
+    the_insn |= ((ULong)d2) << 16;
++   the_insn |= ((ULong)m3) << 12;
+    the_insn |= ((ULong)rxb)<< 8;
+ 
+    return emit_6bytes(p, the_insn);
+@@ -5782,7 +5836,7 @@ s390_emit_VL(UChar *p, UChar v1, UChar x2, UChar b2, UShort d2)
+    if (UNLIKELY(vex_traceflags & VEX_TRACE_ASM))
+       s390_disasm(ENC3(MNM, VR, UDXB), "vl", v1, d2, x2, b2);
+ 
+-   return emit_VRX(p, 0xE70000000006ULL, v1, x2, b2, d2);
++   return emit_VRX(p, 0xE70000000006ULL, v1, x2, b2, d2, 0);
+ }
+ 
+ static UChar *
+@@ -5795,13 +5849,23 @@ s390_emit_VLR(UChar *p, UChar v1, UChar v2)
+ }
+ 
+ 
++static UChar *
++s390_emit_VLREP(UChar *p, UChar v1, UChar x2, UChar b2, UShort d2, UShort m3)
++{
++   if (UNLIKELY(vex_traceflags & VEX_TRACE_ASM))
++      s390_disasm(ENC4(MNM, VR, UDXB, UINT), "vlrep", v1, d2, x2, b2, m3);
++
++   return emit_VRX(p, 0xE70000000005ULL, v1, x2, b2, d2, m3);
++}
++
++
+ static UChar *
+ s390_emit_VST(UChar *p, UChar v1, UChar x2, UChar b2, UShort d2)
+ {
+    if (UNLIKELY(vex_traceflags & VEX_TRACE_ASM))
+       s390_disasm(ENC3(MNM, VR, UDXB), "vst", v1, d2, x2, b2);
+ 
+-   return emit_VRX(p, 0xE7000000000eULL, v1, x2, b2, d2);
++   return emit_VRX(p, 0xE7000000000eULL, v1, x2, b2, d2, 0);
+ }
+ 
+ 
+@@ -5912,15 +5976,24 @@ s390_emit_VPKLS(UChar *p, UChar v1, UChar v2, UChar v3, UChar m4)
+ 
+ 
+ static UChar *
+-s390_emit_VREP(UChar *p, UChar v1, UChar v3, UChar m3)
++s390_emit_VREP(UChar *p, UChar v1, UChar v3, UShort i2, UChar m4)
+ {
+    if (UNLIKELY(vex_traceflags & VEX_TRACE_ASM))
+-      s390_disasm(ENC5(MNM, VR, VR, UINT, UINT), "vrep", v1, v3, 0, m3);
++      s390_disasm(ENC5(MNM, VR, VR, UINT, UINT), "vrep", v1, v3, i2, m4);
+ 
+-   return emit_VRR_VVM(p, 0xE7000000004DULL, v1, v3, m3);
++   return emit_VRI_VVMM(p, 0xE7000000004DULL, v1, v3, i2, m4);
+ }
+ 
+ 
++static UChar *
++s390_emit_VREPI(UChar *p, UChar v1, UShort i2, UChar m3)
++{
++   if (UNLIKELY(vex_traceflags & VEX_TRACE_ASM))
++      s390_disasm(ENC4(MNM, VR, UINT, UINT), "vrepi", v1, i2, m3);
++
++   return emit_VRI_VIM(p, 0xE70000000045ULL, v1, i2, m3);
++}
++
+ 
+ static UChar *
+ s390_emit_VUPH(UChar *p, UChar v1, UChar v3, UChar m3)
+@@ -7560,6 +7633,20 @@ s390_insn *s390_insn_vec_triop(UChar size, s390_vec_triop_t tag, HReg dst,
+    return insn;
+ }
+ 
++s390_insn *s390_insn_vec_replicate(UChar size, HReg dst, HReg op1,
++                                   UChar idx)
++{
++   s390_insn *insn = LibVEX_Alloc_inline(sizeof(s390_insn));
++
++   insn->tag  = S390_INSN_VEC_REPLICATE;
++   insn->size = size;
++   insn->variant.vec_replicate.dst = dst;
++   insn->variant.vec_replicate.op1 = op1;
++   insn->variant.vec_replicate.idx = idx;
++
++   return insn;
++}
++
+ /*---------------------------------------------------------------*/
+ /*--- Debug print                                             ---*/
+ /*---------------------------------------------------------------*/
+@@ -8284,6 +8371,13 @@ s390_insn_as_string(const s390_insn *insn)
+                    insn->variant.vec_triop.op3);
+       break;
+ 
++   case S390_INSN_VEC_REPLICATE:
++      s390_sprintf(buf, "%M %R, %R, %I", "v-vrep",
++                   insn->variant.vec_replicate.dst,
++                   insn->variant.vec_replicate.op1,
++                   insn->variant.vec_replicate.idx);
++      break;
++
+    default: goto fail;
+    }
+ 
+@@ -9386,6 +9480,56 @@ s390_negate_emit(UChar *buf, const s390_insn *insn)
+ }
+ 
+ 
++static UChar *
++s390_vec_duplicate_emit(UChar *buf, const s390_insn *insn)
++{
++   UChar v1 = hregNumber(insn->variant.unop.dst);
++   s390_opnd_RMI opnd = insn->variant.unop.src;
++   UChar r2;
++
++   switch (opnd.tag) {
++   case S390_OPND_AMODE: {
++      s390_amode* am = opnd.variant.am;
++      UInt b = hregNumber(am->b);
++      UInt x = hregNumber(am->x);
++      UInt d = am->d;
++
++      if (fits_unsigned_12bit(d)) {
++         return s390_emit_VLREP(buf, v1, x, b, d,
++                                s390_getM_from_size(insn->size));
++      }
++      buf = s390_emit_load_mem(buf, insn->size, R0, am);
++      r2 = R0;
++      goto duplicate_from_gpr;
++   }
++
++   case S390_OPND_IMMEDIATE: {
++      ULong val = opnd.variant.imm;
++
++      if (ulong_fits_signed_16bit(val)) {
++         return s390_emit_VREPI(buf, v1, val, s390_getM_from_size(insn->size));
++      }
++      buf = s390_emit_load_64imm(buf, R0, val);
++      r2 = R0;
++      goto duplicate_from_gpr;
++   }
++
++   case S390_OPND_REG:
++      r2 = hregNumber(opnd.variant.reg);
++
++   duplicate_from_gpr:
++      buf = s390_emit_VLVGP(buf, v1, r2, r2);
++      if (insn->size != 8) {
++         buf = s390_emit_VREP(buf, v1, v1, 8 / insn->size - 1,
++                              s390_getM_from_size(insn->size));
++      }
++      return buf;
++   }
++
++   vpanic("s390_vec_duplicate_emit");
++}
++
++
+ static UChar *
+ s390_insn_unop_emit(UChar *buf, const s390_insn *insn)
+ {
+@@ -9405,12 +9549,7 @@ s390_insn_unop_emit(UChar *buf, const s390_insn *insn)
+       UShort i2 = insn->variant.unop.src.variant.imm;
+       return s390_emit_VGBM(buf, v1, i2);
+       }
+-   case S390_VEC_DUPLICATE: {
+-      vassert(insn->variant.unop.src.tag == S390_OPND_REG);
+-      UChar v1 = hregNumber(insn->variant.unop.dst);
+-      UChar v2 = hregNumber(insn->variant.unop.src.variant.reg);
+-      return s390_emit_VREP(buf, v1, v2, s390_getM_from_size(insn->size));
+-      }
++   case S390_VEC_DUPLICATE:  return s390_vec_duplicate_emit(buf, insn);
+    case S390_VEC_UNPACKLOWS: {
+       vassert(insn->variant.unop.src.tag == S390_OPND_REG);
+       vassert(insn->size < 8);
+@@ -11595,6 +11734,16 @@ s390_insn_vec_triop_emit(UChar *buf, const s390_insn *insn)
+ }
+ 
+ 
++static UChar *
++s390_insn_vec_replicate_emit(UChar *buf, const s390_insn *insn)
++{
++   UChar v1 = hregNumber(insn->variant.vec_replicate.dst);
++   UChar v2 = hregNumber(insn->variant.vec_replicate.op1);
++   UShort idx = (UShort) insn->variant.vec_replicate.idx;
++   return s390_emit_VREP(buf, v1, v2, idx, s390_getM_from_size(insn->size));
++}
++
++
+ Int
+ emit_S390Instr(Bool *is_profinc, UChar *buf, Int nbuf, const s390_insn *insn,
+                Bool mode64, VexEndness endness_host,
+@@ -11791,6 +11940,11 @@ emit_S390Instr(Bool *is_profinc, UChar *buf, Int nbuf, const s390_insn *insn,
+    case S390_INSN_VEC_TRIOP:
+       end = s390_insn_vec_triop_emit(buf, insn);
+       break;
++
++   case S390_INSN_VEC_REPLICATE:
++      end = s390_insn_vec_replicate_emit(buf, insn);
++      break;
++
+    fail:
+    default:
+       vpanic("emit_S390Instr");
+diff --git a/VEX/priv/host_s390_defs.h b/VEX/priv/host_s390_defs.h
+index 9b69f4d38..063fd3800 100644
+--- a/VEX/priv/host_s390_defs.h
++++ b/VEX/priv/host_s390_defs.h
+@@ -166,7 +166,8 @@ typedef enum {
+    S390_INSN_VEC_AMODEINTOP,
+    S390_INSN_VEC_UNOP,
+    S390_INSN_VEC_BINOP,
+-   S390_INSN_VEC_TRIOP
++   S390_INSN_VEC_TRIOP,
++   S390_INSN_VEC_REPLICATE
+ } s390_insn_tag;
+ 
+ 
+@@ -738,6 +739,11 @@ typedef struct {
+          HReg          op2;    /* 128-bit second operand */
+          HReg          op3;    /* 128-bit third operand */
+       } vec_triop;
++      struct {
++         HReg          dst;    /* 128-bit result */
++         HReg          op1;    /* 128-bit first operand */
++         UChar         idx;    /* index of element to replicate */
++      } vec_replicate;
+    } variant;
+ } s390_insn;
+ 
+@@ -853,6 +859,7 @@ s390_insn *s390_insn_vec_binop(UChar size, s390_vec_binop_t, HReg dst, HReg op1,
+                                HReg op2);
+ s390_insn *s390_insn_vec_triop(UChar size, s390_vec_triop_t, HReg dst, HReg op1,
+                                HReg op2, HReg op3);
++s390_insn *s390_insn_vec_replicate(UChar size, HReg dst, HReg op1, UChar idx);
+ 
+ const HChar *s390_insn_as_string(const s390_insn *);
+ 
+diff --git a/VEX/priv/host_s390_isel.c b/VEX/priv/host_s390_isel.c
+index ceca6836e..968122596 100644
+--- a/VEX/priv/host_s390_isel.c
++++ b/VEX/priv/host_s390_isel.c
+@@ -3778,12 +3778,12 @@ s390_isel_vec_expr_wrk(ISelEnv *env, IRExpr *expr)
+    }
+    /* --------- UNARY OP --------- */
+    case Iex_Unop: {
+-      UChar size_for_int_arg = 0;
+       HReg dst = INVALID_HREG;
+       HReg reg1 = INVALID_HREG;
+       s390_unop_t vec_unop = S390_UNOP_T_INVALID;
+       s390_vec_binop_t vec_binop = S390_VEC_BINOP_T_INVALID;
+       IROp op = expr->Iex.Unop.op;
++      IROp arg_op = Iop_INVALID;
+       IRExpr* arg = expr->Iex.Unop.arg;
+       switch(op) {
+       case Iop_NotV128:
+@@ -3839,59 +3839,63 @@ s390_isel_vec_expr_wrk(ISelEnv *env, IRExpr *expr)
+       }
+ 
+       case Iop_Dup8x16:
+-         size = size_for_int_arg = 1;
+-         vec_unop = S390_VEC_DUPLICATE;
+-         goto Iop_V_int_wrk;
++         size = 1;
++         arg_op = Iop_GetElem8x16;
++         goto Iop_V_dup_wrk;
+       case Iop_Dup16x8:
+-         size = size_for_int_arg = 2;
+-         vec_unop = S390_VEC_DUPLICATE;
+-         goto Iop_V_int_wrk;
++         size = 2;
++         arg_op = Iop_GetElem16x8;
++         goto Iop_V_dup_wrk;
+       case Iop_Dup32x4:
+-         size = size_for_int_arg = 4;
+-         vec_unop = S390_VEC_DUPLICATE;
+-         goto Iop_V_int_wrk;
++         size = 4;
++         arg_op = Iop_GetElem32x4;
++         goto Iop_V_dup_wrk;
++
++      Iop_V_dup_wrk: {
++         dst = newVRegV(env);
++         if (arg->tag == Iex_Binop && arg->Iex.Binop.op == arg_op &&
++             arg->Iex.Binop.arg2->tag == Iex_Const) {
++            ULong idx;
++            idx = get_const_value_as_ulong(arg->Iex.Binop.arg2-> Iex.Const.con);
++            reg1 = s390_isel_vec_expr(env, arg->Iex.Binop.arg1);
++            addInstr(env, s390_insn_vec_replicate(size, dst, reg1, (UChar)idx));
++         } else {
++            s390_opnd_RMI src = s390_isel_int_expr_RMI(env, arg);
++            addInstr(env, s390_insn_unop(size, S390_VEC_DUPLICATE, dst, src));
++         }
++         return dst;
++      }
+ 
+       case Iop_Widen8Sto16x8:
+          size = 1;
+-         size_for_int_arg = 8;
+          vec_unop = S390_VEC_UNPACKLOWS;
+-         goto Iop_V_int_wrk;
++         goto Iop_V_widen_wrk;
+       case Iop_Widen16Sto32x4:
+          size = 2;
+-         size_for_int_arg = 8;
+          vec_unop = S390_VEC_UNPACKLOWS;
+-         goto Iop_V_int_wrk;
++         goto Iop_V_widen_wrk;
+       case Iop_Widen32Sto64x2:
+          size = 4;
+-         size_for_int_arg = 8;
+          vec_unop = S390_VEC_UNPACKLOWS;
+-         goto Iop_V_int_wrk;
++         goto Iop_V_widen_wrk;
+       case Iop_Widen8Uto16x8:
+          size = 1;
+-         size_for_int_arg = 8;
+          vec_unop = S390_VEC_UNPACKLOWU;
+-         goto Iop_V_int_wrk;
++         goto Iop_V_widen_wrk;
+       case Iop_Widen16Uto32x4:
+          size = 2;
+-         size_for_int_arg = 8;
+          vec_unop = S390_VEC_UNPACKLOWU;
+-         goto Iop_V_int_wrk;
++         goto Iop_V_widen_wrk;
+       case Iop_Widen32Uto64x2:
+          size = 4;
+-         size_for_int_arg = 8;
+          vec_unop = S390_VEC_UNPACKLOWU;
+-         goto Iop_V_int_wrk;
+-
+-      Iop_V_int_wrk: {
+-         HReg vr1 = vec_generate_zeroes(env);
+-         s390_amode* amode2 = s390_isel_amode(env, IRExpr_Const(IRConst_U64(0)));
+-         reg1 = s390_isel_int_expr(env, arg);
++         goto Iop_V_widen_wrk;
+ 
++      Iop_V_widen_wrk: {
+          vassert(vec_unop != S390_UNOP_T_INVALID);
+-         addInstr(env,
+-                  s390_insn_vec_amodeintop(size_for_int_arg, S390_VEC_SET_ELEM,
+-                                           vr1, amode2, reg1));
+-
++         s390_opnd_RMI src = s390_isel_int_expr_RMI(env, arg);
++         HReg vr1 = newVRegV(env);
++         addInstr(env, s390_insn_unop(8, S390_VEC_DUPLICATE, vr1, src));
+          dst = newVRegV(env);
+          addInstr(env, s390_insn_unop(size, vec_unop, dst, s390_opnd_reg(vr1)));
+          return dst;
+
+commit 6c1cb1a0128b00858b973ef9344e12d6ddbaaf57
+Author: Andreas Arnez <arnez@linux.ibm.com>
+Date:   Thu Mar 25 18:48:07 2021 +0100
+
+    s390x: Add support for emitting "vector or with complement"
+    
+    In the instruction selector, look out for IR expressions that fit "vector
+    or with complement (VOC)".  Emit when applicable.
+    
+    This slighly reduces the generated code sometimes, such as for certain
+    vector string instructions, where such expressions occur quite frequently.
+
+diff --git a/VEX/priv/host_s390_defs.c b/VEX/priv/host_s390_defs.c
+index c764d6ef9..239d9d299 100644
+--- a/VEX/priv/host_s390_defs.c
++++ b/VEX/priv/host_s390_defs.c
+@@ -5907,6 +5907,15 @@ s390_emit_VO(UChar *p, UChar v1, UChar v2, UChar v3)
+    return emit_VRR_VVV(p, 0xE7000000006aULL, v1, v2, v3);
+ }
+ 
++static UChar *
++s390_emit_VOC(UChar *p, UChar v1, UChar v2, UChar v3)
++{
++   if (UNLIKELY(vex_traceflags & VEX_TRACE_ASM))
++      s390_disasm(ENC4(MNM, VR, VR, VR), "voc", v1, v2, v3);
++
++   return emit_VRR_VVV(p, 0xE7000000006fULL, v1, v2, v3);
++}
++
+ static UChar *
+ s390_emit_VX(UChar *p, UChar v1, UChar v2, UChar v3)
+ {
+@@ -8312,6 +8321,7 @@ s390_insn_as_string(const s390_insn *insn)
+       case S390_VEC_PACK_SATURU:    op = "v-vpacksaturu"; break;
+       case S390_VEC_COMPARE_EQUAL:  op = "v-vcmpeq"; break;
+       case S390_VEC_OR:             op = "v-vor"; break;
++      case S390_VEC_ORC:            op = "v-vorc"; break;
+       case S390_VEC_XOR:            op = "v-vxor";  break;
+       case S390_VEC_AND:            op = "v-vand"; break;
+       case S390_VEC_MERGEL:         op = "v-vmergel"; break;
+@@ -11609,6 +11619,8 @@ s390_insn_vec_binop_emit(UChar *buf, const s390_insn *insn)
+          return s390_emit_VCEQ(buf, v1, v2, v3, s390_getM_from_size(size));
+       case S390_VEC_OR:
+          return s390_emit_VO(buf, v1, v2, v3);
++      case S390_VEC_ORC:
++         return s390_emit_VOC(buf, v1, v2, v3);
+       case S390_VEC_XOR:
+          return s390_emit_VX(buf, v1, v2, v3);
+       case S390_VEC_AND:
+diff --git a/VEX/priv/host_s390_defs.h b/VEX/priv/host_s390_defs.h
+index 063fd3800..dc116106e 100644
+--- a/VEX/priv/host_s390_defs.h
++++ b/VEX/priv/host_s390_defs.h
+@@ -366,6 +366,7 @@ typedef enum {
+    S390_VEC_PACK_SATURU,
+    S390_VEC_COMPARE_EQUAL,
+    S390_VEC_OR,
++   S390_VEC_ORC,
+    S390_VEC_XOR,
+    S390_VEC_AND,
+    S390_VEC_MERGEL,
+diff --git a/VEX/priv/host_s390_isel.c b/VEX/priv/host_s390_isel.c
+index 968122596..53d76fe8a 100644
+--- a/VEX/priv/host_s390_isel.c
++++ b/VEX/priv/host_s390_isel.c
+@@ -4102,6 +4102,15 @@ s390_isel_vec_expr_wrk(ISelEnv *env, IRExpr *expr)
+       case Iop_OrV128:
+          size = 16;
+          vec_binop = S390_VEC_OR;
++         if (arg1->tag == Iex_Unop && arg1->Iex.Unop.op == Iop_NotV128) {
++            IRExpr* orig_arg1 = arg1;
++            arg1 = arg2;
++            arg2 = orig_arg1->Iex.Unop.arg;
++            vec_binop = S390_VEC_ORC;
++         } else if (arg2->tag == Iex_Unop && arg2->Iex.Unop.op == Iop_NotV128) {
++            arg2 = arg2->Iex.Unop.arg;
++            vec_binop = S390_VEC_ORC;
++         }
+          goto Iop_VV_wrk;
+ 
+       case Iop_XorV128:
+
+commit 0bd4263326b2d48f782339a9bbe1a069c7de45c7
+Author: Andreas Arnez <arnez@linux.ibm.com>
+Date:   Tue Mar 30 17:45:20 2021 +0200
+
+    s390x: Fix/optimize Iop_64HLtoV128
+    
+    In s390_vr_fill() in guest_s390_toIR.c, filling a vector with two copies
+    of a 64-bit value is realized with Iop_64HLtoV128, since there is no such
+    operator as Iop_Dup64x2.  But the two args to Iop_64HLtoV128 use the same
+    expression, referenced twice.  Although this hasn't been seen to cause
+    real trouble yet, it's problematic and potentially inefficient, so change
+    it: Assign to a temp and pass that twice instead.
+    
+    In the instruction selector, if Iop_64HLtoV128 is found to be used for a
+    duplication as above, select "v-vdup" instead of "v-vinitfromgprs".  This
+    mimicks the behavior we'd get if there actually was an operator
+    Iop_Dup64x2.
+
+diff --git a/VEX/priv/guest_s390_toIR.c b/VEX/priv/guest_s390_toIR.c
+index dfea54259..a73dcfb14 100644
+--- a/VEX/priv/guest_s390_toIR.c
++++ b/VEX/priv/guest_s390_toIR.c
+@@ -2299,9 +2299,12 @@ s390_vr_fill(UChar v1, IRExpr *o2)
+    case Ity_I32:
+       put_vr_qw(v1, unop(Iop_Dup32x4, o2));
+       break;
+-   case Ity_I64:
+-      put_vr_qw(v1, binop(Iop_64HLtoV128, o2, o2));
++   case Ity_I64: {
++      IRTemp val = newTemp(Ity_I64);
++      assign(val, o2);
++      put_vr_qw(v1, binop(Iop_64HLtoV128, mkexpr(val), mkexpr(val)));
+       break;
++   }
+    default:
+       ppIRType(o2type);
+       vpanic("s390_vr_fill: invalid IRType");
+diff --git a/VEX/priv/host_s390_isel.c b/VEX/priv/host_s390_isel.c
+index 53d76fe8a..ee20c6711 100644
+--- a/VEX/priv/host_s390_isel.c
++++ b/VEX/priv/host_s390_isel.c
+@@ -4662,12 +4662,16 @@ s390_isel_vec_expr_wrk(ISelEnv *env, IRExpr *expr)
+       }
+ 
+       case Iop_64HLtoV128:
+-         reg1 = s390_isel_int_expr(env, arg1);
+-         reg2 = s390_isel_int_expr(env, arg2);
+-
+-         addInstr(env, s390_insn_vec_binop(size, S390_VEC_INIT_FROM_GPRS,
+-                  dst, reg1, reg2));
+-
++         if (arg1->tag == Iex_RdTmp && arg2->tag == Iex_RdTmp &&
++             arg1->Iex.RdTmp.tmp == arg2->Iex.RdTmp.tmp) {
++            s390_opnd_RMI src = s390_isel_int_expr_RMI(env, arg1);
++            addInstr(env, s390_insn_unop(8, S390_VEC_DUPLICATE, dst, src));
++         } else {
++            reg1 = s390_isel_int_expr(env, arg1);
++            reg2 = s390_isel_int_expr(env, arg2);
++            addInstr(env, s390_insn_vec_binop(size, S390_VEC_INIT_FROM_GPRS,
++                                              dst, reg1, reg2));
++         }
+          return dst;
+ 
+       default:
+
+commit cae5062b05b95e0303b1122a0ea9aadc197e4f0a
+Author: Andreas Arnez <arnez@linux.ibm.com>
+Date:   Fri May 7 18:13:03 2021 +0200
+
+    s390x: Add missing stdout.exp for vector string memcheck test
+    
+    The file vistr.stdout.exp was missing from commit 32312d588.  Add it.
+
+diff --git a/memcheck/tests/s390x/vistr.stdout.exp b/memcheck/tests/s390x/vistr.stdout.exp
+new file mode 100644
+index 000000000..e69de29bb
