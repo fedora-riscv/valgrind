@@ -143,10 +143,12 @@ BuildRequires: docbook-dtds
 # configure might use which
 BuildRequires: which
 
-# For testing the debuginfod
+# For testing debuginfod-find
 %if 0%{?fedora} > 29 || 0%{?rhel} > 7
-BuildRequires: elfutils-debuginfod
+BuildRequires: elfutils-debuginfod-client
 %endif
+# For using debuginfod at runtime
+Recommends: elfutils-debuginfod-client
 
 %{?scl:Requires:%scl_runtime}
 
