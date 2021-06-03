@@ -113,6 +113,9 @@ Patch8: valgrind-3.17.0-s390_insn_as_string.patch
 # KDE#435908 Don't look for separate debuginfo if image already has .debug_info
 Patch9: valgrind-3.17.0-debuginfod.patch
 
+# KDE#423963 Only process clone results in the parent thread
+Patch10: valgrind-3.17.0-clone-parent-res.patch
+
 BuildRequires: make
 BuildRequires: glibc-devel
 
@@ -259,6 +262,7 @@ Valgrind User Manual for details.
 
 %patch8 -p1
 %patch9 -p1
+%patch10 -p1
 
 %build
 # LTO triggers undefined symbols in valgrind.  Valgrind has a --enable-lto
@@ -487,6 +491,7 @@ fi
 * Thu Jun  3 2021 Mark Wielaard <mjw@fedoraproject.org>
 - Add valgrind-3.17.0-s390_insn_as_string.patch
 - Add valgrind-3.17.0-debuginfod.patch
+- Add valgrind-3.17.0-clone-parent-res.patch
 
 * Tue May  4 2021 Mark Wielaard <mjw@fedoraproject.org> - 3.17.0-3
 - Add valgrind-3.17.0-ppc64-isa-3.1{,tests}.patch

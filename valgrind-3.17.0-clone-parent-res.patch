@@ -1,0 +1,21 @@
+commit e08a82991a9b9dc87c13f2b89273f25f97d14baf
+Author: Tom Hughes <tom@compton.nu>
+Date:   Tue Apr 6 22:44:36 2021 +0100
+
+    Only process clone results in the parent thread
+    
+    Fixes BZ#423963
+
+diff --git a/coregrind/m_syswrap/syswrap-linux.c b/coregrind/m_syswrap/syswrap-linux.c
+index 5ae4e6613..c59d8ee26 100644
+--- a/coregrind/m_syswrap/syswrap-linux.c
++++ b/coregrind/m_syswrap/syswrap-linux.c
+@@ -940,7 +940,7 @@ PRE(sys_clone)
+          ("Valgrind does not support general clone().");
+    }
+ 
+-   if (SUCCESS) {
++   if (SUCCESS && RES != 0) {
+       if (ARG_FLAGS & (VKI_CLONE_PARENT_SETTID | VKI_CLONE_PIDFD))
+          POST_MEM_WRITE(ARG3, sizeof(Int));
+       if (ARG_FLAGS & (VKI_CLONE_CHILD_SETTID | VKI_CLONE_CHILD_CLEARTID))
