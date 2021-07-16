@@ -28,7 +28,7 @@
 # Include rhts environment
 . /usr/share/beakerlib/beakerlib.sh || exit 1
 
-    SPELL_CHECKER="${SPELL_CHECKER:-hunspell}"
+SPELL_CHECKER="${SPELL_CHECKER:-hunspell}"
 
 VALGRIND="${VALGRIND:-$(which valgrind)}"
 PACKAGES="${PACKAGES:-$(rpm --qf '%{name}\n' -qf $(which $VALGRIND) | head -1)}"
@@ -48,42 +48,17 @@ rlJournalStart
 
     rlPhaseStartTest
 
-    out="$TmpDir/spell_check.out"
-    err="$TmpDir/spell_check.err"
-    vout="$TmpDir/spell_check.valgrind.out"
-    verr="$TmpDir/spell_check.valgrind.err"
+    rlRun "echo \"NEWSX\"|hunspell -a;echo -e '#include <time.h>\nclock_t clock(void) { return 0; }'|gcc -o libclock.so -Wall -g -shared -fPIC -x c -;echo "NEWSX"|LD_PRELOAD=./libclock.so hunspell -a > out"
 
-    spell_checker_command=""
-    spell_checker_command="echo \"hackerx\" | $SPELL_CHECKER -a > $out 2> $err"
+    rlRun "echo \"NEWSX\"|hunspell -a;echo -e '#include <time.h>\nclock_t clock(void) { return 0; }'|gcc -o libclock.so -Wall -g -shared -fPIC -x c -;echo \"NEWSX\"|LD_PRELOAD=./libclock.so valgrind -q hunspell -a > valgrind_out"
 
     # Remove dictionary to avoid possibility of different results with
     # already present dictionary. After this all commands start with
     # the clean sheet.
     rlRun "rm -f $HOME/.hunspell_en_US"
 
-    rlRun "$spell_checker_command" 0-255
-
-    if [ "$?" -eq "0" ]; then
-        spell_checker_command="${spell_checker_command/$out/$vout}"
-        spell_checker_command="${spell_checker_command/$err/$verr}"
-
-        rlRun "rm -f $HOME/.hunspell_en_US"
-        rlRun "valgrind $spell_checker_command" 0-255
-        if [ "$?" -ne 0 ]; then
-            rlLogWarning "Valgrind check failed"
-            rlLogWarning "$(cat $verr)"
-        else
-            rlAssertNotDiffer "$out" "$vout"
-            [ "$?" -ne 0 ] && rlLogWarning "$(diff $out $vout)"
-        fi
-    else
-        ((skipped++))
-
-        rlLogWarning "Regular check failed"
-        rlLogWarning "$(cat $err)"
-    fi
-
-    rlRun "rm -f $out $err $vout $verr"
+    rlAssertNotDiffer "out" "valgrind_out"
+    [ "$?" -ne 0 ] && rlLogWarning "$(diff out valgrind_out)"
     rlPhaseEnd
 
     rlPhaseStartCleanup
