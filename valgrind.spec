@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.17.0
-Release: 6%{?dist}
+Release: 7%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -75,9 +75,6 @@ Source0: ftp://sourceware.org/pub/valgrind/valgrind-%{version}.tar.bz2
 
 # Needs investigation and pushing upstream
 Patch1: valgrind-3.9.0-cachegrind-improvements.patch
-
-# KDE#211352 - helgrind races in helgrind's own mythread_wrapper
-Patch2: valgrind-3.9.0-helgrind-race-supp.patch
 
 # Make ld.so supressions slightly less specific.
 Patch3: valgrind-3.9.0-ldso-supp.patch
@@ -152,6 +149,9 @@ Patch13: valgrind-3.17.0-s390-z13-vec-fix.patch
 # commit 6da22a4d246519cd1a638cfc7eff00cdd74413c4
 # gdbserver_tests: update filters for newer glibc/gdb
 Patch14: gdbserver_tests-update-filters-for-newer-glibc-gdb.patch
+
+# KDE#439590 glibc-2.34 breaks suppressions against obj:*/lib*/libc-2.*so*
+Patch15: helgrind-and-drd-suppression-libc-and-libpthread.patch
 
 BuildRequires: make
 BuildRequires: glibc-devel
@@ -285,7 +285,6 @@ Valgrind User Manual for details.
 %setup -q -n %{?scl:%{pkg_name}}%{!?scl:%{name}}-%{version}
 
 %patch1 -p1
-%patch2 -p1
 %patch3 -p1
 
 # Old rhel gcc doesn't have -fstack-protector-strong.
@@ -307,6 +306,7 @@ touch memcheck/tests/s390x/vistr.stdout.exp
 %patch13 -p1
 
 %patch14 -p1
+%patch15 -p1
 
 %build
 # LTO triggers undefined symbols in valgrind.  Valgrind has a --enable-lto
@@ -532,8 +532,10 @@ fi
 %endif
 
 %changelog
-* Sat Jul 17 2021 Mark Wielaard <mjw@fedoraproject.org>
+* Sat Jul 17 2021 Mark Wielaard <mjw@fedoraproject.org> - 3.17.0-7
 - Add gdbserver_tests-update-filters-for-newer-glibc-gdb.patch
+- Add helgrind-and-drd-suppression-libc-and-libpthread.patch
+- Remove valgrind-3.9.0-helgrind-race-supp.patch
 
 * Fri Jul  9 2021 Mark Wielaard <mjw@fedoraproject.org> - 3.17.0-6
 - Update to include fixed CI gating tests.
