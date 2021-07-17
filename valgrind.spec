@@ -149,6 +149,10 @@ Patch12: valgrind-3.17.0-s390-z15.patch
 # s390x: Don't emit "vector or with complement" on z13
 Patch13: valgrind-3.17.0-s390-z13-vec-fix.patch
 
+# commit 6da22a4d246519cd1a638cfc7eff00cdd74413c4
+# gdbserver_tests: update filters for newer glibc/gdb
+Patch14: gdbserver_tests-update-filters-for-newer-glibc-gdb.patch
+
 BuildRequires: make
 BuildRequires: glibc-devel
 
@@ -301,6 +305,8 @@ Valgrind User Manual for details.
 touch memcheck/tests/s390x/vistr.stdout.exp
 %patch12 -p1
 %patch13 -p1
+
+%patch14 -p1
 
 %build
 # LTO triggers undefined symbols in valgrind.  Valgrind has a --enable-lto
@@ -526,6 +532,9 @@ fi
 %endif
 
 %changelog
+* Sat Jul 17 2021 Mark Wielaard <mjw@fedoraproject.org>
+- Add gdbserver_tests-update-filters-for-newer-glibc-gdb.patch
+
 * Fri Jul  9 2021 Mark Wielaard <mjw@fedoraproject.org> - 3.17.0-6
 - Update to include fixed CI gating tests.
 
