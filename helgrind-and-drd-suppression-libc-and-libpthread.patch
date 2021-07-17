@@ -150,7 +150,7 @@ index cee5f22fb..2c880051a 100644
     drd-ld
     drd:ConflictingAccess
 -   obj:*/lib*/ld-*.so
-+   obj:*/lib*/ld-*.so*
++   obj:*/lib*/ld*.so*
  }
  
  #

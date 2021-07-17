@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.17.0
-Release: 7%{?dist}
+Release: 8%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -532,6 +532,9 @@ fi
 %endif
 
 %changelog
+* Sat Jul 17 2021 Mark Wielaard <mjw@fedoraproject.org> - 3.17.0-8
+- Update drd suppression for native ld.so names.
+
 * Sat Jul 17 2021 Mark Wielaard <mjw@fedoraproject.org> - 3.17.0-7
 - Add gdbserver_tests-update-filters-for-newer-glibc-gdb.patch
 - Add helgrind-and-drd-suppression-libc-and-libpthread.patch
