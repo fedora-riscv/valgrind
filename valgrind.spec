@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.17.0
-Release: 8%{?dist}
+Release: 9%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -152,6 +152,9 @@ Patch14: gdbserver_tests-update-filters-for-newer-glibc-gdb.patch
 
 # KDE#439590 glibc-2.34 breaks suppressions against obj:*/lib*/libc-2.*so*
 Patch15: helgrind-and-drd-suppression-libc-and-libpthread.patch
+
+# KDE#420906 missing syscall wrapper for clone3 (435)
+Patch16: valgrind-3.17.0-clone3.patch
 
 BuildRequires: make
 BuildRequires: glibc-devel
@@ -307,6 +310,7 @@ touch memcheck/tests/s390x/vistr.stdout.exp
 
 %patch14 -p1
 %patch15 -p1
+%patch16 -p1
 
 %build
 # LTO triggers undefined symbols in valgrind.  Valgrind has a --enable-lto
@@ -532,6 +536,9 @@ fi
 %endif
 
 %changelog
+* Wed Jul 21 2021 Mark Wielaard <mjw@fedoraproject.org> - 3.17.0-9
+- Add valgrind-3.17.0-clone3.patch
+
 * Sat Jul 17 2021 Mark Wielaard <mjw@fedoraproject.org> - 3.17.0-8
 - Update drd suppression for native ld.so names.
 

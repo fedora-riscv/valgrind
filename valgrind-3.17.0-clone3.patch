@@ -1,0 +1,141 @@
+diff --git a/coregrind/m_syswrap/syswrap-amd64-linux.c b/coregrind/m_syswrap/syswrap-amd64-linux.c
+index 45e1f3d1b..3b2dcb8e3 100644
+--- a/coregrind/m_syswrap/syswrap-amd64-linux.c
++++ b/coregrind/m_syswrap/syswrap-amd64-linux.c
+@@ -874,6 +874,8 @@ static SyscallTableEntry syscall_table[] = {
+    LINXY(__NR_io_uring_enter,    sys_io_uring_enter),    // 426
+    LINXY(__NR_io_uring_register, sys_io_uring_register), // 427
+ 
++   GENX_(__NR_clone3,            sys_ni_syscall),        // 435
++
+    LINX_(__NR_faccessat2,	 sys_faccessat2),        // 439
+ };
+ 
+diff --git a/coregrind/m_syswrap/syswrap-arm-linux.c b/coregrind/m_syswrap/syswrap-arm-linux.c
+index 428cb7c6f..7f41b0749 100644
+--- a/coregrind/m_syswrap/syswrap-arm-linux.c
++++ b/coregrind/m_syswrap/syswrap-arm-linux.c
+@@ -1051,6 +1051,8 @@ static SyscallTableEntry syscall_main_table[] = {
+    LINXY(__NR_io_uring_enter,    sys_io_uring_enter),    // 426
+    LINXY(__NR_io_uring_register, sys_io_uring_register), // 427
+ 
++   GENX_(__NR_clone3,            sys_ni_syscall),        // 435
++
+    LINX_(__NR_faccessat2,    sys_faccessat2),           // 439
+ };
+ 
+diff --git a/coregrind/m_syswrap/syswrap-arm64-linux.c b/coregrind/m_syswrap/syswrap-arm64-linux.c
+index 024ece27f..0d717f44b 100644
+--- a/coregrind/m_syswrap/syswrap-arm64-linux.c
++++ b/coregrind/m_syswrap/syswrap-arm64-linux.c
+@@ -830,6 +830,8 @@ static SyscallTableEntry syscall_main_table[] = {
+    LINXY(__NR_io_uring_enter,    sys_io_uring_enter),    // 426
+    LINXY(__NR_io_uring_register, sys_io_uring_register), // 427
+ 
++   GENX_(__NR_clone3,            sys_ni_syscall),        // 435
++
+    LINX_(__NR_faccessat2,        sys_faccessat2),        // 439
+ };
+ 
+diff --git a/coregrind/m_syswrap/syswrap-mips32-linux.c b/coregrind/m_syswrap/syswrap-mips32-linux.c
+index 62b085ea2..b62129111 100644
+--- a/coregrind/m_syswrap/syswrap-mips32-linux.c
++++ b/coregrind/m_syswrap/syswrap-mips32-linux.c
+@@ -1136,6 +1136,8 @@ static SyscallTableEntry syscall_main_table[] = {
+    LINXY(__NR_io_uring_enter,          sys_io_uring_enter),          // 426
+    LINXY(__NR_io_uring_register,       sys_io_uring_register),       // 427
+ 
++   GENX_(__NR_clone3,                  sys_ni_syscall),              // 435
++
+    LINX_ (__NR_faccessat2,             sys_faccessat2),              // 439
+ };
+ 
+diff --git a/coregrind/m_syswrap/syswrap-mips64-linux.c b/coregrind/m_syswrap/syswrap-mips64-linux.c
+index b73c03da1..94f38366f 100644
+--- a/coregrind/m_syswrap/syswrap-mips64-linux.c
++++ b/coregrind/m_syswrap/syswrap-mips64-linux.c
+@@ -815,6 +815,7 @@ static SyscallTableEntry syscall_main_table[] = {
+    LINXY (__NR_io_uring_setup, sys_io_uring_setup),
+    LINXY (__NR_io_uring_enter, sys_io_uring_enter),
+    LINXY (__NR_io_uring_register, sys_io_uring_register),
++   GENX_ (__NR_clone3, sys_ni_syscall),
+    LINX_ (__NR_faccessat2, sys_faccessat2),
+ };
+ 
+diff --git a/coregrind/m_syswrap/syswrap-nanomips-linux.c b/coregrind/m_syswrap/syswrap-nanomips-linux.c
+index 14127b181..102c15550 100644
+--- a/coregrind/m_syswrap/syswrap-nanomips-linux.c
++++ b/coregrind/m_syswrap/syswrap-nanomips-linux.c
+@@ -824,6 +824,7 @@ static SyscallTableEntry syscall_main_table[] = {
+    LINXY (__NR_io_uring_setup,         sys_io_uring_setup),
+    LINXY (__NR_io_uring_enter,         sys_io_uring_enter),
+    LINXY (__NR_io_uring_register,      sys_io_uring_register),
++   GENX_ (__NR_clone3,                 sys_ni_syscall),
+    LINX_ (__NR_faccessat2,             sys_faccessat2),
+ };
+ 
+diff --git a/coregrind/m_syswrap/syswrap-ppc32-linux.c b/coregrind/m_syswrap/syswrap-ppc32-linux.c
+index aad14f8ba..1e2efc677 100644
+--- a/coregrind/m_syswrap/syswrap-ppc32-linux.c
++++ b/coregrind/m_syswrap/syswrap-ppc32-linux.c
+@@ -1054,6 +1054,8 @@ static SyscallTableEntry syscall_table[] = {
+    LINXY(__NR_io_uring_enter,    sys_io_uring_enter),    // 426
+    LINXY(__NR_io_uring_register, sys_io_uring_register), // 427
+ 
++   GENX_(__NR_clone3,            sys_ni_syscall),        // 435
++
+    LINX_(__NR_faccessat2,        sys_faccessat2),       // 439
+ };
+ 
+diff --git a/coregrind/m_syswrap/syswrap-ppc64-linux.c b/coregrind/m_syswrap/syswrap-ppc64-linux.c
+index c0e3f5549..76610e142 100644
+--- a/coregrind/m_syswrap/syswrap-ppc64-linux.c
++++ b/coregrind/m_syswrap/syswrap-ppc64-linux.c
+@@ -1023,6 +1023,8 @@ static SyscallTableEntry syscall_table[] = {
+    LINXY(__NR_io_uring_enter,    sys_io_uring_enter),    // 426
+    LINXY(__NR_io_uring_register, sys_io_uring_register), // 427
+ 
++   GENX_(__NR_clone3,            sys_ni_syscall),        // 435
++
+    LINX_(__NR_faccessat2,        sys_faccessat2),       // 439
+ };
+ 
+diff --git a/coregrind/m_syswrap/syswrap-s390x-linux.c b/coregrind/m_syswrap/syswrap-s390x-linux.c
+index af6c4eb21..5283c19fe 100644
+--- a/coregrind/m_syswrap/syswrap-s390x-linux.c
++++ b/coregrind/m_syswrap/syswrap-s390x-linux.c
+@@ -864,6 +864,8 @@ static SyscallTableEntry syscall_table[] = {
+    LINXY(__NR_io_uring_enter, sys_io_uring_enter),                    // 426
+    LINXY(__NR_io_uring_register, sys_io_uring_register),              // 427
+ 
++   GENX_(__NR_clone3, sys_ni_syscall),                                // 435
++
+    LINX_(__NR_faccessat2,  sys_faccessat2),                           // 439
+ };
+ 
+diff --git a/coregrind/m_syswrap/syswrap-x86-linux.c b/coregrind/m_syswrap/syswrap-x86-linux.c
+index 67d866497..418c76975 100644
+--- a/coregrind/m_syswrap/syswrap-x86-linux.c
++++ b/coregrind/m_syswrap/syswrap-x86-linux.c
+@@ -1645,6 +1645,8 @@ static SyscallTableEntry syscall_table[] = {
+    LINXY(__NR_io_uring_enter,    sys_io_uring_enter),   // 426
+    LINXY(__NR_io_uring_register, sys_io_uring_register),// 427
+ 
++   GENX_(__NR_clone3,            sys_ni_syscall),       // 435
++
+    LINX_(__NR_faccessat2,	 sys_faccessat2),       // 439
+ };
+ 
+diff --git a/include/vki/vki-scnums-shared-linux.h b/include/vki/vki-scnums-shared-linux.h
+index c8bc31b4b..6c70c9981 100644
+--- a/include/vki/vki-scnums-shared-linux.h
++++ b/include/vki/vki-scnums-shared-linux.h
+@@ -39,6 +39,8 @@
+ #define __NR_fsmount		432
+ #define __NR_fspick		433
+ 
++#define __NR_clone3		435
++
+ #define __NR_faccessat2		439
+ 
+ #endif
