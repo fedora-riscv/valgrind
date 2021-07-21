@@ -156,6 +156,10 @@ Patch15: helgrind-and-drd-suppression-libc-and-libpthread.patch
 # KDE#420906 missing syscall wrapper for clone3 (435)
 Patch16: valgrind-3.17.0-clone3.patch
 
+# commit 200b6a5a0ea3e1e154663b0fc575bfe2becf177d
+# m_debuginfo/debuginfo.c VG_(get_fnname_kind) _start is below main
+Patch17: valgrind-3.17.0_start.patch
+
 BuildRequires: make
 BuildRequires: glibc-devel
 
@@ -311,6 +315,7 @@ touch memcheck/tests/s390x/vistr.stdout.exp
 %patch14 -p1
 %patch15 -p1
 %patch16 -p1
+%patch17 -p1
 
 %build
 # LTO triggers undefined symbols in valgrind.  Valgrind has a --enable-lto
@@ -536,6 +541,9 @@ fi
 %endif
 
 %changelog
+* Wed Jul 21 2021 Mark Wielaard <mjw@fedoraproject.org>
+- Add valgrind-3.17.0_start.patch
+
 * Wed Jul 21 2021 Mark Wielaard <mjw@fedoraproject.org> - 3.17.0-9
 - Add valgrind-3.17.0-clone3.patch
 
