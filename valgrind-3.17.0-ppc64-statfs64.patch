@@ -1,0 +1,27 @@
+commit 44da99781e5bb954a0cd3c897b859012a125fec6
+Author: Mark Wielaard <mark@klomp.org>
+Date:   Fri Aug 6 19:08:17 2021 +0200
+
+    unhandled ppc64le-linux syscall: 252 (statfs64) and 253 (fstatfs64)
+    
+    glibc 2.34 consolidated all statfs implementations. All other arches
+    that have statfs64/fstat64 (including ppc32) already had that syscall
+    hooked up, it was just ppc64 that was missing it.
+    
+    https://bugs.kde.org/show_bug.cgi?id=440670
+
+diff --git a/coregrind/m_syswrap/syswrap-ppc64-linux.c b/coregrind/m_syswrap/syswrap-ppc64-linux.c
+index 76610e142..f1a88f7ce 100644
+--- a/coregrind/m_syswrap/syswrap-ppc64-linux.c
++++ b/coregrind/m_syswrap/syswrap-ppc64-linux.c
+@@ -900,8 +900,8 @@ static SyscallTableEntry syscall_table[] = {
+ 
+    LINXY(__NR_tgkill,            sys_tgkill),             // 250
+ // _____(__NR_utimes,            sys_utimes),             // 251
+-// _____(__NR_statfs64,          sys_statfs64),           // 252
+-// _____(__NR_fstatfs64,         sys_fstatfs64),          // 253
++   GENXY(__NR_statfs64,          sys_statfs64),           // 252
++   GENXY(__NR_fstatfs64,         sys_fstatfs64),          // 253
+ // /* #define __NR_fadvise64_64    254     32bit only */
+ 
+ // _____(__NR_rtas,              sys_rtas),               // 255

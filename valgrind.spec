@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.17.0
-Release: 10%{?dist}
+Release: 11%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -159,6 +159,9 @@ Patch16: valgrind-3.17.0-clone3.patch
 # commit 200b6a5a0ea3e1e154663b0fc575bfe2becf177d
 # m_debuginfo/debuginfo.c VG_(get_fnname_kind) _start is below main
 Patch17: valgrind-3.17.0_start.patch
+
+# KDE#440670 unhandled ppc64 syscalls 252 (statfs64 and 253 (fstatfs64)
+Patch18: valgrind-3.17.0-ppc64-statfs64.patch
 
 BuildRequires: make
 BuildRequires: glibc-devel
@@ -541,6 +544,9 @@ fi
 %endif
 
 %changelog
+* Fri Aug  6 2021 Mark Wielaard <mjw@fedoraproject.org> - 3.17.0-11
+- Add valgrind-3.17.0-ppc64-statfs64.patch
+
 * Fri Jul 23 2021 Fedora Release Engineering <releng@fedoraproject.org> - 1:3.17.0-10
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_35_Mass_Rebuild
 
