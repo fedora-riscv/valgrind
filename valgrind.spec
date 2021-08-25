@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.17.0
-Release: 11%{?dist}
+Release: 12%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -557,7 +557,7 @@ fi
 %endif
 
 %changelog
-* Wed Aug 25 2021 Mark Wielaard <mjw@fedoraproject.org>
+* Wed Aug 25 2021 Mark Wielaard <mjw@fedoraproject.org> - 3.17.0-12
 - Add valgrind-3.17.0-vgdb-queued-signals.patch
 - Add valgrind-3.17.0-ppc64-test-isa-3-1.patch
 - Add valgrind-3.17.0-ppc64-pstxvp.patch
