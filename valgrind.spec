@@ -163,6 +163,9 @@ Patch17: valgrind-3.17.0_start.patch
 # KDE#440670 unhandled ppc64 syscalls 252 (statfs64 and 253 (fstatfs64)
 Patch18: valgrind-3.17.0-ppc64-statfs64.patch
 
+# KDE#441474 vgdb might eat all memory while waiting for sigstop
+Patch19: valgrind-3.17.0-vgdb-queued-signals.patch
+
 BuildRequires: make
 BuildRequires: glibc-devel
 
@@ -320,6 +323,7 @@ touch memcheck/tests/s390x/vistr.stdout.exp
 %patch16 -p1
 %patch17 -p1
 %patch18 -p1
+%patch19 -p1
 
 %build
 # LTO triggers undefined symbols in valgrind.  Valgrind has a --enable-lto
@@ -545,6 +549,9 @@ fi
 %endif
 
 %changelog
+* Wed Aug 25 2021 Mark Wielaard <mjw@fedoraproject.org>
+- Add valgrind-3.17.0-vgdb-queued-signals.patch
+
 * Fri Aug  6 2021 Mark Wielaard <mjw@fedoraproject.org> - 3.17.0-11
 - Add valgrind-3.17.0-ppc64-statfs64.patch
 
