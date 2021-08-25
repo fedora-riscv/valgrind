@@ -169,6 +169,9 @@ Patch19: valgrind-3.17.0-vgdb-queued-signals.patch
 # KDE#440906 update test_isa_3_1_common.c to avoid modulo against hard regs
 Patch20: valgrind-3.17.0-ppc64-test-isa-3-1.patch
 
+# KDE#441512 remove troublesome block of code from guest_ppc_toIR for pstxvp
+Patch21: valgrind-3.17.0-ppc64-pstxvp.patch
+
 BuildRequires: make
 BuildRequires: glibc-devel
 
@@ -328,6 +331,7 @@ touch memcheck/tests/s390x/vistr.stdout.exp
 %patch18 -p1
 %patch19 -p1
 %patch20 -p1
+%patch21 -p1
 
 %build
 # LTO triggers undefined symbols in valgrind.  Valgrind has a --enable-lto
@@ -556,6 +560,7 @@ fi
 * Wed Aug 25 2021 Mark Wielaard <mjw@fedoraproject.org>
 - Add valgrind-3.17.0-vgdb-queued-signals.patch
 - Add valgrind-3.17.0-ppc64-test-isa-3-1.patch
+- Add valgrind-3.17.0-ppc64-pstxvp.patch
 
 * Fri Aug  6 2021 Mark Wielaard <mjw@fedoraproject.org> - 3.17.0-11
 - Add valgrind-3.17.0-ppc64-statfs64.patch
