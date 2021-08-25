@@ -166,6 +166,9 @@ Patch18: valgrind-3.17.0-ppc64-statfs64.patch
 # KDE#441474 vgdb might eat all memory while waiting for sigstop
 Patch19: valgrind-3.17.0-vgdb-queued-signals.patch
 
+# KDE#440906 update test_isa_3_1_common.c to avoid modulo against hard regs
+Patch20: valgrind-3.17.0-ppc64-test-isa-3-1.patch
+
 BuildRequires: make
 BuildRequires: glibc-devel
 
@@ -324,6 +327,7 @@ touch memcheck/tests/s390x/vistr.stdout.exp
 %patch17 -p1
 %patch18 -p1
 %patch19 -p1
+%patch20 -p1
 
 %build
 # LTO triggers undefined symbols in valgrind.  Valgrind has a --enable-lto
@@ -551,6 +555,7 @@ fi
 %changelog
 * Wed Aug 25 2021 Mark Wielaard <mjw@fedoraproject.org>
 - Add valgrind-3.17.0-vgdb-queued-signals.patch
+- Add valgrind-3.17.0-ppc64-test-isa-3-1.patch
 
 * Fri Aug  6 2021 Mark Wielaard <mjw@fedoraproject.org> - 3.17.0-11
 - Add valgrind-3.17.0-ppc64-statfs64.patch
