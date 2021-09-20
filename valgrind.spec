@@ -175,6 +175,10 @@ Patch21: valgrind-3.17.0-ppc64-pstxvp.patch
 # KDE#441534 Update the expected output for test_isa_3_1_VRT
 Patch22: valgrind-3.17.0-ppc64-test_isa_3_1_VRT.patch
 
+# commit 10922b70b825a0a9b4df9694ceb9f20e93e2c11d
+# m_debuginfo: Handle DW_TAG_atomic_type
+Patch23: valgrind-3.17.0-dwarf-atomic_type.patch
+
 BuildRequires: make
 BuildRequires: glibc-devel
 
@@ -336,6 +340,7 @@ touch memcheck/tests/s390x/vistr.stdout.exp
 %patch20 -p1
 %patch21 -p1
 %patch22 -p1
+%patch23 -p1
 
 %build
 # LTO triggers undefined symbols in valgrind.  Valgrind has a --enable-lto
@@ -561,6 +566,9 @@ fi
 %endif
 
 %changelog
+* Mon Sep 20 2021 Mark Wielaard <mjw@fedoraproject.org>
+- Add valgrind-3.17.0-dwarf-atomic_type.patch
+
 * Wed Sep  8 2021 Mark Wielaard <mjw@fedoraproject.org>
 - Add valgrind-3.17.0-ppc64-test_isa_3_1_VRT.patch
 

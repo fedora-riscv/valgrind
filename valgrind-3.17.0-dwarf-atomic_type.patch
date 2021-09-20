@@ -1,0 +1,43 @@
+commit 10922b70b825a0a9b4df9694ceb9f20e93e2c11d
+Author: Mark Wielaard <mark@klomp.org>
+Date:   Sat Sep 18 02:19:13 2021 +0200
+
+    m_debuginfo: Handle DW_TAG_atomic_type
+    
+    DW_TAG_atomic_type is a DWARF5 qualifier tag like DW_TAG_volatile_type,
+    DW_TAG_const_type and DW_TAG_restrict_type.
+
+diff --git a/coregrind/m_debuginfo/readdwarf3.c b/coregrind/m_debuginfo/readdwarf3.c
+index 52c27d4bb..968c37bd6 100644
+--- a/coregrind/m_debuginfo/readdwarf3.c
++++ b/coregrind/m_debuginfo/readdwarf3.c
+@@ -4191,14 +4191,15 @@ static void parse_type_DIE ( /*MOD*/XArray* /* of TyEnt */ tyents,
+    }
+ 
+    if (dtag == DW_TAG_volatile_type || dtag == DW_TAG_const_type
+-       || dtag == DW_TAG_restrict_type) {
++       || dtag == DW_TAG_restrict_type || dtag == DW_TAG_atomic_type) {
+       Int have_ty = 0;
+       VG_(memset)(&typeE, 0, sizeof(typeE));
+       typeE.cuOff = D3_INVALID_CUOFF;
+       typeE.tag   = Te_TyQual;
+       typeE.Te.TyQual.qual
+          = (dtag == DW_TAG_volatile_type ? 'V'
+-            : (dtag == DW_TAG_const_type ? 'C' : 'R'));
++            : (dtag == DW_TAG_const_type ? 'C'
++               : (dtag == DW_TAG_restrict_type ? 'R' : 'A')));
+       /* target type defaults to 'void' */
+       typeE.Te.TyQual.typeR = D3_FAKEVOID_CUOFF;
+       nf_i = 0;
+diff --git a/coregrind/m_debuginfo/tytypes.c b/coregrind/m_debuginfo/tytypes.c
+index 75e4cf500..e356b92c9 100644
+--- a/coregrind/m_debuginfo/tytypes.c
++++ b/coregrind/m_debuginfo/tytypes.c
+@@ -295,6 +295,7 @@ void ML_(pp_TyEnt_C_ishly)( const XArray* /* of TyEnt */ tyents,
+             case 'C': VG_(printf)("const "); break;
+             case 'V': VG_(printf)("volatile "); break;
+             case 'R': VG_(printf)("restrict "); break;
++            case 'A': VG_(printf)("atomic "); break;
+             default: goto unhandled;
+          }
+          ML_(pp_TyEnt_C_ishly)(tyents, ent->Te.TyQual.typeR);
