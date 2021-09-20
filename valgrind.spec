@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.17.0
-Release: 12%{?dist}
+Release: 13%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -179,6 +179,9 @@ Patch22: valgrind-3.17.0-ppc64-test_isa_3_1_VRT.patch
 # m_debuginfo: Handle DW_TAG_atomic_type
 Patch23: valgrind-3.17.0-dwarf-atomic_type.patch
 
+# KDE#442061 Valgrind: very slow execution under Fedora 34
+Patch24: valgrind-3.17.0-faster-readdwarf3.patch
+
 BuildRequires: make
 BuildRequires: glibc-devel
 
@@ -341,6 +344,7 @@ touch memcheck/tests/s390x/vistr.stdout.exp
 %patch21 -p1
 %patch22 -p1
 %patch23 -p1
+%patch24 -p1
 
 %build
 # LTO triggers undefined symbols in valgrind.  Valgrind has a --enable-lto
@@ -566,8 +570,9 @@ fi
 %endif
 
 %changelog
-* Mon Sep 20 2021 Mark Wielaard <mjw@fedoraproject.org>
+* Mon Sep 20 2021 Mark Wielaard <mjw@fedoraproject.org> - 3.17.0-13
 - Add valgrind-3.17.0-dwarf-atomic_type.patch
+- Add valgrind-3.17.0-faster-readdwarf3.patch
 
 * Wed Sep  8 2021 Mark Wielaard <mjw@fedoraproject.org>
 - Add valgrind-3.17.0-ppc64-test_isa_3_1_VRT.patch
