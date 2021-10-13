@@ -2,8 +2,8 @@
 
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
-Version: 3.17.0
-Release: 13%{?dist}
+Version: 3.18.0
+Release: 0.1.RC1%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -71,7 +71,7 @@ URL: http://www.valgrind.org/
 # So those will already have their full symbol table.
 %undefine _include_minidebuginfo
 
-Source0: ftp://sourceware.org/pub/valgrind/valgrind-%{version}.tar.bz2
+Source0: https://sourceware.org/pub/valgrind/valgrind-%{version}.RC1.tar.bz2
 
 # Needs investigation and pushing upstream
 Patch1: valgrind-3.9.0-cachegrind-improvements.patch
@@ -84,103 +84,6 @@ Patch4: valgrind-3.16.0-some-stack-protector.patch
 
 # Add some -Wl,z,now.
 Patch5: valgrind-3.16.0-some-Wl-z-now.patch
-
-# Upstream commits that provide additional ppc64le ISA 3.1 support
-# commit 3cc0232c46a5905b4a6c2fbd302b58bf5f90b3d5
-# PPC64: ISA 3.1 VSX PCV Generate Operations
-# commit 078f89e99b6f62e043f6138c6a7ae238befc1f2a
-# PPC64: Reduced-Precision bfloat16 Outer Product & Format Conversion Operations
-# commit e09fdaf569b975717465ed8043820d0198d4d47d
-# PPC64: Reduced-Precision: Missing Integer-based Outer Product Operations
-Patch6: valgrind-3.17.0-ppc64-isa-3.1.patch
-
-# Upstream commits that provide extra tests for ppc64le ISA 3.1 support
-# commit c8fa838be405d7ac43035dcf675bf490800c26ec
-# Reduced Precision bfloat16 outer product tests
-# commit 4bcc6c8a97c10c4dd41b35bd3b3035ec4037d524
-# VSX Permute Control Vector Generate Operation tests.
-# commit c589b652939655090c005a982a71f50c489fb5ce
-# Reduced precision Missing Integer based outer tests
-Patch7: valgrind-3.17.0-ppc64-isa-3.1-tests.patch
-
-# commit 45873298ff2d17accc65654d64758360616aade5
-# s390x: Add missing UNOP insns to s390_insn_as_string
-Patch8: valgrind-3.17.0-s390_insn_as_string.patch
-
-# KDE#435908 Don't look for separate debuginfo if image already has .debug_info
-Patch9: valgrind-3.17.0-debuginfod.patch
-
-# KDE#423963 Only process clone results in the parent thread
-Patch10: valgrind-3.17.0-clone-parent-res.patch
-
-# commit d74a637206ef5532ccd2ccb2e31ee2762f184e60
-# Bug 433863 - s390x: Remove memcheck test cases for cs, cds, and csg
-# commit 18ddcc47c951427efd3b790ba2481159b9bd1598
-# s390x: Support "expensive" comparisons Iop_ExpCmpNE32/64
-# commit 5db3f929c43bf46f4707178706cfe90f43acdd19
-# s390x: Add convenience function mkV128()
-# commit e78bd78d3043729033b426218ab8c6dae9c51e96
-# Bug 434296 - s390x: Rework IR conversion of VSTRC, VFAE, and VFEE
-# commit 4f17a067c4f8245c05611d6e8aa36e8841bab376
-# Bug 434296 - s390x: Rework IR conversion of VFENE
-# commit 9bd78ebd8bb5cd4ebb3f081ceba46836cc485551
-# Bug 434296 - s390x: Rework IR conversion of VISTR
-# commit 32312d588b77c5b5b5a0145bb0cc6f795b447790
-# Bug 434296 - s390x: Add memcheck test cases for vector string insns
-# commit a0bb049ace14ab52d386bb1d49a399f39eec4986
-# s390x: Improve handling of amodes without base register
-# commit fd935e238d907d9c523a311ba795077d95ad6912
-# s390x: Rework insn "v-vdup" and add "v-vrep"
-# commit 6c1cb1a0128b00858b973ef9344e12d6ddbaaf57
-# s390x: Add support for emitting "vector or with complement"
-# commit 0bd4263326b2d48f782339a9bbe1a069c7de45c7
-# s390x: Fix/optimize Iop_64HLtoV128
-# commit cae5062b05b95e0303b1122a0ea9aadc197e4f0a
-# s390x: Add missing stdout.exp for vector string memcheck test
-Patch11: valgrind-3.17.0-s390-prep.patch
-
-# KDE#432387 - s390x: z15 instructions support 
-Patch12: valgrind-3.17.0-s390-z15.patch
-
-# commit 124ae6cfa303f0cc71ffd685620cb57c4f8f02bb
-# s390x: Don't emit "vector or with complement" on z13
-Patch13: valgrind-3.17.0-s390-z13-vec-fix.patch
-
-# commit 6da22a4d246519cd1a638cfc7eff00cdd74413c4
-# gdbserver_tests: update filters for newer glibc/gdb
-Patch14: gdbserver_tests-update-filters-for-newer-glibc-gdb.patch
-
-# KDE#439590 glibc-2.34 breaks suppressions against obj:*/lib*/libc-2.*so*
-Patch15: helgrind-and-drd-suppression-libc-and-libpthread.patch
-
-# KDE#420906 missing syscall wrapper for clone3 (435)
-Patch16: valgrind-3.17.0-clone3.patch
-
-# commit 200b6a5a0ea3e1e154663b0fc575bfe2becf177d
-# m_debuginfo/debuginfo.c VG_(get_fnname_kind) _start is below main
-Patch17: valgrind-3.17.0_start.patch
-
-# KDE#440670 unhandled ppc64 syscalls 252 (statfs64 and 253 (fstatfs64)
-Patch18: valgrind-3.17.0-ppc64-statfs64.patch
-
-# KDE#441474 vgdb might eat all memory while waiting for sigstop
-Patch19: valgrind-3.17.0-vgdb-queued-signals.patch
-
-# KDE#440906 update test_isa_3_1_common.c to avoid modulo against hard regs
-Patch20: valgrind-3.17.0-ppc64-test-isa-3-1.patch
-
-# KDE#441512 remove troublesome block of code from guest_ppc_toIR for pstxvp
-Patch21: valgrind-3.17.0-ppc64-pstxvp.patch
-
-# KDE#441534 Update the expected output for test_isa_3_1_VRT
-Patch22: valgrind-3.17.0-ppc64-test_isa_3_1_VRT.patch
-
-# commit 10922b70b825a0a9b4df9694ceb9f20e93e2c11d
-# m_debuginfo: Handle DW_TAG_atomic_type
-Patch23: valgrind-3.17.0-dwarf-atomic_type.patch
-
-# KDE#442061 Valgrind: very slow execution under Fedora 34
-Patch24: valgrind-3.17.0-faster-readdwarf3.patch
 
 BuildRequires: make
 BuildRequires: glibc-devel
@@ -211,9 +114,6 @@ BuildRequires: autoconf
 
 # For make check validating the documentation
 BuildRequires: docbook-dtds
-
-# configure might use which
-BuildRequires: which
 
 # For testing debuginfod-find
 %if 0%{?fedora} > 29 || 0%{?rhel} > 7
@@ -311,7 +211,7 @@ Valgrind User Manual for details.
 %endif
 
 %prep
-%setup -q -n %{?scl:%{pkg_name}}%{!?scl:%{name}}-%{version}
+%setup -q -n %{?scl:%{pkg_name}}%{!?scl:%{name}}-%{version}.RC1
 
 %patch1 -p1
 %patch3 -p1
@@ -321,30 +221,6 @@ Valgrind User Manual for details.
 %patch4 -p1
 %patch5 -p1
 %endif
-
-%patch6 -p1
-%patch7 -p1
-
-%patch8 -p1
-%patch9 -p1
-%patch10 -p1
-
-%patch11 -p1
-touch memcheck/tests/s390x/vistr.stdout.exp
-%patch12 -p1
-%patch13 -p1
-
-%patch14 -p1
-%patch15 -p1
-%patch16 -p1
-%patch17 -p1
-%patch18 -p1
-%patch19 -p1
-%patch20 -p1
-%patch21 -p1
-%patch22 -p1
-%patch23 -p1
-%patch24 -p1
 
 %build
 # LTO triggers undefined symbols in valgrind.  Valgrind has a --enable-lto
@@ -518,7 +394,9 @@ cat diffs
 echo ===============END TESTING===============
 
 %files
-%doc COPYING NEWS README_*
+%{!?_licensedir:%global license %%doc}
+%license COPYING COPYING.DOCS
+%doc NEWS README_*
 %doc docs/installed/html docs/installed/*.pdf
 %{_bindir}/*
 %dir %{_libexecdir}/valgrind
@@ -531,6 +409,8 @@ echo ===============END TESTING===============
 %{_mandir}/man1/*
 
 %files devel
+%{!?_licensedir:%global license %%doc}
+%license COPYING
 %dir %{_includedir}/valgrind
 %{_includedir}/valgrind/valgrind.h
 %{_includedir}/valgrind/callgrind.h
@@ -541,6 +421,8 @@ echo ===============END TESTING===============
 %{_libdir}/pkgconfig/valgrind.pc
 
 %if %{build_tools_devel}
+%{!?_licensedir:%global license %%doc}
+%license COPYING
 %files tools-devel
 %{_includedir}/valgrind/config.h
 %{_includedir}/valgrind/libvex*h
@@ -570,6 +452,10 @@ fi
 %endif
 
 %changelog
+* Wed Oct 13 2021 Mark Wielaard <mjw@fedoraproject.org> - 3.18.0-0.1.RC1
+- Update to upstream 3.18.0-RC1
+- Drop all upstreamed patches
+
 * Mon Sep 20 2021 Mark Wielaard <mjw@fedoraproject.org> - 3.17.0-13
 - Add valgrind-3.17.0-dwarf-atomic_type.patch
 - Add valgrind-3.17.0-faster-readdwarf3.patch
