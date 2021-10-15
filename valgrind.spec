@@ -2,8 +2,8 @@
 
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
-Version: 3.18.0
-Release: 0.1.RC1%{?dist}
+Version: 3.18.1
+Release: 1%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -71,7 +71,7 @@ URL: http://www.valgrind.org/
 # So those will already have their full symbol table.
 %undefine _include_minidebuginfo
 
-Source0: https://sourceware.org/pub/valgrind/valgrind-%{version}.RC1.tar.bz2
+Source0: https://sourceware.org/pub/valgrind/valgrind-%{version}.tar.bz2
 
 # Needs investigation and pushing upstream
 Patch1: valgrind-3.9.0-cachegrind-improvements.patch
@@ -211,7 +211,7 @@ Valgrind User Manual for details.
 %endif
 
 %prep
-%setup -q -n %{?scl:%{pkg_name}}%{!?scl:%{name}}-%{version}.RC1
+%setup -q -n %{?scl:%{pkg_name}}%{!?scl:%{name}}-%{version}
 
 %patch1 -p1
 %patch3 -p1
@@ -452,6 +452,9 @@ fi
 %endif
 
 %changelog
+* Fri Oct 15 2021 Mark Wielaard <mjw@fedoraproject.org> - 3.18.0-1
+- Update to upstream 3.18.1 final
+
 * Wed Oct 13 2021 Mark Wielaard <mjw@fedoraproject.org> - 3.18.0-0.1.RC1
 - Update to upstream 3.18.0-RC1
 - Drop all upstreamed patches
