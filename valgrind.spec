@@ -118,9 +118,9 @@ BuildRequires: docbook-dtds
 # For testing debuginfod-find
 %if 0%{?fedora} > 29 || 0%{?rhel} > 7
 BuildRequires: elfutils-debuginfod-client
-%endif
 # For using debuginfod at runtime
 Recommends: elfutils-debuginfod-client
+%endif
 
 %{?scl:Requires:%scl_runtime}
 
