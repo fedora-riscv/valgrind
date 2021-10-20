@@ -393,8 +393,9 @@ fi
 cat diffs
 echo ===============END TESTING===============
 
-%files
 %{!?_licensedir:%global license %%doc}
+
+%files
 %license COPYING COPYING.DOCS
 %doc NEWS README_*
 %doc docs/installed/html docs/installed/*.pdf
@@ -409,8 +410,6 @@ echo ===============END TESTING===============
 %{_mandir}/man1/*
 
 %files devel
-%{!?_licensedir:%global license %%doc}
-%license COPYING
 %dir %{_includedir}/valgrind
 %{_includedir}/valgrind/valgrind.h
 %{_includedir}/valgrind/callgrind.h
@@ -421,9 +420,8 @@ echo ===============END TESTING===============
 %{_libdir}/pkgconfig/valgrind.pc
 
 %if %{build_tools_devel}
-%{!?_licensedir:%global license %%doc}
-%license COPYING
 %files tools-devel
+%license COPYING
 %{_includedir}/valgrind/config.h
 %{_includedir}/valgrind/libvex*h
 %{_includedir}/valgrind/pub_tool_*h
