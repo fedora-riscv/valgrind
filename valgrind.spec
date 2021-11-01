@@ -91,6 +91,9 @@ Patch6: valgrind-3.18.1-dhat-tests-copy.patch
 # KDE#444242 s390x: Sign-extend "relative long" offset in EXRL
 Patch7: valgrind-3.18.1-s390x-EXRL.patch
 
+# KDE#444571 - PPC, fix lxsibzx and lxsihzx
+Patch8: valgrind-3.18.1-ppc64-lxsibzx-lxsihzx.patch
+
 BuildRequires: make
 BuildRequires: glibc-devel
 
@@ -230,6 +233,7 @@ Valgrind User Manual for details.
 
 %patch6 -p1
 %patch7 -p1
+%patch8 -p1
 
 %build
 # LTO triggers undefined symbols in valgrind.  Valgrind has a --enable-lto
@@ -462,6 +466,7 @@ fi
 * Mon Nov  1 2021 Mark Wielaard <mjw@fedoraproject.org>
 - Add valgrind-3.18.1-dhat-tests-copy.patch
 - Add valgrind-3.18.1-s390x-EXRL.patch
+- Add valgrind-3.18.1-ppc64-lxsibzx-lxsihzx.patch
 
 * Fri Oct 15 2021 Mark Wielaard <mjw@fedoraproject.org> - 3.18.0-1
 - Update to upstream 3.18.1 final
