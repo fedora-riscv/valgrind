@@ -85,6 +85,9 @@ Patch4: valgrind-3.16.0-some-stack-protector.patch
 # Add some -Wl,z,now.
 Patch5: valgrind-3.16.0-some-Wl-z-now.patch
 
+# KDE#444495 dhat/tests/copy fails on s390x
+Patch6: valgrind-3.18.1-dhat-tests-copy.patch
+
 BuildRequires: make
 BuildRequires: glibc-devel
 
@@ -221,6 +224,8 @@ Valgrind User Manual for details.
 %patch4 -p1
 %patch5 -p1
 %endif
+
+%patch6 -p1
 
 %build
 # LTO triggers undefined symbols in valgrind.  Valgrind has a --enable-lto
@@ -450,6 +455,9 @@ fi
 %endif
 
 %changelog
+* Mon Nov  1 2021 Mark Wielaard <mjw@fedoraproject.org>
+- Add valgrind-3.18.1-dhat-tests-copy.patch
+
 * Fri Oct 15 2021 Mark Wielaard <mjw@fedoraproject.org> - 3.18.0-1
 - Update to upstream 3.18.1 final
 
