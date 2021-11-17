@@ -94,6 +94,10 @@ Patch7: valgrind-3.18.1-s390x-EXRL.patch
 # KDE#444571 - PPC, fix lxsibzx and lxsihzx
 Patch8: valgrind-3.18.1-ppc64-lxsibzx-lxsihzx.patch
 
+# commit ae8c6de01417023e78763de145b1c0e6ddd87277
+# Fix for the prefixed stq instruction in PC relative mode.
+Patch9: valgrind-3.18.1-ppc-pstq.patch
+
 BuildRequires: make
 BuildRequires: glibc-devel
 
@@ -234,6 +238,7 @@ Valgrind User Manual for details.
 %patch6 -p1
 %patch7 -p1
 %patch8 -p1
+%patch9 -p1
 
 %build
 # LTO triggers undefined symbols in valgrind.  Valgrind has a --enable-lto
@@ -463,6 +468,9 @@ fi
 %endif
 
 %changelog
+* Wed Nov 17 2021 Mark Wielaard <mjw@fedoraproject.org>
+- Add valgrind-3.18.1-ppc-pstq.patch
+
 * Mon Nov  1 2021 Mark Wielaard <mjw@fedoraproject.org> - 3.18.1-2
 - Add valgrind-3.18.1-dhat-tests-copy.patch
 - Add valgrind-3.18.1-s390x-EXRL.patch

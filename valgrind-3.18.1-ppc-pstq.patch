@@ -1,0 +1,47 @@
+commit ae8c6de01417023e78763de145b1c0e6ddd87277
+Author: Carl Love <cel@us.ibm.com>
+Date:   Wed Oct 20 20:40:13 2021 +0000
+
+    Fix for the prefixed stq instruction in PC relative mode.
+    
+    The pstq instruction for R=1, was not using the correct effective address.
+    The EA_hi and EA_lo should have been based on the value of EA as calculated
+    by the function calculate_prefix_EA.  Unfortuanely, the EA_hi and EA_lo
+    addresses were still using the previous code (not PC relative) to calculate
+    the address from the contants of RA plus the offset.
+
+diff --git a/VEX/priv/guest_ppc_toIR.c b/VEX/priv/guest_ppc_toIR.c
+index 8afd77490..543fa9574 100644
+--- a/VEX/priv/guest_ppc_toIR.c
++++ b/VEX/priv/guest_ppc_toIR.c
+@@ -9838,23 +9838,24 @@ static Bool dis_int_store_ds_prefix ( UInt prefix,
+             if (host_endness == VexEndnessBE) {
+ 
+                /* upper 64-bits */
+-               assign( EA_hi, ea_rAor0_simm( rA_addr, immediate_val ) );
++               assign( EA_hi, mkexpr(EA));
+ 
+                /* lower 64-bits */
+-               assign( EA_lo, ea_rAor0_simm( rA_addr, immediate_val+8 ) );
++               assign( EA_lo, binop(Iop_Add64, mkexpr(EA), mkU64(8)));
++
+             } else {
+                /* upper 64-bits */
+-               assign( EA_hi, ea_rAor0_simm( rA_addr, immediate_val+8 ) );
++               assign( EA_hi, binop(Iop_Add64, mkexpr(EA), mkU64(8)));
+ 
+                /* lower 64-bits */
+-               assign( EA_lo, ea_rAor0_simm( rA_addr, immediate_val ) );
++               assign( EA_lo, mkexpr(EA));
+             }
+          } else {
+             /* upper half of upper 64-bits */
+-            assign( EA_hi, ea_rAor0_simm( rA_addr, immediate_val+4 ) );
++            assign( EA_hi, binop(Iop_Add32, mkexpr(EA), mkU32(4)));
+ 
+             /* lower half of upper 64-bits */
+-            assign( EA_lo, ea_rAor0_simm( rA_addr, immediate_val+12 ) );
++            assign( EA_lo, binop(Iop_Add32, mkexpr(EA), mkU32(12)));
+          }
+ 
+          /* Note, the store order for stq instruction is the same for BE
