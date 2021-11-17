@@ -1,0 +1,121 @@
+commit 7dbe2fed72886874f2eaf57dc07929542ae55b58
+Author: Julian Seward <jseward@acm.org>
+Date:   Fri Nov 12 10:40:48 2021 +0100
+
+    Bug 445354 - arm64 backend: incorrect code emitted for doubleword CAS.
+    
+    The sequence of instructions emitted by the arm64 backend for doubleword
+    compare-and-swap is incorrect.  This could lead to incorrect simulation of the
+    AArch8.1 atomic instructions (CASP, at least).  It also causes failures in the
+    upcoming fix for v8.0 support for LD{,A}XP/ST{,L}XP in bug 444399, at least
+    when running with the fallback LL/SC implementation
+    (`--sim-hints=fallback-llsc`, or as autoselected at startup).  In the worst
+    case it can cause segfaulting in the generated code, because it could jump
+    backwards unexpectedly far.
+    
+    The problem is the sequence emitted for ARM64in_CASP:
+    
+    * the jump offsets are incorrect, both for `bne out` (x 2) and `cbnz w1, loop`.
+    
+    * using w1 to hold the success indication of the stxp instruction trashes the
+      previous value in x1.  But the value in x1 is an output of ARM64in_CASP,
+      hence one of the two output registers is corrupted.  That confuses any code
+      downstream that want to inspect those values to find out whether or not the
+      transaction succeeded.
+    
+    The fixes are to
+    
+    * fix the branch offsets
+    
+    * use a different register to hold the stxp success indication.  w3 is a
+      convenient check.
+
+diff --git a/VEX/priv/host_arm64_defs.c b/VEX/priv/host_arm64_defs.c
+index 5dccc0495..5657bcab9 100644
+--- a/VEX/priv/host_arm64_defs.c
++++ b/VEX/priv/host_arm64_defs.c
+@@ -2271,6 +2271,7 @@ void getRegUsage_ARM64Instr ( HRegUsage* u, const ARM64Instr* i, Bool mode64 )
+          addHRegUse(u, HRmWrite, hregARM64_X1());
+          addHRegUse(u, HRmWrite, hregARM64_X9());
+          addHRegUse(u, HRmWrite, hregARM64_X8());
++         addHRegUse(u, HRmWrite, hregARM64_X3());
+          break;
+       case ARM64in_MFence:
+          return;
+@@ -4254,16 +4255,16 @@ Int emit_ARM64Instr ( /*MB_MOD*/Bool* is_profInc,
+ 
+               -- always:
+               cmp     x0, x8                 // EB08001F
+-              bne     out                    // 540000E1 (b.ne #28 <out>)
++              bne     out                    // 540000A1
+               cmp     x1, x9                 // EB09003F
+-              bne     out                    // 540000A1 (b.ne #20 <out>)
++              bne     out                    // 54000061
+ 
+               -- one of:
+-              stxp    w1, x6, x7, [x2]       // C8211C46
+-              stxp    w1, w6, w7, [x2]       // 88211C46
++              stxp    w3, x6, x7, [x2]       // C8231C46
++              stxp    w3, w6, w7, [x2]       // 88231C46
+ 
+               -- always:
+-              cbnz    w1, loop               // 35FFFE81 (cbnz w1, #-48 <loop>)
++              cbnz    w3, loop               // 35FFFF03
+             out:
+          */
+          switch (i->ARM64in.CASP.szB) {
+@@ -4277,15 +4278,15 @@ Int emit_ARM64Instr ( /*MB_MOD*/Bool* is_profInc,
+             default: vassert(0);
+          }
+          *p++ = 0xEB08001F;
+-         *p++ = 0x540000E1;
+-         *p++ = 0xEB09003F;
+          *p++ = 0x540000A1;
++         *p++ = 0xEB09003F;
++         *p++ = 0x54000061;
+          switch (i->ARM64in.CASP.szB) {
+-            case 8:  *p++ = 0xC8211C46; break;
+-            case 4:  *p++ = 0x88211C46; break;
++            case 8:  *p++ = 0xC8231C46; break;
++            case 4:  *p++ = 0x88231C46; break;
+             default: vassert(0);
+          }
+-         *p++ = 0x35FFFE81;
++         *p++ = 0x35FFFF03;
+          goto done;
+       }
+       case ARM64in_MFence: {
+diff --git a/VEX/priv/host_arm64_defs.h b/VEX/priv/host_arm64_defs.h
+index f0737f2c6..01fb5708e 100644
+--- a/VEX/priv/host_arm64_defs.h
++++ b/VEX/priv/host_arm64_defs.h
+@@ -720,6 +720,7 @@ typedef
+             Int  szB; /* 1, 2, 4 or 8 */
+          } StrEX;
+          /* x1 = CAS(x3(addr), x5(expected) -> x7(new)),
++            and trashes x8
+             where x1[8*szB-1 : 0] == x5[8*szB-1 : 0] indicates success,
+                   x1[8*szB-1 : 0] != x5[8*szB-1 : 0] indicates failure.
+             Uses x8 as scratch (but that's not allocatable).
+@@ -738,7 +739,7 @@ typedef
+             -- if branch taken, failure; x1[[8*szB-1 : 0] holds old value
+             -- attempt to store
+             stxr    w8, x7, [x3]
+-            -- if store successful, x1==0, so the eor is "x1 := x5"
++            -- if store successful, x8==0
+             -- if store failed,     branch back and try again.
+             cbne    w8, loop
+            after:
+@@ -746,6 +747,12 @@ typedef
+          struct {
+             Int szB; /* 1, 2, 4 or 8 */
+          } CAS;
++         /* Doubleworld CAS, 2 x 32 bit or 2 x 64 bit
++            x0(oldLSW),x1(oldMSW)
++               = DCAS(x2(addr), x4(expectedLSW),x5(expectedMSW)
++                                -> x6(newLSW),x7(newMSW))
++            and trashes x8, x9 and x3
++         */
+          struct {
+             Int szB; /* 4 or 8 */
+          } CASP;

@@ -108,6 +108,9 @@ Patch11: valgrind-3.18.1-gdbserver_tests-hwcap.patch
 # KDE#445184 Rust v0 symbol demangling is broken 
 Patch12: valgrind-3.18.1-rust-v0-demangle.patch
 
+# KDE#445354 arm64 backend: incorrect code emitted for doubleword CAS
+Patch13: valgrind-3.18.1-arm64-doubleword-cas.patch
+
 BuildRequires: make
 BuildRequires: glibc-devel
 
@@ -252,6 +255,7 @@ Valgrind User Manual for details.
 %patch10 -p1
 %patch11 -p1
 %patch12 -p1
+%patch13 -p1
 
 %build
 # LTO triggers undefined symbols in valgrind.  Valgrind has a --enable-lto
@@ -486,6 +490,7 @@ fi
 - Add valgrind-3.18.1-ppc-pstq-tests.patch
 - Add valgrind-3.18.1-gdbserver_tests-hwcap.patch
 - Add valgrind-3.18.1-rust-v0-demangle.patch
+- Add valgrind-3.18.1-arm64-doubleword-cas.patch
 
 * Mon Nov  1 2021 Mark Wielaard <mjw@fedoraproject.org> - 3.18.1-2
 - Add valgrind-3.18.1-dhat-tests-copy.patch
