@@ -1,0 +1,25 @@
+commit 64ab89162906d5b9e2de6c3afe476fec861ef7ec
+Author: Mark Wielaard <mark@klomp.org>
+Date:   Tue Nov 2 14:27:45 2021 +0100
+
+    gdbserver_tests: Filter out glibc hwcaps libc.so
+    
+    On some systems the gdbserver_tests would fail because the filter
+    for the optimized hwcaps subdir didn't match because the file is
+    called slightly differently, with the version number before .so
+    instead of after. For example: /lib64/glibc-hwcaps/power9/libc-2.28.so
+    
+    Add one extra filter for this pattern.
+
+diff --git a/gdbserver_tests/filter_gdb.in b/gdbserver_tests/filter_gdb.in
+index d0c94f3f1..b753e0168 100755
+--- a/gdbserver_tests/filter_gdb.in
++++ b/gdbserver_tests/filter_gdb.in
+@@ -134,6 +134,7 @@ s/in \(.__\)\{0,1\}select () from \/.*$/in syscall .../
+ /^   from \/lib\/libc.so.*$/d
+ /^   from \/lib64\/libc.so.*$/d
+ /^   from \/lib64\/.*\/libc.so.*$/d
++/^   from \/lib64\/.*\/libc-.*.so/d
+ 
+ #       and yet another (gdb 7.0 way) to get a system call
+ s/in select ()$/in syscall .../

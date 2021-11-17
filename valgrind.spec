@@ -101,6 +101,10 @@ Patch8: valgrind-3.18.1-ppc64-lxsibzx-lxsihzx.patch
 Patch9: valgrind-3.18.1-ppc-pstq.patch
 Patch10: valgrind-3.18.1-ppc-pstq-tests.patch
 
+# commit 64ab89162906d5b9e2de6c3afe476fec861ef7ec
+# gdbserver_tests: Filter out glibc hwcaps libc.so
+Patch11: valgrind-3.18.1-gdbserver_tests-hwcap.patch
+
 BuildRequires: make
 BuildRequires: glibc-devel
 
@@ -243,6 +247,7 @@ Valgrind User Manual for details.
 %patch8 -p1
 %patch9 -p1
 %patch10 -p1
+%patch11 -p1
 
 %build
 # LTO triggers undefined symbols in valgrind.  Valgrind has a --enable-lto
@@ -475,6 +480,7 @@ fi
 * Wed Nov 17 2021 Mark Wielaard <mjw@fedoraproject.org>
 - Add valgrind-3.18.1-ppc-pstq.patch
 - Add valgrind-3.18.1-ppc-pstq-tests.patch
+- Add valgrind-3.18.1-gdbserver_tests-hwcap.patch
 
 * Mon Nov  1 2021 Mark Wielaard <mjw@fedoraproject.org> - 3.18.1-2
 - Add valgrind-3.18.1-dhat-tests-copy.patch
