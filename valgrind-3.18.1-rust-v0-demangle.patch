@@ -1,0 +1,137 @@
+commit 4831385c6706b377851284adc4c4545fff4c6564
+Author: Nicholas Nethercote <nnethercote@apple.com>
+Date:   Tue Nov 9 12:30:07 2021 +1100
+
+    Fix Rust v0 demangling.
+    
+    It's currently broken due to a silly test that prevents the v0
+    demangling code from even running.
+    
+    The commit also adds a test, to avoid such problems in the future.
+
+diff --git a/coregrind/m_demangle/demangle.c b/coregrind/m_demangle/demangle.c
+index 16161da2a..3fd7cb75f 100644
+--- a/coregrind/m_demangle/demangle.c
++++ b/coregrind/m_demangle/demangle.c
+@@ -118,8 +118,13 @@ void VG_(demangle) ( Bool do_cxx_demangling, Bool do_z_demangling,
+    }
+ 
+    /* Possibly undo (1) */
++   // - C++ mangled symbols start with "_Z" (possibly with exceptions?)
++   // - Rust "legacy" mangled symbols start with "_Z".
++   // - Rust "v0" mangled symbols start with "_R".
++   // XXX: the Java/Rust/Ada demangling here probably doesn't work. See
++   // https://bugs.kde.org/show_bug.cgi?id=445235 for details.
+    if (do_cxx_demangling && VG_(clo_demangle)
+-       && orig != NULL && orig[0] == '_' && orig[1] == 'Z') {
++       && orig != NULL && orig[0] == '_' && (orig[1] == 'Z' || orig[1] == 'R')) {
+       /* !!! vvv STATIC vvv !!! */
+       static HChar* demangled = NULL;
+       /* !!! ^^^ STATIC ^^^ !!! */
+diff --git a/memcheck/tests/demangle-rust.c b/memcheck/tests/demangle-rust.c
+new file mode 100644
+index 000000000..f2a458b2a
+--- /dev/null
++++ b/memcheck/tests/demangle-rust.c
+@@ -0,0 +1,31 @@
++// Valgrind supports demangling Rust symbols (both the "v0" and "legacy"
++// mangling schemes), but we don't want to add a dependency on the Rust
++// compiler for a single test. So this is a C program with function names that
++// are mangled Rust symbols. In the output, they become demangled Rust names.
++// It's a hack, but a useful one.
++
++#include <stdlib.h>
++
++// A v0 symbol that demangles to: <rustc_middle::ty::PredicateKind as rustc_middle::ty::fold::TypeFoldable>::fold_with::<rustc_infer::infer::resolve::OpportunisticVarResolver>
++int _RINvYNtNtCs4uGc65yWeeX_12rustc_middle2ty13PredicateKindNtNtB5_4fold12TypeFoldable9fold_withNtNtNtCsgI90OQiJWEs_11rustc_infer5infer7resolve24OpportunisticVarResolverECsdozMG8X9FIu_21rustc_trait_selection(int *p)
++{
++   return *p ? 1 : 2;
++}
++
++// A v0 symbol that demangles to: rustc_expand::mbe::macro_parser::parse_tt
++int _RNvNtNtCsaqSe1lZGvEL_12rustc_expand3mbe12macro_parser8parse_tt(int* p)
++{
++   return _RINvYNtNtCs4uGc65yWeeX_12rustc_middle2ty13PredicateKindNtNtB5_4fold12TypeFoldable9fold_withNtNtNtCsgI90OQiJWEs_11rustc_infer5infer7resolve24OpportunisticVarResolverECsdozMG8X9FIu_21rustc_trait_selection(p);
++}
++
++// A legacy symbol that demangles to: core::str::lossy::Utf8Lossy::from_bytes
++int _ZN4core3str5lossy9Utf8Lossy10from_bytes17heb1677c8cb728b0bE(int* p)
++{
++   return _RNvNtNtCsaqSe1lZGvEL_12rustc_expand3mbe12macro_parser8parse_tt(p);
++}
++
++int main(void)
++{
++   return _ZN4core3str5lossy9Utf8Lossy10from_bytes17heb1677c8cb728b0bE(malloc(sizeof(int)));
++}
++
+diff --git a/memcheck/tests/demangle-rust.stderr.exp b/memcheck/tests/demangle-rust.stderr.exp
+new file mode 100644
+index 000000000..f04bb625b
+--- /dev/null
++++ b/memcheck/tests/demangle-rust.stderr.exp
+@@ -0,0 +1,6 @@
++Conditional jump or move depends on uninitialised value(s)
++   at 0x........: <rustc_middle::ty::PredicateKind as rustc_middle::ty::fold::TypeFoldable>::fold_with::<rustc_infer::infer::resolve::OpportunisticVarResolver> (demangle-rust.c:12)
++   by 0x........: rustc_expand::mbe::macro_parser::parse_tt (demangle-rust.c:18)
++   by 0x........: core::str::lossy::Utf8Lossy::from_bytes (demangle-rust.c:24)
++   by 0x........: main (demangle-rust.c:29)
++
+diff --git a/memcheck/tests/demangle-rust.vgtest b/memcheck/tests/demangle-rust.vgtest
+new file mode 100644
+index 000000000..d726c6b2e
+--- /dev/null
++++ b/memcheck/tests/demangle-rust.vgtest
+@@ -0,0 +1,2 @@
++prog: demangle-rust
++vgopts: -q
+
+commit c1bfa115f985633722f25922d2996c231e8c9d8d
+Author: Mark Wielaard <mark@klomp.org>
+Date:   Wed Nov 10 09:02:36 2021 +0100
+
+    Add demangle-rust.vgtest demangle-rust.stderr.exp to EXTRA_DIST
+
+diff --git a/memcheck/tests/Makefile.am b/memcheck/tests/Makefile.am
+index 4d0476e2d..7837d87c7 100644
+--- a/memcheck/tests/Makefile.am
++++ b/memcheck/tests/Makefile.am
+@@ -281,6 +281,7 @@ EXTRA_DIST = \
+ 	realloc3.stderr.exp realloc3.vgtest \
+ 	recursive-merge.stderr.exp recursive-merge.vgtest \
+ 	resvn_stack.stderr.exp resvn_stack.vgtest \
++	demangle-rust.vgtest demangle-rust.stderr.exp \
+ 	sbfragment.stdout.exp sbfragment.stderr.exp sbfragment.vgtest \
+ 	sem.stderr.exp sem.vgtest \
+ 	sendmsg.stderr.exp sendmsg.stderr.exp-solaris sendmsg.vgtest \
+
+commit d151907e5d8ff393f4fef126c8ae445ea8813661
+Author: Mark Wielaard <mark@klomp.org>
+Date:   Thu Nov 11 18:02:09 2021 +0100
+
+    Add demangle-rust to check_PROGRAMS
+    
+    The demangle-rust.vgtest would fail because the demangle-rust binary
+    wasn't build by default. Add it to check_PROGRAMS and define
+    demangle_rust_SOURCES to make sure it is always build.
+
+diff --git a/memcheck/tests/Makefile.am b/memcheck/tests/Makefile.am
+index 7837d87c7..449710020 100644
+--- a/memcheck/tests/Makefile.am
++++ b/memcheck/tests/Makefile.am
+@@ -392,6 +392,7 @@ check_PROGRAMS = \
+ 	custom_alloc \
+ 	custom-overlap \
+ 	demangle \
++	demangle-rust \
+ 	big_debuginfo_symbol \
+ 	deep-backtrace \
+ 	describe-block \
+@@ -505,6 +506,7 @@ endif
+ leak_cpp_interior_SOURCES	= leak_cpp_interior.cpp
+ 
+ demangle_SOURCES = demangle.cpp
++demangle_rust_SOURCES = demangle-rust.c
+ 
+ # Suppress various gcc warnings which are correct, but for things
+ # we are actually testing for at runtime.
