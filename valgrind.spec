@@ -95,8 +95,11 @@ Patch7: valgrind-3.18.1-s390x-EXRL.patch
 Patch8: valgrind-3.18.1-ppc64-lxsibzx-lxsihzx.patch
 
 # commit ae8c6de01417023e78763de145b1c0e6ddd87277
+# commit 3950c5d661ee09526cddcf24daf5fc22bc83f70c
 # Fix for the prefixed stq instruction in PC relative mode.
+# KDE#444836 pstq instruction for R=1 is not storing to the correct address
 Patch9: valgrind-3.18.1-ppc-pstq.patch
+Patch10: valgrind-3.18.1-ppc-pstq-tests.patch
 
 BuildRequires: make
 BuildRequires: glibc-devel
@@ -239,6 +242,7 @@ Valgrind User Manual for details.
 %patch7 -p1
 %patch8 -p1
 %patch9 -p1
+%patch10 -p1
 
 %build
 # LTO triggers undefined symbols in valgrind.  Valgrind has a --enable-lto
@@ -470,6 +474,7 @@ fi
 %changelog
 * Wed Nov 17 2021 Mark Wielaard <mjw@fedoraproject.org>
 - Add valgrind-3.18.1-ppc-pstq.patch
+- Add valgrind-3.18.1-ppc-pstq-tests.patch
 
 * Mon Nov  1 2021 Mark Wielaard <mjw@fedoraproject.org> - 3.18.1-2
 - Add valgrind-3.18.1-dhat-tests-copy.patch
