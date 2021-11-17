@@ -114,6 +114,9 @@ Patch13: valgrind-3.18.1-arm64-doubleword-cas.patch
 # KDE#444399 arm64: unhandled instruction LD{,A}XP and ST{,L}XP
 Patch14: valgrind-3.18.1-arm64-ldaxp-stlxp.patch
 
+# KDE#445415 arm64 front end: alignment checks missing for atomic instructions.
+Patch15: valgrind-3.18.1-arm64-atomic-align.patch
+
 BuildRequires: make
 BuildRequires: glibc-devel
 
@@ -260,6 +263,7 @@ Valgrind User Manual for details.
 %patch12 -p1
 %patch13 -p1
 %patch14 -p1
+%patch15 -p1
 
 %build
 # LTO triggers undefined symbols in valgrind.  Valgrind has a --enable-lto
@@ -496,6 +500,7 @@ fi
 - Add valgrind-3.18.1-rust-v0-demangle.patch
 - Add valgrind-3.18.1-arm64-doubleword-cas.patch
 - Add valgrind-3.18.1-arm64-ldaxp-stlxp.patch
+- Add valgrind-3.18.1-arm64-atomic-align.patch
 
 * Mon Nov  1 2021 Mark Wielaard <mjw@fedoraproject.org> - 3.18.1-2
 - Add valgrind-3.18.1-dhat-tests-copy.patch
