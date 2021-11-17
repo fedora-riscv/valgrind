@@ -1,0 +1,1440 @@
+commit 530df882b8f60ecacaf2b9b8a719f7ea1c1d1650
+Author: Julian Seward <jseward@acm.org>
+Date:   Fri Nov 12 12:13:45 2021 +0100
+
+    Bug 444399 - disInstr(arm64): unhandled instruction 0xC87F2D89 (LD{,A}XP and ST{,L}XP).
+    
+    This is unfortunately a big and complex patch, to implement LD{,A}XP and
+    ST{,L}XP.  These were omitted from the original AArch64 v8.0 implementation
+    for unknown reasons.
+    
+    (Background) the patch is made significantly more complex because for AArch64
+    we actually have two implementations of the underlying
+    Load-Linked/Store-Conditional (LL/SC) machinery: a "primary" implementation,
+    which translates LL/SC more or less directly into IR and re-emits them at the
+    back end, and a "fallback" implementation that implements LL/SC "manually", by
+    taking advantage of the fact that V serialises thread execution, so we can
+    "implement" LL/SC by simulating a reservation using fields LLSC_* in the guest
+    state, and invalidating the reservation at every thread switch.
+    
+    (Background) the fallback scheme is needed because the primary scheme is in
+    violation of the ARMv8 semantics in that it can (easily) introduce extra
+    memory references between the LL and SC, hence on some hardware causing the
+    reservation to always fail and so the simulated program to wind up looping
+    forever.
+    
+    For these instructions, big picture:
+    
+    * for the primary implementation, we take advantage of the fact that
+      IRStmt_LLSC allows I128 bit transactions to be represented.  Hence we bundle
+      up the two 64-bit data elements into an I128 (or vice versa) and present a
+      single I128-typed IRStmt_LLSC in the IR.  In the backend, those are
+      re-emitted as LDXP/STXP respectively.  For LL/SC on 32-bit register pairs,
+      that bundling produces a single 64-bit item, and so the existing LL/SC
+      backend machinery handles it.  The effect is that a doubleword 32-bit LL/SC
+      in the front end translates into a single 64-bit LL/SC in the back end.
+      Overall, though, the implementation is straightforward.
+    
+    * for the fallback implementation, it is necessary to extend the guest state
+      field `guest_LLSC_DATA` to represent a 128-bit transaction, by splitting it
+      into _DATA_LO64 and DATA_HI64.  Then, the implementation is an exact
+      analogue of the fallback implementation for single-word LL/SC.  It takes
+      advantage of the fact that the backend already supports 128-bit CAS, as
+      fixed in bug 445354.  As with the primary implementation, doubleword 32-bit
+      LL/SC is bundled into a single 64-bit transaction.
+    
+    Detailed changes:
+    
+    * new arm64 guest state fields LLSC_DATA_LO64/LLSC_DATA_LO64 to replace
+      guest_LLSC_DATA
+    
+    * (ridealong fix) arm64 front end: a fix to a minor and harmless decoding bug
+      for the single-word LDX/STX case.
+    
+    * arm64 front end: IR generation for LD{,A}XP/ST{,L}XP: tedious and
+      longwinded, but per comments above, an exact(ish) analogue of the singleword
+      case
+    
+    * arm64 backend: new insns ARM64Instr_LdrEXP / ARM64Instr_StrEXP to wrap up 2
+      x 64 exclusive loads/stores.  Per comments above, there's no need to handle
+      the 2 x 32 case.
+    
+    * arm64 isel: translate I128-typed IRStmt_LLSC into the above two insns
+    
+    * arm64 isel: some auxiliary bits and pieces needed to handle I128 values;
+      this is standard doubleword isel stuff
+    
+    * arm64 isel: (ridealong fix): Ist_CAS: check for endianness of the CAS!
+    
+    * arm64 isel: (ridealong) a couple of formatting fixes
+    
+    * IR infrastructure: add support for I128 constants, done the same as V128
+      constants
+    
+    * memcheck: handle shadow loads and stores for I128 values
+    
+    * testcase: memcheck/tests/atomic_incs.c: on arm64, also test 128-bit atomic
+      addition, to check we really have atomicity right
+    
+    * testcase: new test none/tests/arm64/ldxp_stxp.c, tests operation but not
+      atomicity.  (Smoke test).
+
+diff --git a/VEX/priv/guest_arm64_toIR.c b/VEX/priv/guest_arm64_toIR.c
+index 12a1c5978..ee018c6a9 100644
+--- a/VEX/priv/guest_arm64_toIR.c
++++ b/VEX/priv/guest_arm64_toIR.c
+@@ -1184,9 +1184,10 @@ static IRExpr* narrowFrom64 ( IRType dstTy, IRExpr* e )
+ #define OFFB_CMSTART  offsetof(VexGuestARM64State,guest_CMSTART)
+ #define OFFB_CMLEN    offsetof(VexGuestARM64State,guest_CMLEN)
+ 
+-#define OFFB_LLSC_SIZE offsetof(VexGuestARM64State,guest_LLSC_SIZE)
+-#define OFFB_LLSC_ADDR offsetof(VexGuestARM64State,guest_LLSC_ADDR)
+-#define OFFB_LLSC_DATA offsetof(VexGuestARM64State,guest_LLSC_DATA)
++#define OFFB_LLSC_SIZE      offsetof(VexGuestARM64State,guest_LLSC_SIZE)
++#define OFFB_LLSC_ADDR      offsetof(VexGuestARM64State,guest_LLSC_ADDR)
++#define OFFB_LLSC_DATA_LO64 offsetof(VexGuestARM64State,guest_LLSC_DATA_LO64)
++#define OFFB_LLSC_DATA_HI64 offsetof(VexGuestARM64State,guest_LLSC_DATA_HI64)
+ 
+ 
+ /* ---------------- Integer registers ---------------- */
+@@ -6652,7 +6653,7 @@ Bool dis_ARM64_load_store(/*MB_OUT*/DisResult* dres, UInt insn,
+         (coregrind/m_scheduler/scheduler.c, run_thread_for_a_while()
+          has to do this bit)
+    */   
+-   if (INSN(29,23) == BITS7(0,0,1,0,0,0,0)
++   if (INSN(29,24) == BITS6(0,0,1,0,0,0)
+        && (INSN(23,21) & BITS3(1,0,1)) == BITS3(0,0,0)
+        && INSN(14,10) == BITS5(1,1,1,1,1)) {
+       UInt szBlg2     = INSN(31,30);
+@@ -6678,7 +6679,8 @@ Bool dis_ARM64_load_store(/*MB_OUT*/DisResult* dres, UInt insn,
+             // if it faults.
+             IRTemp loaded_data64 = newTemp(Ity_I64);
+             assign(loaded_data64, widenUto64(ty, loadLE(ty, mkexpr(ea))));
+-            stmt( IRStmt_Put( OFFB_LLSC_DATA, mkexpr(loaded_data64) ));
++            stmt( IRStmt_Put( OFFB_LLSC_DATA_LO64, mkexpr(loaded_data64) ));
++            stmt( IRStmt_Put( OFFB_LLSC_DATA_HI64, mkU64(0) ));
+             stmt( IRStmt_Put( OFFB_LLSC_ADDR, mkexpr(ea) ));
+             stmt( IRStmt_Put( OFFB_LLSC_SIZE, mkU64(szB) ));
+             putIReg64orZR(tt, mkexpr(loaded_data64));
+@@ -6729,7 +6731,7 @@ Bool dis_ARM64_load_store(/*MB_OUT*/DisResult* dres, UInt insn,
+             ));
+             // Fail if the data doesn't match the LL data
+             IRTemp llsc_data64 = newTemp(Ity_I64);
+-            assign(llsc_data64, IRExpr_Get(OFFB_LLSC_DATA, Ity_I64));
++            assign(llsc_data64, IRExpr_Get(OFFB_LLSC_DATA_LO64, Ity_I64));
+             stmt( IRStmt_Exit(
+                       binop(Iop_CmpNE64, widenUto64(ty, loadLE(ty, mkexpr(ea))),
+                                          mkexpr(llsc_data64)),
+@@ -6771,6 +6773,257 @@ Bool dis_ARM64_load_store(/*MB_OUT*/DisResult* dres, UInt insn,
+       /* else fall through */
+    }
+ 
++   /* -------------------- LD{,A}XP -------------------- */
++   /* -------------------- ST{,L}XP -------------------- */
++   /* 31 30 29     23  20    15 14  9  4
++       1 sz 001000 011 11111 0  t2  n  t1   LDXP  Rt1, Rt2, [Xn|SP]
++       1 sz 001000 011 11111 1  t2  n  t1   LDAXP Rt1, Rt2, [Xn|SP]
++       1 sz 001000 001 s     0  t2  n  t1   STXP  Ws, Rt1, Rt2, [Xn|SP]
++       1 sz 001000 001 s     1  t2  n  t1   STLXP Ws, Rt1, Rt2, [Xn|SP]
++   */
++   /* See just above, "LD{,A}X{R,RH,RB} / ST{,L}X{R,RH,RB}", for detailed
++      comments about this implementation.  Note the 'sz' field here is only 1
++      bit; above, it is 2 bits, and has a different encoding.
++   */
++   if (INSN(31,31) == 1
++       && INSN(29,24) == BITS6(0,0,1,0,0,0)
++       && (INSN(23,21) & BITS3(1,0,1)) == BITS3(0,0,1)) {
++      Bool elemIs64   = INSN(30,30) == 1;
++      Bool isLD       = INSN(22,22) == 1;
++      Bool isAcqOrRel = INSN(15,15) == 1;
++      UInt ss         = INSN(20,16);
++      UInt tt2        = INSN(14,10);
++      UInt nn         = INSN(9,5);
++      UInt tt1        = INSN(4,0);
++
++      UInt   elemSzB = elemIs64 ? 8 : 4;
++      UInt   fullSzB = 2 * elemSzB;
++      IRType elemTy  = integerIRTypeOfSize(elemSzB);
++      IRType fullTy  = integerIRTypeOfSize(fullSzB);
++
++      IRTemp ea = newTemp(Ity_I64);
++      assign(ea, getIReg64orSP(nn));
++      /* FIXME generate check that ea is 2*elemSzB-aligned */
++
++      if (isLD && ss == BITS5(1,1,1,1,1)) {
++         if (abiinfo->guest__use_fallback_LLSC) {
++            // Fallback implementation of LL.
++            // Do the load first so we don't update any guest state if it
++            // faults.  Assumes little-endian guest.
++            if (fullTy == Ity_I64) {
++               vassert(elemSzB == 4);
++               IRTemp loaded_data64 = newTemp(Ity_I64);
++               assign(loaded_data64, loadLE(fullTy, mkexpr(ea)));
++               stmt( IRStmt_Put( OFFB_LLSC_DATA_LO64, mkexpr(loaded_data64) ));
++               stmt( IRStmt_Put( OFFB_LLSC_DATA_HI64, mkU64(0) ));
++               stmt( IRStmt_Put( OFFB_LLSC_ADDR, mkexpr(ea) ));
++               stmt( IRStmt_Put( OFFB_LLSC_SIZE, mkU64(8) ));
++               putIReg64orZR(tt1, unop(Iop_32Uto64,
++                                       unop(Iop_64to32,
++                                            mkexpr(loaded_data64))));
++               putIReg64orZR(tt2, unop(Iop_32Uto64,
++                                       unop(Iop_64HIto32,
++                                            mkexpr(loaded_data64))));
++            } else {
++               vassert(elemSzB == 8 && fullTy == Ity_I128);
++               IRTemp loaded_data128 = newTemp(Ity_I128);
++               // Hack: do the load as V128 rather than I128 so as to avoid
++               // having to implement I128 loads in the arm64 back end.
++               assign(loaded_data128, unop(Iop_ReinterpV128asI128,
++                                           loadLE(Ity_V128, mkexpr(ea))));
++               IRTemp loaded_data_lo64 = newTemp(Ity_I64);
++               IRTemp loaded_data_hi64 = newTemp(Ity_I64);
++               assign(loaded_data_lo64, unop(Iop_128to64,
++                                             mkexpr(loaded_data128)));
++               assign(loaded_data_hi64, unop(Iop_128HIto64,
++                                             mkexpr(loaded_data128)));
++               stmt( IRStmt_Put( OFFB_LLSC_DATA_LO64,
++                                 mkexpr(loaded_data_lo64) ));
++               stmt( IRStmt_Put( OFFB_LLSC_DATA_HI64,
++                                 mkexpr(loaded_data_hi64) ));
++               stmt( IRStmt_Put( OFFB_LLSC_ADDR, mkexpr(ea) ));
++               stmt( IRStmt_Put( OFFB_LLSC_SIZE, mkU64(16) ));
++               putIReg64orZR(tt1, mkexpr(loaded_data_lo64));
++               putIReg64orZR(tt2, mkexpr(loaded_data_hi64));
++            }
++         } else {
++            // Non-fallback implementation of LL.
++            IRTemp res = newTemp(fullTy); // I64 or I128
++            stmt(IRStmt_LLSC(Iend_LE, res, mkexpr(ea), NULL/*LL*/));
++            // Assuming a little-endian guest here.  Rt1 goes at the lower
++            // address, so it must live in the least significant half of `res`.
++            IROp opGetLO = fullTy == Ity_I128 ? Iop_128to64   : Iop_64to32;
++            IROp opGetHI = fullTy == Ity_I128 ? Iop_128HIto64 : Iop_64HIto32;
++            putIReg64orZR(tt1, widenUto64(elemTy, unop(opGetLO, mkexpr(res))));
++            putIReg64orZR(tt2, widenUto64(elemTy, unop(opGetHI, mkexpr(res))));
++         }
++         if (isAcqOrRel) {
++            stmt(IRStmt_MBE(Imbe_Fence));
++         }
++         DIP("ld%sxp %s, %s, [%s] %s\n",
++             isAcqOrRel ? (isLD ? "a" : "l") : "",
++             nameIRegOrZR(elemSzB == 8, tt1),
++             nameIRegOrZR(elemSzB == 8, tt2),
++             nameIReg64orSP(nn),
++             abiinfo->guest__use_fallback_LLSC
++                ? "(fallback implementation)" : "");
++         return True;
++      }
++      if (!isLD) {
++         if (isAcqOrRel) {
++            stmt(IRStmt_MBE(Imbe_Fence));
++         }
++         if (abiinfo->guest__use_fallback_LLSC) {
++            // Fallback implementation of SC.
++            // This is really ugly, since we don't have any way to do
++            // proper if-then-else.  First, set up as if the SC failed,
++            // and jump forwards if it really has failed.
++
++            // Continuation address
++            IRConst* nia = IRConst_U64(guest_PC_curr_instr + 4);
++
++            // "the SC failed".  Any non-zero value means failure.
++            putIReg64orZR(ss, mkU64(1));
++
++            IRTemp tmp_LLsize = newTemp(Ity_I64);
++            assign(tmp_LLsize, IRExpr_Get(OFFB_LLSC_SIZE, Ity_I64));
++            stmt( IRStmt_Put( OFFB_LLSC_SIZE, mkU64(0) // "no transaction"
++            ));
++            // Fail if no or wrong-size transaction
++            vassert((fullSzB == 8 && fullTy == Ity_I64)
++                    || (fullSzB == 16 && fullTy == Ity_I128));
++            stmt( IRStmt_Exit(
++                     binop(Iop_CmpNE64, mkexpr(tmp_LLsize), mkU64(fullSzB)),
++                     Ijk_Boring, nia, OFFB_PC
++            ));
++            // Fail if the address doesn't match the LL address
++            stmt( IRStmt_Exit(
++                      binop(Iop_CmpNE64, mkexpr(ea),
++                                         IRExpr_Get(OFFB_LLSC_ADDR, Ity_I64)),
++                      Ijk_Boring, nia, OFFB_PC
++            ));
++            // The data to be stored.
++            IRTemp store_data = newTemp(fullTy);
++            if (fullTy == Ity_I64) {
++               assign(store_data,
++                      binop(Iop_32HLto64,
++                            narrowFrom64(Ity_I32, getIReg64orZR(tt2)),
++                            narrowFrom64(Ity_I32, getIReg64orZR(tt1))));
++            } else {
++               assign(store_data,
++                      binop(Iop_64HLto128,
++                            getIReg64orZR(tt2), getIReg64orZR(tt1)));
++            }
++
++            if (fullTy == Ity_I64) {
++               // 64 bit (2x32 bit) path
++               // Fail if the data in memory doesn't match the data stashed by
++               // the LL.
++               IRTemp llsc_data_lo64 = newTemp(Ity_I64);
++               assign(llsc_data_lo64,
++                      IRExpr_Get(OFFB_LLSC_DATA_LO64, Ity_I64));
++               stmt( IRStmt_Exit(
++                         binop(Iop_CmpNE64, loadLE(Ity_I64, mkexpr(ea)),
++                                            mkexpr(llsc_data_lo64)),
++                      Ijk_Boring, nia, OFFB_PC
++               ));
++               // Try to CAS the new value in.
++               IRTemp old = newTemp(Ity_I64);
++               IRTemp expd = newTemp(Ity_I64);
++               assign(expd, mkexpr(llsc_data_lo64));
++               stmt( IRStmt_CAS(mkIRCAS(/*oldHi*/IRTemp_INVALID, old,
++                                        Iend_LE, mkexpr(ea),
++                                        /*expdHi*/NULL, mkexpr(expd),
++                                        /*dataHi*/NULL, mkexpr(store_data)
++               )));
++               // Fail if the CAS failed (viz, old != expd)
++               stmt( IRStmt_Exit(
++                         binop(Iop_CmpNE64, mkexpr(old), mkexpr(expd)),
++                         Ijk_Boring, nia, OFFB_PC
++               ));
++            } else {
++               // 128 bit (2x64 bit) path
++               // Fail if the data in memory doesn't match the data stashed by
++               // the LL.
++               IRTemp llsc_data_lo64 = newTemp(Ity_I64);
++               assign(llsc_data_lo64,
++                      IRExpr_Get(OFFB_LLSC_DATA_LO64, Ity_I64));
++               IRTemp llsc_data_hi64 = newTemp(Ity_I64);
++               assign(llsc_data_hi64,
++                      IRExpr_Get(OFFB_LLSC_DATA_HI64, Ity_I64));
++               IRTemp data_at_ea = newTemp(Ity_I128);
++               assign(data_at_ea,
++                      unop(Iop_ReinterpV128asI128,
++                           loadLE(Ity_V128, mkexpr(ea))));
++               stmt( IRStmt_Exit(
++                        binop(Iop_CmpNE64,
++                              unop(Iop_128to64, mkexpr(data_at_ea)),
++                              mkexpr(llsc_data_lo64)),
++                        Ijk_Boring, nia, OFFB_PC
++               ));
++               stmt( IRStmt_Exit(
++                        binop(Iop_CmpNE64,
++                              unop(Iop_128HIto64, mkexpr(data_at_ea)),
++                              mkexpr(llsc_data_hi64)),
++                        Ijk_Boring, nia, OFFB_PC
++               ));
++               // Try to CAS the new value in.
++               IRTemp old_lo64 = newTemp(Ity_I64);
++               IRTemp old_hi64 = newTemp(Ity_I64);
++               IRTemp expd_lo64 = newTemp(Ity_I64);
++               IRTemp expd_hi64 = newTemp(Ity_I64);
++               IRTemp store_data_lo64 = newTemp(Ity_I64);
++               IRTemp store_data_hi64 = newTemp(Ity_I64);
++               assign(expd_lo64, mkexpr(llsc_data_lo64));
++               assign(expd_hi64, mkexpr(llsc_data_hi64));
++               assign(store_data_lo64, unop(Iop_128to64, mkexpr(store_data)));
++               assign(store_data_hi64, unop(Iop_128HIto64, mkexpr(store_data)));
++               stmt( IRStmt_CAS(mkIRCAS(old_hi64, old_lo64,
++                                        Iend_LE, mkexpr(ea),
++                                        mkexpr(expd_hi64), mkexpr(expd_lo64),
++                                        mkexpr(store_data_hi64),
++                                        mkexpr(store_data_lo64)
++               )));
++               // Fail if the CAS failed (viz, old != expd)
++               stmt( IRStmt_Exit(
++                        binop(Iop_CmpNE64, mkexpr(old_lo64), mkexpr(expd_lo64)),
++                        Ijk_Boring, nia, OFFB_PC
++               ));
++               stmt( IRStmt_Exit(
++                        binop(Iop_CmpNE64, mkexpr(old_hi64), mkexpr(expd_hi64)),
++                        Ijk_Boring, nia, OFFB_PC
++               ));
++            }
++            // Otherwise we succeeded (!)
++            putIReg64orZR(ss, mkU64(0));
++         } else {
++            // Non-fallback implementation of SC.
++            IRTemp  res     = newTemp(Ity_I1);
++            IRExpr* dataLO  = narrowFrom64(elemTy, getIReg64orZR(tt1));
++            IRExpr* dataHI  = narrowFrom64(elemTy, getIReg64orZR(tt2));
++            IROp    opMerge = fullTy == Ity_I128 ? Iop_64HLto128 : Iop_32HLto64;
++            IRExpr* data    = binop(opMerge, dataHI, dataLO);
++            // Assuming a little-endian guest here.  Rt1 goes at the lower
++            // address, so it must live in the least significant half of `data`.
++            stmt(IRStmt_LLSC(Iend_LE, res, mkexpr(ea), data));
++            /* IR semantics: res is 1 if store succeeds, 0 if it fails.
++               Need to set rS to 1 on failure, 0 on success. */
++            putIReg64orZR(ss, binop(Iop_Xor64, unop(Iop_1Uto64, mkexpr(res)),
++                                               mkU64(1)));
++         }
++         DIP("st%sxp %s, %s, %s, [%s] %s\n",
++             isAcqOrRel ? (isLD ? "a" : "l") : "",
++             nameIRegOrZR(False, ss),
++             nameIRegOrZR(elemSzB == 8, tt1),
++             nameIRegOrZR(elemSzB == 8, tt2),
++             nameIReg64orSP(nn),
++             abiinfo->guest__use_fallback_LLSC
++                ? "(fallback implementation)" : "");
++         return True;
++      }
++      /* else fall through */
++   }
++
+    /* ------------------ LDA{R,RH,RB} ------------------ */
+    /* ------------------ STL{R,RH,RB} ------------------ */
+    /* 31 29     23  20      14    9 4
+diff --git a/VEX/priv/host_arm64_defs.c b/VEX/priv/host_arm64_defs.c
+index 5657bcab9..b65e27db4 100644
+--- a/VEX/priv/host_arm64_defs.c
++++ b/VEX/priv/host_arm64_defs.c
+@@ -1059,6 +1059,16 @@ ARM64Instr* ARM64Instr_StrEX ( Int szB ) {
+    vassert(szB == 8 || szB == 4 || szB == 2 || szB == 1);
+    return i;
+ }
++ARM64Instr* ARM64Instr_LdrEXP ( void ) {
++   ARM64Instr* i = LibVEX_Alloc_inline(sizeof(ARM64Instr));
++   i->tag        = ARM64in_LdrEXP;
++   return i;
++}
++ARM64Instr* ARM64Instr_StrEXP ( void ) {
++   ARM64Instr* i = LibVEX_Alloc_inline(sizeof(ARM64Instr));
++   i->tag        = ARM64in_StrEXP;
++   return i;
++}
+ ARM64Instr* ARM64Instr_CAS ( Int szB ) {
+    ARM64Instr* i = LibVEX_Alloc_inline(sizeof(ARM64Instr));
+    i->tag             = ARM64in_CAS;
+@@ -1699,12 +1709,19 @@ void ppARM64Instr ( const ARM64Instr* i ) {
+                     sz, i->ARM64in.StrEX.szB == 8 ? 'x' : 'w');
+          return;
+       }
++      case ARM64in_LdrEXP:
++         vex_printf("ldxp   x2, x3, [x4]");
++         return;
++      case ARM64in_StrEXP:
++         vex_printf("stxp   w0, x2, x3, [x4]");
++         return;
+       case ARM64in_CAS: {
+          vex_printf("x1 = cas(%dbit)(x3, x5 -> x7)", 8 * i->ARM64in.CAS.szB);
+          return;
+       }
+       case ARM64in_CASP: {
+-         vex_printf("x0,x1 = casp(%dbit)(x2, x4,x5 -> x6,x7)", 8 * i->ARM64in.CASP.szB);
++         vex_printf("x0,x1 = casp(2x%dbit)(x2, x4,x5 -> x6,x7)",
++                    8 * i->ARM64in.CASP.szB);
+          return;
+       }
+       case ARM64in_MFence:
+@@ -2253,6 +2270,17 @@ void getRegUsage_ARM64Instr ( HRegUsage* u, const ARM64Instr* i, Bool mode64 )
+          addHRegUse(u, HRmWrite, hregARM64_X0());
+          addHRegUse(u, HRmRead, hregARM64_X2());
+          return;
++      case ARM64in_LdrEXP:
++         addHRegUse(u, HRmRead, hregARM64_X4());
++         addHRegUse(u, HRmWrite, hregARM64_X2());
++         addHRegUse(u, HRmWrite, hregARM64_X3());
++         return;
++      case ARM64in_StrEXP:
++         addHRegUse(u, HRmRead, hregARM64_X4());
++         addHRegUse(u, HRmWrite, hregARM64_X0());
++         addHRegUse(u, HRmRead, hregARM64_X2());
++         addHRegUse(u, HRmRead, hregARM64_X3());
++         return;
+       case ARM64in_CAS:
+          addHRegUse(u, HRmRead, hregARM64_X3());
+          addHRegUse(u, HRmRead, hregARM64_X5());
+@@ -2571,6 +2599,10 @@ void mapRegs_ARM64Instr ( HRegRemap* m, ARM64Instr* i, Bool mode64 )
+          return;
+       case ARM64in_StrEX:
+          return;
++      case ARM64in_LdrEXP:
++         return;
++      case ARM64in_StrEXP:
++         return;
+       case ARM64in_CAS:
+          return;
+       case ARM64in_CASP:
+@@ -4167,6 +4199,16 @@ Int emit_ARM64Instr ( /*MB_MOD*/Bool* is_profInc,
+          }
+          goto bad;
+       }
++      case ARM64in_LdrEXP: {
++         // 820C7FC8   ldxp x2, x3, [x4]
++         *p++ = 0xC87F0C82;
++         goto done;
++      }
++      case ARM64in_StrEXP: {
++         // 820C20C8   stxp w0, x2, x3, [x4]
++         *p++ = 0xC8200C82;
++         goto done;
++      }
+       case ARM64in_CAS: {
+          /* This isn't simple.  For an explanation see the comment in
+             host_arm64_defs.h on the definition of ARM64Instr case CAS.
+diff --git a/VEX/priv/host_arm64_defs.h b/VEX/priv/host_arm64_defs.h
+index 01fb5708e..dc686dff7 100644
+--- a/VEX/priv/host_arm64_defs.h
++++ b/VEX/priv/host_arm64_defs.h
+@@ -509,8 +509,10 @@ typedef
+       ARM64in_AddToSP,     /* move SP by small, signed constant */
+       ARM64in_FromSP,      /* move SP to integer register */
+       ARM64in_Mul,
+-      ARM64in_LdrEX,
+-      ARM64in_StrEX,
++      ARM64in_LdrEX,       /* load exclusive, single register */
++      ARM64in_StrEX,       /* store exclusive, single register */
++      ARM64in_LdrEXP,      /* load exclusive, register pair, 2x64-bit only */
++      ARM64in_StrEXP,      /* store exclusive, register pair, 2x64-bit only */
+       ARM64in_CAS,
+       ARM64in_CASP,
+       ARM64in_MFence,
+@@ -719,6 +721,12 @@ typedef
+          struct {
+             Int  szB; /* 1, 2, 4 or 8 */
+          } StrEX;
++         /* LDXP x2, x3, [x4].  This is 2x64-bit only. */
++         struct {
++         } LdrEXP;
++         /* STXP w0, x2, x3, [x4].  This is 2x64-bit only. */
++         struct {
++         } StrEXP;
+          /* x1 = CAS(x3(addr), x5(expected) -> x7(new)),
+             and trashes x8
+             where x1[8*szB-1 : 0] == x5[8*szB-1 : 0] indicates success,
+@@ -1037,6 +1045,8 @@ extern ARM64Instr* ARM64Instr_Mul     ( HReg dst, HReg argL, HReg argR,
+                                         ARM64MulOp op );
+ extern ARM64Instr* ARM64Instr_LdrEX   ( Int szB );
+ extern ARM64Instr* ARM64Instr_StrEX   ( Int szB );
++extern ARM64Instr* ARM64Instr_LdrEXP  ( void );
++extern ARM64Instr* ARM64Instr_StrEXP  ( void );
+ extern ARM64Instr* ARM64Instr_CAS     ( Int szB );
+ extern ARM64Instr* ARM64Instr_CASP    ( Int szB );
+ extern ARM64Instr* ARM64Instr_MFence  ( void );
+diff --git a/VEX/priv/host_arm64_isel.c b/VEX/priv/host_arm64_isel.c
+index 4b1d8c846..094e7e74b 100644
+--- a/VEX/priv/host_arm64_isel.c
++++ b/VEX/priv/host_arm64_isel.c
+@@ -196,9 +196,9 @@ static HReg        iselCondCode_R        ( ISelEnv* env, IRExpr* e );
+ static HReg        iselIntExpr_R_wrk     ( ISelEnv* env, IRExpr* e );
+ static HReg        iselIntExpr_R         ( ISelEnv* env, IRExpr* e );
+ 
+-static void        iselInt128Expr_wrk    ( /*OUT*/HReg* rHi, HReg* rLo, 
++static void        iselInt128Expr_wrk    ( /*OUT*/HReg* rHi, /*OUT*/HReg* rLo,
+                                            ISelEnv* env, IRExpr* e );
+-static void        iselInt128Expr        ( /*OUT*/HReg* rHi, HReg* rLo, 
++static void        iselInt128Expr        ( /*OUT*/HReg* rHi, /*OUT*/HReg* rLo,
+                                            ISelEnv* env, IRExpr* e );
+ 
+ static HReg        iselDblExpr_wrk        ( ISelEnv* env, IRExpr* e );
+@@ -1759,9 +1759,12 @@ static HReg iselIntExpr_R_wrk ( ISelEnv* env, IRExpr* e )
+ 
+       /* AND/OR/XOR(e1, e2) (for any e1, e2) */
+       switch (e->Iex.Binop.op) {
+-         case Iop_And64: case Iop_And32: lop = ARM64lo_AND; goto log_binop;
+-         case Iop_Or64:  case Iop_Or32:  case Iop_Or16: lop = ARM64lo_OR;  goto log_binop;
+-         case Iop_Xor64: case Iop_Xor32: lop = ARM64lo_XOR; goto log_binop;
++         case Iop_And64: case Iop_And32:
++            lop = ARM64lo_AND; goto log_binop;
++         case Iop_Or64:  case Iop_Or32:  case Iop_Or16:
++            lop = ARM64lo_OR;  goto log_binop;
++         case Iop_Xor64: case Iop_Xor32:
++            lop = ARM64lo_XOR; goto log_binop;
+          log_binop: {
+             HReg      dst  = newVRegI(env);
+             HReg      argL = iselIntExpr_R(env, e->Iex.Binop.arg1);
+@@ -2013,6 +2016,11 @@ static HReg iselIntExpr_R_wrk ( ISelEnv* env, IRExpr* e )
+             iselInt128Expr(&rHi,&rLo, env, e->Iex.Unop.arg);
+             return rHi; /* and abandon rLo */
+          }
++         case Iop_128to64: {
++            HReg rHi, rLo;
++            iselInt128Expr(&rHi,&rLo, env, e->Iex.Unop.arg);
++            return rLo; /* and abandon rHi */
++         }
+          case Iop_8Sto32: case Iop_8Sto64: {
+             IRExpr* arg = e->Iex.Unop.arg;
+             HReg    src = iselIntExpr_R(env, arg);
+@@ -2185,13 +2193,19 @@ static HReg iselIntExpr_R_wrk ( ISelEnv* env, IRExpr* e )
+             }
+             return dst;
+          }
++         case Iop_64HIto32: {
++            HReg dst = newVRegI(env);
++            HReg src = iselIntExpr_R(env, e->Iex.Unop.arg);
++            addInstr(env, ARM64Instr_Shift(dst, src, ARM64RI6_I6(32),
++                                           ARM64sh_SHR));
++            return dst;
++         }
+          case Iop_64to32:
+          case Iop_64to16:
+          case Iop_64to8:
+          case Iop_32to16:
+             /* These are no-ops. */
+             return iselIntExpr_R(env, e->Iex.Unop.arg);
+-
+          default:
+             break;
+       }
+@@ -2335,6 +2349,43 @@ static void iselInt128Expr_wrk ( HReg* rHi, HReg* rLo,
+    vassert(e);
+    vassert(typeOfIRExpr(env->type_env,e) == Ity_I128);
+ 
++   /* --------- TEMP --------- */
++   if (e->tag == Iex_RdTmp) {
++      lookupIRTempPair(rHi, rLo, env, e->Iex.RdTmp.tmp);
++      return;
++   }
++
++   /* --------- CONST --------- */
++   if (e->tag == Iex_Const) {
++      IRConst* c = e->Iex.Const.con;
++      vassert(c->tag == Ico_U128);
++      if (c->Ico.U128 == 0) {
++         // The only case we need to handle (so far)
++         HReg zero = newVRegI(env);
++         addInstr(env, ARM64Instr_Imm64(zero, 0));
++         *rHi = *rLo = zero;
++         return;
++      }
++   }
++
++   /* --------- UNARY ops --------- */
++   if (e->tag == Iex_Unop) {
++      switch (e->Iex.Unop.op) {
++         case Iop_ReinterpV128asI128: {
++            HReg dstHi = newVRegI(env);
++            HReg dstLo = newVRegI(env);
++            HReg src    = iselV128Expr(env, e->Iex.Unop.arg);
++            addInstr(env, ARM64Instr_VXfromQ(dstHi, src, 1));
++            addInstr(env, ARM64Instr_VXfromQ(dstLo, src, 0));
++            *rHi = dstHi;
++            *rLo = dstLo;
++            return;
++         }
++         default:
++            break;
++      }
++   }
++
+    /* --------- BINARY ops --------- */
+    if (e->tag == Iex_Binop) {
+       switch (e->Iex.Binop.op) {
+@@ -4086,6 +4137,14 @@ static void iselStmt ( ISelEnv* env, IRStmt* stmt )
+          addInstr(env, ARM64Instr_VMov(8/*yes, really*/, dst, src));
+          return;
+       }
++      if (ty == Ity_I128) {
++         HReg rHi, rLo, dstHi, dstLo;
++         iselInt128Expr(&rHi,&rLo, env, stmt->Ist.WrTmp.data);
++         lookupIRTempPair( &dstHi, &dstLo, env, tmp);
++         addInstr(env, ARM64Instr_MovI(dstHi, rHi));
++         addInstr(env, ARM64Instr_MovI(dstLo, rLo));
++         return;
++      }
+       if (ty == Ity_V128) {
+          HReg src = iselV128Expr(env, stmt->Ist.WrTmp.data);
+          HReg dst = lookupIRTemp(env, tmp);
+@@ -4183,42 +4242,67 @@ static void iselStmt ( ISelEnv* env, IRStmt* stmt )
+          /* LL */
+          IRTemp res = stmt->Ist.LLSC.result;
+          IRType ty  = typeOfIRTemp(env->type_env, res);
+-         if (ty == Ity_I64 || ty == Ity_I32 
++         if (ty == Ity_I128 || ty == Ity_I64 || ty == Ity_I32
+              || ty == Ity_I16 || ty == Ity_I8) {
+             Int  szB   = 0;
+-            HReg r_dst = lookupIRTemp(env, res);
+             HReg raddr = iselIntExpr_R(env, stmt->Ist.LLSC.addr);
+             switch (ty) {
+-               case Ity_I8:  szB = 1; break;
+-               case Ity_I16: szB = 2; break;
+-               case Ity_I32: szB = 4; break;
+-               case Ity_I64: szB = 8; break;
+-               default:      vassert(0);
++               case Ity_I8:   szB = 1;  break;
++               case Ity_I16:  szB = 2;  break;
++               case Ity_I32:  szB = 4;  break;
++               case Ity_I64:  szB = 8;  break;
++               case Ity_I128: szB = 16; break;
++               default:       vassert(0);
++            }
++            if (szB == 16) {
++               HReg r_dstMSword = INVALID_HREG;
++               HReg r_dstLSword = INVALID_HREG;
++               lookupIRTempPair(&r_dstMSword, &r_dstLSword, env, res);
++               addInstr(env, ARM64Instr_MovI(hregARM64_X4(), raddr));
++               addInstr(env, ARM64Instr_LdrEXP());
++               addInstr(env, ARM64Instr_MovI(r_dstLSword, hregARM64_X2()));
++               addInstr(env, ARM64Instr_MovI(r_dstMSword, hregARM64_X3()));
++            } else {
++               vassert(szB != 0);
++               HReg r_dst = lookupIRTemp(env, res);
++               addInstr(env, ARM64Instr_MovI(hregARM64_X4(), raddr));
++               addInstr(env, ARM64Instr_LdrEX(szB));
++               addInstr(env, ARM64Instr_MovI(r_dst, hregARM64_X2()));
+             }
+-            addInstr(env, ARM64Instr_MovI(hregARM64_X4(), raddr));
+-            addInstr(env, ARM64Instr_LdrEX(szB));
+-            addInstr(env, ARM64Instr_MovI(r_dst, hregARM64_X2()));
+             return;
+          }
+          goto stmt_fail;
+       } else {
+          /* SC */
+          IRType tyd = typeOfIRExpr(env->type_env, stmt->Ist.LLSC.storedata);
+-         if (tyd == Ity_I64 || tyd == Ity_I32
++         if (tyd == Ity_I128 || tyd == Ity_I64 || tyd == Ity_I32
+              || tyd == Ity_I16 || tyd == Ity_I8) {
+             Int  szB = 0;
+-            HReg rD  = iselIntExpr_R(env, stmt->Ist.LLSC.storedata);
+             HReg rA  = iselIntExpr_R(env, stmt->Ist.LLSC.addr);
+             switch (tyd) {
+-               case Ity_I8:  szB = 1; break;
+-               case Ity_I16: szB = 2; break;
+-               case Ity_I32: szB = 4; break;
+-               case Ity_I64: szB = 8; break;
+-               default:      vassert(0);
++               case Ity_I8:   szB = 1; break;
++               case Ity_I16:  szB = 2; break;
++               case Ity_I32:  szB = 4; break;
++               case Ity_I64:  szB = 8; break;
++               case Ity_I128: szB = 16; break;
++               default:       vassert(0);
++            }
++            if (szB == 16) {
++               HReg rD_MSword = INVALID_HREG;
++               HReg rD_LSword = INVALID_HREG;
++               iselInt128Expr(&rD_MSword,
++                              &rD_LSword, env, stmt->Ist.LLSC.storedata);
++               addInstr(env, ARM64Instr_MovI(hregARM64_X2(), rD_LSword));
++               addInstr(env, ARM64Instr_MovI(hregARM64_X3(), rD_MSword));
++               addInstr(env, ARM64Instr_MovI(hregARM64_X4(), rA));
++               addInstr(env, ARM64Instr_StrEXP());
++            } else {
++               vassert(szB != 0);
++               HReg rD  = iselIntExpr_R(env, stmt->Ist.LLSC.storedata);
++               addInstr(env, ARM64Instr_MovI(hregARM64_X2(), rD));
++               addInstr(env, ARM64Instr_MovI(hregARM64_X4(), rA));
++               addInstr(env, ARM64Instr_StrEX(szB));
+             }
+-            addInstr(env, ARM64Instr_MovI(hregARM64_X2(), rD));
+-            addInstr(env, ARM64Instr_MovI(hregARM64_X4(), rA));
+-            addInstr(env, ARM64Instr_StrEX(szB));
+          } else {
+             goto stmt_fail;
+          }
+@@ -4243,10 +4327,10 @@ static void iselStmt ( ISelEnv* env, IRStmt* stmt )
+ 
+    /* --------- ACAS --------- */
+    case Ist_CAS: {
+-      if (stmt->Ist.CAS.details->oldHi == IRTemp_INVALID) {
++      IRCAS* cas = stmt->Ist.CAS.details;
++      if (cas->oldHi == IRTemp_INVALID && cas->end == Iend_LE) {
+          /* "normal" singleton CAS */
+          UChar  sz;
+-         IRCAS* cas = stmt->Ist.CAS.details;
+          IRType ty  = typeOfIRExpr(env->type_env, cas->dataLo);
+          switch (ty) { 
+             case Ity_I64: sz = 8; break;
+@@ -4281,10 +4365,9 @@ static void iselStmt ( ISelEnv* env, IRStmt* stmt )
+          addInstr(env, ARM64Instr_MovI(rOld, rResult));
+          return;
+       }
+-      else {
++      if (cas->oldHi != IRTemp_INVALID && cas->end == Iend_LE) {
+          /* Paired register CAS, i.e. CASP */
+          UChar  sz;
+-         IRCAS* cas = stmt->Ist.CAS.details;
+          IRType ty  = typeOfIRExpr(env->type_env, cas->dataLo);
+          switch (ty) {
+             case Ity_I64: sz = 8; break;
+diff --git a/VEX/priv/ir_defs.c b/VEX/priv/ir_defs.c
+index 25566c41c..2d82c41a1 100644
+--- a/VEX/priv/ir_defs.c
++++ b/VEX/priv/ir_defs.c
+@@ -76,6 +76,7 @@ void ppIRConst ( const IRConst* con )
+       case Ico_U16:  vex_printf( "0x%x:I16",     (UInt)(con->Ico.U16)); break;
+       case Ico_U32:  vex_printf( "0x%x:I32",     (UInt)(con->Ico.U32)); break;
+       case Ico_U64:  vex_printf( "0x%llx:I64",   (ULong)(con->Ico.U64)); break;
++      case Ico_U128: vex_printf( "I128{0x%04x}", (UInt)(con->Ico.U128)); break;
+       case Ico_F32:  u.f32 = con->Ico.F32;
+                      vex_printf( "F32{0x%x}",   u.i32);
+                      break;
+@@ -2266,6 +2267,13 @@ IRConst* IRConst_U64 ( ULong u64 )
+    c->Ico.U64 = u64;
+    return c;
+ }
++IRConst* IRConst_U128 ( UShort con )
++{
++   IRConst* c  = LibVEX_Alloc_inline(sizeof(IRConst));
++   c->tag      = Ico_U128;
++   c->Ico.U128 = con;
++   return c;
++}
+ IRConst* IRConst_F32 ( Float f32 )
+ {
+    IRConst* c = LibVEX_Alloc_inline(sizeof(IRConst));
+@@ -4230,6 +4238,7 @@ IRType typeOfIRConst ( const IRConst* con )
+       case Ico_U16:   return Ity_I16;
+       case Ico_U32:   return Ity_I32;
+       case Ico_U64:   return Ity_I64;
++      case Ico_U128:  return Ity_I128;
+       case Ico_F32:   return Ity_F32;
+       case Ico_F32i:  return Ity_F32;
+       case Ico_F64:   return Ity_F64;
+@@ -5129,7 +5138,7 @@ void tcStmt ( const IRSB* bb, const IRStmt* stmt, IRType gWordTy )
+          tyRes = typeOfIRTemp(tyenv, stmt->Ist.LLSC.result);
+          if (stmt->Ist.LLSC.storedata == NULL) {
+             /* it's a LL */
+-            if (tyRes != Ity_I64 && tyRes != Ity_I32
++            if (tyRes != Ity_I128 && tyRes != Ity_I64 && tyRes != Ity_I32
+                 && tyRes != Ity_I16 && tyRes != Ity_I8)
+                sanityCheckFail(bb,stmt,"Ist.LLSC(LL).result :: bogus");
+          } else {
+@@ -5137,7 +5146,7 @@ void tcStmt ( const IRSB* bb, const IRStmt* stmt, IRType gWordTy )
+             if (tyRes != Ity_I1)
+                sanityCheckFail(bb,stmt,"Ist.LLSC(SC).result: not :: Ity_I1");
+             tyData = typeOfIRExpr(tyenv, stmt->Ist.LLSC.storedata);
+-            if (tyData != Ity_I64 && tyData != Ity_I32
++            if (tyData != Ity_I128 && tyData != Ity_I64 && tyData != Ity_I32
+                 && tyData != Ity_I16 && tyData != Ity_I8)
+                sanityCheckFail(bb,stmt,
+                                "Ist.LLSC(SC).result :: storedata bogus");
+@@ -5385,6 +5394,7 @@ Int sizeofIRType ( IRType ty )
+ IRType integerIRTypeOfSize ( Int szB )
+ {
+    switch (szB) {
++      case 16: return Ity_I128;
+       case 8: return Ity_I64;
+       case 4: return Ity_I32;
+       case 2: return Ity_I16;
+diff --git a/VEX/pub/libvex_guest_arm64.h b/VEX/pub/libvex_guest_arm64.h
+index 39b6ecdc2..91d06bd75 100644
+--- a/VEX/pub/libvex_guest_arm64.h
++++ b/VEX/pub/libvex_guest_arm64.h
+@@ -157,14 +157,18 @@ typedef
+          note of bits 23 and 22. */
+       UInt  guest_FPCR;
+ 
+-      /* Fallback LL/SC support.  See bugs 344524 and 369459. */
+-      ULong guest_LLSC_SIZE; // 0==no current transaction, else 1,2,4 or 8.
++      /* Fallback LL/SC support.  See bugs 344524 and 369459.  _LO64 and _HI64
++         contain the original contents of _ADDR+0 .. _ADDR+15, but only _SIZE
++         number of bytes of it.  The remaining 16-_SIZE bytes of them must be
++         zero. */
++      ULong guest_LLSC_SIZE; // 0==no current transaction, else 1,2,4,8 or 16.
+       ULong guest_LLSC_ADDR; // Address of transaction.
+-      ULong guest_LLSC_DATA; // Original value at _ADDR, zero-extended.
++      ULong guest_LLSC_DATA_LO64; // Original value at _ADDR+0.
++      ULong guest_LLSC_DATA_HI64; // Original value at _ADDR+8.
+ 
+       /* Padding to make it have an 16-aligned size */
+       /* UInt  pad_end_0; */
+-      ULong pad_end_1;
++      /* ULong pad_end_1; */
+    }
+    VexGuestARM64State;
+ 
+diff --git a/VEX/pub/libvex_ir.h b/VEX/pub/libvex_ir.h
+index deaa044c1..85805bb69 100644
+--- a/VEX/pub/libvex_ir.h
++++ b/VEX/pub/libvex_ir.h
+@@ -269,6 +269,8 @@ typedef
+       Ico_U16, 
+       Ico_U32, 
+       Ico_U64,
++      Ico_U128,  /* 128-bit restricted integer constant,
++                    same encoding scheme as V128 */
+       Ico_F32,   /* 32-bit IEEE754 floating */
+       Ico_F32i,  /* 32-bit unsigned int to be interpreted literally
+                     as a IEEE754 single value. */
+@@ -295,6 +297,7 @@ typedef
+          UShort U16;
+          UInt   U32;
+          ULong  U64;
++         UShort U128;
+          Float  F32;
+          UInt   F32i;
+          Double F64;
+@@ -311,6 +314,7 @@ extern IRConst* IRConst_U8   ( UChar );
+ extern IRConst* IRConst_U16  ( UShort );
+ extern IRConst* IRConst_U32  ( UInt );
+ extern IRConst* IRConst_U64  ( ULong );
++extern IRConst* IRConst_U128 ( UShort );
+ extern IRConst* IRConst_F32  ( Float );
+ extern IRConst* IRConst_F32i ( UInt );
+ extern IRConst* IRConst_F64  ( Double );
+diff --git a/memcheck/mc_machine.c b/memcheck/mc_machine.c
+index 919c7fae8..176c8e5cb 100644
+--- a/memcheck/mc_machine.c
++++ b/memcheck/mc_machine.c
+@@ -1115,9 +1115,10 @@ static Int get_otrack_shadow_offset_wrk ( Int offset, Int szB )
+    if (o == GOF(CMSTART) && sz == 8) return -1; // untracked
+    if (o == GOF(CMLEN)   && sz == 8) return -1; // untracked
+ 
+-   if (o == GOF(LLSC_SIZE) && sz == 8) return -1; // untracked
+-   if (o == GOF(LLSC_ADDR) && sz == 8) return o;
+-   if (o == GOF(LLSC_DATA) && sz == 8) return o;
++   if (o == GOF(LLSC_SIZE)      && sz == 8) return -1; // untracked
++   if (o == GOF(LLSC_ADDR)      && sz == 8) return o;
++   if (o == GOF(LLSC_DATA_LO64) && sz == 8) return o;
++   if (o == GOF(LLSC_DATA_HI64) && sz == 8) return o;
+ 
+    VG_(printf)("MC_(get_otrack_shadow_offset)(arm64)(off=%d,sz=%d)\n",
+                offset,szB);
+diff --git a/memcheck/mc_translate.c b/memcheck/mc_translate.c
+index c6fd2653f..72ccb3c8c 100644
+--- a/memcheck/mc_translate.c
++++ b/memcheck/mc_translate.c
+@@ -5497,8 +5497,11 @@ IRAtom* expr2vbits_Load_WRK ( MCEnv* mce,
+       the address (shadow) to 'defined' following the test. */
+    complainIfUndefined( mce, addr, guard );
+ 
+-   /* Now cook up a call to the relevant helper function, to read the
+-      data V bits from shadow memory. */
++   /* Now cook up a call to the relevant helper function, to read the data V
++      bits from shadow memory.  Note that I128 loads are done by pretending
++      we're doing a V128 load, and then converting the resulting V128 vbits
++      word to an I128, right at the end of this function -- see `castedToI128`
++      below.  (It's only a minor hack :-) This pertains to bug 444399. */
+    ty = shadowTypeV(ty);
+ 
+    void*        helper           = NULL;
+@@ -5511,6 +5514,7 @@ IRAtom* expr2vbits_Load_WRK ( MCEnv* mce,
+                         hname = "MC_(helperc_LOADV256le)";
+                         ret_via_outparam = True;
+                         break;
++         case Ity_I128: // fallthrough.  See comment above.
+          case Ity_V128: helper = &MC_(helperc_LOADV128le);
+                         hname = "MC_(helperc_LOADV128le)";
+                         ret_via_outparam = True;
+@@ -5576,7 +5580,7 @@ IRAtom* expr2vbits_Load_WRK ( MCEnv* mce,
+ 
+    /* We need to have a place to park the V bits we're just about to
+       read. */
+-   IRTemp datavbits = newTemp(mce, ty, VSh);
++   IRTemp datavbits = newTemp(mce, ty == Ity_I128 ? Ity_V128 : ty, VSh);
+ 
+    /* Here's the call. */
+    IRDirty* di;
+@@ -5603,7 +5607,14 @@ IRAtom* expr2vbits_Load_WRK ( MCEnv* mce,
+    }
+    stmt( 'V', mce, IRStmt_Dirty(di) );
+ 
+-   return mkexpr(datavbits);
++   if (ty == Ity_I128) {
++      IRAtom* castedToI128
++         = assignNew('V', mce, Ity_I128,
++                     unop(Iop_ReinterpV128asI128, mkexpr(datavbits)));
++      return castedToI128;
++   } else {
++      return mkexpr(datavbits);
++   }
+ }
+ 
+ 
+@@ -5631,6 +5642,7 @@ IRAtom* expr2vbits_Load ( MCEnv* mce,
+       case Ity_I16:
+       case Ity_I32:
+       case Ity_I64:
++      case Ity_I128:
+       case Ity_V128:
+       case Ity_V256:
+          return expr2vbits_Load_WRK(mce, end, ty, addr, bias, guard);
+@@ -5928,6 +5940,7 @@ void do_shadow_Store ( MCEnv* mce,
+                         c = IRConst_V256(V_BITS32_DEFINED); break;
+          case Ity_V128: // V128 weirdness -- used twice
+                         c = IRConst_V128(V_BITS16_DEFINED); break;
++         case Ity_I128: c = IRConst_U128(V_BITS16_DEFINED); break;
+          case Ity_I64:  c = IRConst_U64 (V_BITS64_DEFINED); break;
+          case Ity_I32:  c = IRConst_U32 (V_BITS32_DEFINED); break;
+          case Ity_I16:  c = IRConst_U16 (V_BITS16_DEFINED); break;
+@@ -5948,6 +5961,7 @@ void do_shadow_Store ( MCEnv* mce,
+       switch (ty) {
+          case Ity_V256: /* we'll use the helper four times */
+          case Ity_V128: /* we'll use the helper twice */
++         case Ity_I128: /* we'll use the helper twice */
+          case Ity_I64: helper = &MC_(helperc_STOREV64le);
+                        hname = "MC_(helperc_STOREV64le)";
+                        break;
+@@ -6051,9 +6065,9 @@ void do_shadow_Store ( MCEnv* mce,
+       stmt( 'V', mce, IRStmt_Dirty(diQ3) );
+ 
+    } 
+-   else if (UNLIKELY(ty == Ity_V128)) {
++   else if (UNLIKELY(ty == Ity_V128 || ty == Ity_I128)) {
+ 
+-      /* V128-bit case */
++      /* V128/I128-bit case */
+       /* See comment in next clause re 64-bit regparms */
+       /* also, need to be careful about endianness */
+ 
+@@ -6062,6 +6076,7 @@ void do_shadow_Store ( MCEnv* mce,
+       IRAtom  *addrLo64, *addrHi64;
+       IRAtom  *vdataLo64, *vdataHi64;
+       IRAtom  *eBiasLo64, *eBiasHi64;
++      IROp    opGetLO64,  opGetHI64;
+ 
+       if (end == Iend_LE) {
+          offLo64 = 0;
+@@ -6071,9 +6086,17 @@ void do_shadow_Store ( MCEnv* mce,
+          offHi64 = 0;
+       }
+ 
++      if (ty == Ity_V128) {
++         opGetLO64 = Iop_V128to64;
++         opGetHI64 = Iop_V128HIto64;
++      } else {
++         opGetLO64 = Iop_128to64;
++         opGetHI64 = Iop_128HIto64;
++      }
++
+       eBiasLo64 = tyAddr==Ity_I32 ? mkU32(bias+offLo64) : mkU64(bias+offLo64);
+       addrLo64  = assignNew('V', mce, tyAddr, binop(mkAdd, addr, eBiasLo64) );
+-      vdataLo64 = assignNew('V', mce, Ity_I64, unop(Iop_V128to64, vdata));
++      vdataLo64 = assignNew('V', mce, Ity_I64, unop(opGetLO64, vdata));
+       diLo64    = unsafeIRDirty_0_N( 
+                      1/*regparms*/, 
+                      hname, VG_(fnptr_to_fnentry)( helper ), 
+@@ -6081,7 +6104,7 @@ void do_shadow_Store ( MCEnv* mce,
+                   );
+       eBiasHi64 = tyAddr==Ity_I32 ? mkU32(bias+offHi64) : mkU64(bias+offHi64);
+       addrHi64  = assignNew('V', mce, tyAddr, binop(mkAdd, addr, eBiasHi64) );
+-      vdataHi64 = assignNew('V', mce, Ity_I64, unop(Iop_V128HIto64, vdata));
++      vdataHi64 = assignNew('V', mce, Ity_I64, unop(opGetHI64, vdata));
+       diHi64    = unsafeIRDirty_0_N( 
+                      1/*regparms*/, 
+                      hname, VG_(fnptr_to_fnentry)( helper ), 
+@@ -6888,7 +6911,7 @@ static void do_shadow_LLSC ( MCEnv*    mce,
+       /* Just treat this as a normal load, followed by an assignment of
+          the value to .result. */
+       /* Stay sane */
+-      tl_assert(resTy == Ity_I64 || resTy == Ity_I32
++      tl_assert(resTy == Ity_I128 || resTy == Ity_I64 || resTy == Ity_I32
+                 || resTy == Ity_I16 || resTy == Ity_I8);
+       assign( 'V', mce, resTmp,
+                    expr2vbits_Load(
+@@ -6899,7 +6922,7 @@ static void do_shadow_LLSC ( MCEnv*    mce,
+       /* Stay sane */
+       IRType dataTy = typeOfIRExpr(mce->sb->tyenv,
+                                    stStoredata);
+-      tl_assert(dataTy == Ity_I64 || dataTy == Ity_I32
++      tl_assert(dataTy == Ity_I128 || dataTy == Ity_I64 || dataTy == Ity_I32
+                 || dataTy == Ity_I16 || dataTy == Ity_I8);
+       do_shadow_Store( mce, stEnd,
+                             stAddr, 0/* addr bias */,
+@@ -7684,7 +7707,7 @@ static void schemeS ( MCEnv* mce, IRStmt* st )
+                = typeOfIRTemp(mce->sb->tyenv, st->Ist.LLSC.result);
+             IRExpr* vanillaLoad
+                = IRExpr_Load(st->Ist.LLSC.end, resTy, st->Ist.LLSC.addr);
+-            tl_assert(resTy == Ity_I64 || resTy == Ity_I32
++            tl_assert(resTy == Ity_I128 || resTy == Ity_I64 || resTy == Ity_I32
+                       || resTy == Ity_I16 || resTy == Ity_I8);
+             assign( 'B', mce, findShadowTmpB(mce, st->Ist.LLSC.result),
+                               schemeE(mce, vanillaLoad));
+diff --git a/memcheck/tests/Makefile.am b/memcheck/tests/Makefile.am
+index 449710020..2b43ef7d7 100644
+--- a/memcheck/tests/Makefile.am
++++ b/memcheck/tests/Makefile.am
+@@ -90,6 +90,7 @@ EXTRA_DIST = \
+ 	addressable.stderr.exp addressable.stdout.exp addressable.vgtest \
+ 	atomic_incs.stderr.exp atomic_incs.vgtest \
+ 	atomic_incs.stdout.exp-32bit atomic_incs.stdout.exp-64bit \
++	atomic_incs.stdout.exp-64bit-and-128bit \
+ 	badaddrvalue.stderr.exp \
+ 	badaddrvalue.stdout.exp badaddrvalue.vgtest \
+         exit_on_first_error.stderr.exp \
+diff --git a/memcheck/tests/atomic_incs.c b/memcheck/tests/atomic_incs.c
+index f931750f4..1c738c530 100644
+--- a/memcheck/tests/atomic_incs.c
++++ b/memcheck/tests/atomic_incs.c
+@@ -22,6 +22,17 @@
+ #define NNN 3456987
+ 
+ #define IS_8_ALIGNED(_ptr)   (0 == (((unsigned long)(_ptr)) & 7))
++#define IS_16_ALIGNED(_ptr)  (0 == (((unsigned long)(_ptr)) & 15))
++
++// U128 from libvex_basictypes.h is a 4-x-UInt array, which is a bit
++// inconvenient, hence:
++typedef
++   struct {
++      // assuming little-endianness
++      unsigned long long int lo64;
++      unsigned long long int hi64;
++   }
++   MyU128;
+ 
+ 
+ __attribute__((noinline)) void atomic_add_8bit ( char* p, int n ) 
+@@ -712,6 +723,40 @@ __attribute__((noinline)) void atomic_add_64bit ( long long int* p, int n )
+ #endif
+ }
+ 
++__attribute__((noinline)) void atomic_add_128bit ( MyU128* p,
++                                                   unsigned long long int n )
++{
++#if defined(VGA_x86) || defined(VGA_ppc32) || defined(VGA_mips32) \
++    || defined (VGA_nanomips) || defined(VGA_mips64) \
++    || defined(VGA_amd64) \
++    || defined(VGA_ppc64be) || defined(VGA_ppc64le) \
++    || defined(VGA_arm) \
++    || defined(VGA_s390x)
++   /* do nothing; is not supported */
++#elif defined(VGA_arm64)
++   unsigned long long int block[3]
++      = { (unsigned long long int)p, (unsigned long long int)n,
++          0xFFFFFFFFFFFFFFFFULL};
++   do {
++      __asm__ __volatile__(
++         "mov   x5, %0"             "\n\t" // &block[0]
++         "ldr   x9, [x5, #0]"       "\n\t" // p
++         "ldr   x10, [x5, #8]"      "\n\t" // n
++         "ldxp  x7, x8, [x9]"       "\n\t"
++         "adds  x7, x7, x10"        "\n\t"
++         "adc   x8, x8, xzr"        "\n\t"
++         "stxp  w4, x7, x8, [x9]"   "\n\t"
++         "str   x4, [x5, #16]"      "\n\t"
++         : /*out*/
++         : /*in*/ "r"(&block[0])
++         : /*trash*/ "memory", "cc", "x5", "x7", "x8", "x9", "x10", "x4"
++      );
++   } while (block[2] != 0);
++#else
++# error "Unsupported arch"
++#endif
++}
++
+ int main ( int argc, char** argv )
+ {
+    int    i, status;
+@@ -720,8 +765,12 @@ int main ( int argc, char** argv )
+    short* p16;
+    int*   p32;
+    long long int* p64;
++   MyU128*  p128;
+    pid_t  child, p2;
+ 
++   assert(sizeof(MyU128) == 16);
++   assert(sysconf(_SC_PAGESIZE) >= 4096);
++
+    printf("parent, pre-fork\n");
+ 
+    page = mmap( 0, sysconf(_SC_PAGESIZE),
+@@ -736,11 +785,13 @@ int main ( int argc, char** argv )
+    p16 = (short*)(page+256);
+    p32 = (int*)(page+512);
+    p64 = (long long int*)(page+768);
++   p128 = (MyU128*)(page+1024);
+ 
+    assert( IS_8_ALIGNED(p8) );
+    assert( IS_8_ALIGNED(p16) );
+    assert( IS_8_ALIGNED(p32) );
+    assert( IS_8_ALIGNED(p64) );
++   assert( IS_16_ALIGNED(p128) );
+ 
+    memset(page, 0, 1024);
+ 
+@@ -748,6 +799,7 @@ int main ( int argc, char** argv )
+    *p16 = 0;
+    *p32 = 0;
+    *p64 = 0;
++   p128->lo64 = p128->hi64 = 0;
+ 
+    child = fork();
+    if (child == -1) {
+@@ -763,6 +815,7 @@ int main ( int argc, char** argv )
+          atomic_add_16bit(p16, 1);
+          atomic_add_32bit(p32, 1);
+          atomic_add_64bit(p64, 98765 ); /* ensure we hit the upper 32 bits */
++         atomic_add_128bit(p128, 0x1000000013374771ULL); // ditto re upper 64
+       }
+       return 1;
+       /* NOTREACHED */
+@@ -778,6 +831,7 @@ int main ( int argc, char** argv )
+       atomic_add_16bit(p16, 1);
+       atomic_add_32bit(p32, 1);
+       atomic_add_64bit(p64, 98765 ); /* ensure we hit the upper 32 bits */
++      atomic_add_128bit(p128, 0x1000000013374771ULL); // ditto re upper 64
+    }
+ 
+    p2 = waitpid(child, &status, 0);
+@@ -788,11 +842,17 @@ int main ( int argc, char** argv )
+ 
+    printf("FINAL VALUES:  8 bit %d,  16 bit %d,  32 bit %d,  64 bit %lld\n",
+           (int)(*(signed char*)p8), (int)(*p16), *p32, *p64 );
++   printf("               128 bit 0x%016llx:0x%016llx\n",
++          p128->hi64, p128->lo64);
+ 
+    if (-74 == (int)(*(signed char*)p8) 
+        && 32694 == (int)(*p16) 
+        && 6913974 == *p32
+-       && (0LL == *p64 || 682858642110LL == *p64)) {
++       && (0LL == *p64 || 682858642110LL == *p64)
++       && ((0 == p128->hi64 && 0 == p128->lo64)
++           || (0x00000000000697fb == p128->hi64
++               && 0x6007eb426316d956ULL == p128->lo64))
++      ) {
+       printf("PASS\n");
+    } else {
+       printf("FAIL -- see source code for expected values\n");
+diff --git a/memcheck/tests/atomic_incs.stdout.exp-32bit b/memcheck/tests/atomic_incs.stdout.exp-32bit
+index c5b8781e5..55e5044b5 100644
+--- a/memcheck/tests/atomic_incs.stdout.exp-32bit
++++ b/memcheck/tests/atomic_incs.stdout.exp-32bit
+@@ -3,5 +3,6 @@ child
+ parent, pre-fork
+ parent
+ FINAL VALUES:  8 bit -74,  16 bit 32694,  32 bit 6913974,  64 bit 0
++               128 bit 0x0000000000000000:0x0000000000000000
+ PASS
+ parent exits
+diff --git a/memcheck/tests/atomic_incs.stdout.exp-64bit b/memcheck/tests/atomic_incs.stdout.exp-64bit
+index 82405c520..ca2f4fc97 100644
+--- a/memcheck/tests/atomic_incs.stdout.exp-64bit
++++ b/memcheck/tests/atomic_incs.stdout.exp-64bit
+@@ -3,5 +3,6 @@ child
+ parent, pre-fork
+ parent
+ FINAL VALUES:  8 bit -74,  16 bit 32694,  32 bit 6913974,  64 bit 682858642110
++               128 bit 0x0000000000000000:0x0000000000000000
+ PASS
+ parent exits
+diff --git a/memcheck/tests/atomic_incs.stdout.exp-64bit-and-128bit b/memcheck/tests/atomic_incs.stdout.exp-64bit-and-128bit
+new file mode 100644
+index 000000000..ef6580917
+--- /dev/null
++++ b/memcheck/tests/atomic_incs.stdout.exp-64bit-and-128bit
+@@ -0,0 +1,8 @@
++parent, pre-fork
++child
++parent, pre-fork
++parent
++FINAL VALUES:  8 bit -74,  16 bit 32694,  32 bit 6913974,  64 bit 682858642110
++               128 bit 0x00000000000697fb:0x6007eb426316d956
++PASS
++parent exits
+diff --git a/none/tests/arm64/Makefile.am b/none/tests/arm64/Makefile.am
+index 00cbfa52c..9efb49b27 100644
+--- a/none/tests/arm64/Makefile.am
++++ b/none/tests/arm64/Makefile.am
+@@ -12,7 +12,10 @@ EXTRA_DIST = \
+ 	atomics_v81.stdout.exp atomics_v81.stderr.exp atomics_v81.vgtest \
+ 	simd_v81.stdout.exp simd_v81.stderr.exp simd_v81.vgtest \
+         fmadd_sub.stdout.exp fmadd_sub.stderr.exp fmadd_sub.vgtest \
+-	fp_and_simd_v82.stdout.exp fp_and_simd_v82.stderr.exp fp_and_simd_v82.vgtest
++	fp_and_simd_v82.stdout.exp fp_and_simd_v82.stderr.exp \
++	fp_and_simd_v82.vgtest \
++	ldxp_stxp.stdout.exp ldxp_stxp.stderr.exp \
++	ldxp_stxp_basisimpl.vgtest ldxp_stxp_fallbackimpl.vgtest
+ 
+ check_PROGRAMS = \
+ 	allexec \
+@@ -20,7 +23,8 @@ check_PROGRAMS = \
+ 	fp_and_simd \
+ 	integer \
+ 	memory \
+-	fmadd_sub
++	fmadd_sub \
++	ldxp_stxp
+ 
+ if BUILD_ARMV8_CRC_TESTS
+   check_PROGRAMS += crc32
+diff --git a/none/tests/arm64/ldxp_stxp.c b/none/tests/arm64/ldxp_stxp.c
+new file mode 100644
+index 000000000..b5f6ea121
+--- /dev/null
++++ b/none/tests/arm64/ldxp_stxp.c
+@@ -0,0 +1,93 @@
++
++/* Note, this is only a basic smoke test of LD{A}XP and ST{L}XP.  Their
++   atomicity properties are tested by memcheck/tests/atomic_incs.c. */
++
++#include <stdio.h>
++#include <stdlib.h>
++#include <malloc.h>
++#include <assert.h>
++
++typedef  unsigned int            UInt;
++typedef  unsigned long long int  ULong;
++
++
++void initBlock ( ULong* block )
++{
++   block[0] = 0x0001020304050607ULL;
++   block[1] = 0x1011121314151617ULL;
++   block[2] = 0x2021222324252627ULL;
++   block[3] = 0x3031323334353637ULL;
++   block[4] = 0x4041424344454647ULL;
++   block[5] = 0x5051525354555657ULL;
++}
++
++void printBlock ( const char* who,
++                  ULong* block, ULong rt1contents, ULong rt2contents,
++                  UInt zeroIfSuccess )
++{
++   printf("Block %s (%s)\n", who, zeroIfSuccess == 0 ? "success" : "FAILURE" );
++   for (int i = 0; i < 6; i++) {
++      printf("0x%016llx\n", block[i]);
++   }
++   printf("0x%016llx rt1contents\n", rt1contents);
++   printf("0x%016llx rt2contents\n", rt2contents);
++   printf("\n");
++}
++
++int main ( void )
++{
++   ULong* block = memalign(16, 6 * sizeof(ULong));
++   assert(block);
++
++   ULong rt1in, rt2in, rt1out, rt2out;
++   UInt scRes;
++
++   // Do ldxp then stxp with x-registers
++   initBlock(block);
++   rt1in  = 0x5555666677778888ULL;
++   rt2in  = 0xAAAA9999BBBB0000ULL;
++   rt1out = 0x1111222233334444ULL;
++   rt2out = 0xFFFFEEEEDDDDCCCCULL;
++   scRes  = 0x55555555;
++   __asm__ __volatile__(
++      "ldxp %1, %2, [%5]"       "\n\t"
++      "stxp %w0, %3, %4, [%5]"  "\n\t"
++      : /*OUT*/
++        "=&r"(scRes),  // %0
++        "=&r"(rt1out), // %1
++        "=&r"(rt2out)  // %2
++      : /*IN*/
++        "r"(rt1in),    // %3
++        "r"(rt2in),    // %4
++        "r"(&block[2]) // %5
++      : /*TRASH*/
++        "memory","cc"
++   );
++   printBlock("after ldxp/stxp 2x64-bit", block, rt1out, rt2out, scRes);
++
++   // Do ldxp then stxp with w-registers
++   initBlock(block);
++   rt1in  = 0x5555666677778888ULL;
++   rt2in  = 0xAAAA9999BBBB0000ULL;
++   rt1out = 0x1111222233334444ULL;
++   rt2out = 0xFFFFEEEEDDDDCCCCULL;
++   scRes  = 0x55555555;
++   __asm__ __volatile__(
++      "ldxp %w1, %w2, [%5]"       "\n\t"
++      "stxp %w0, %w3, %w4, [%5]"  "\n\t"
++      : /*OUT*/
++        "=&r"(scRes),  // %0
++        "=&r"(rt1out), // %1
++        "=&r"(rt2out)  // %2
++      : /*IN*/
++        "r"(rt1in),    // %3
++        "r"(rt2in),    // %4
++        "r"(&block[2]) // %5
++      : /*TRASH*/
++        "memory","cc"
++   );
++   printBlock("after ldxp/stxp 2x32-bit", block, rt1out, rt2out, scRes);
++
++   free(block);
++   return 0;
++}
+diff --git a/none/tests/arm64/ldxp_stxp_basisimpl.stderr.exp b/none/tests/arm64/ldxp_stxp_basisimpl.stderr.exp
+new file mode 100644
+index 000000000..e69de29bb
+diff --git a/none/tests/arm64/ldxp_stxp_basisimpl.stdout.exp b/none/tests/arm64/ldxp_stxp_basisimpl.stdout.exp
+new file mode 100644
+index 000000000..f269ecdcc
+--- /dev/null
++++ b/none/tests/arm64/ldxp_stxp_basisimpl.stdout.exp
+@@ -0,0 +1,20 @@
++Block after ldxp/stxp 2x64-bit (success)
++0x0001020304050607
++0x1011121314151617
++0x5555666677778888
++0xaaaa9999bbbb0000
++0x4041424344454647
++0x5051525354555657
++0x2021222324252627 rt1contents
++0x3031323334353637 rt2contents
++
++Block after ldxp/stxp 2x32-bit (success)
++0x0001020304050607
++0x1011121314151617
++0xbbbb000077778888
++0x3031323334353637
++0x4041424344454647
++0x5051525354555657
++0x0000000024252627 rt1contents
++0x0000000020212223 rt2contents
++
+diff --git a/none/tests/arm64/ldxp_stxp_basisimpl.vgtest b/none/tests/arm64/ldxp_stxp_basisimpl.vgtest
+new file mode 100644
+index 000000000..29133729a
+--- /dev/null
++++ b/none/tests/arm64/ldxp_stxp_basisimpl.vgtest
+@@ -0,0 +1,2 @@
++prog: ldxp_stxp
++vgopts: -q
+diff --git a/none/tests/arm64/ldxp_stxp_fallbackimpl.stderr.exp b/none/tests/arm64/ldxp_stxp_fallbackimpl.stderr.exp
+new file mode 100644
+index 000000000..e69de29bb
+diff --git a/none/tests/arm64/ldxp_stxp_fallbackimpl.stdout.exp b/none/tests/arm64/ldxp_stxp_fallbackimpl.stdout.exp
+new file mode 100644
+index 000000000..f269ecdcc
+--- /dev/null
++++ b/none/tests/arm64/ldxp_stxp_fallbackimpl.stdout.exp
+@@ -0,0 +1,20 @@
++Block after ldxp/stxp 2x64-bit (success)
++0x0001020304050607
++0x1011121314151617
++0x5555666677778888
++0xaaaa9999bbbb0000
++0x4041424344454647
++0x5051525354555657
++0x2021222324252627 rt1contents
++0x3031323334353637 rt2contents
++
++Block after ldxp/stxp 2x32-bit (success)
++0x0001020304050607
++0x1011121314151617
++0xbbbb000077778888
++0x3031323334353637
++0x4041424344454647
++0x5051525354555657
++0x0000000024252627 rt1contents
++0x0000000020212223 rt2contents
++
+diff --git a/none/tests/arm64/ldxp_stxp_fallbackimpl.vgtest b/none/tests/arm64/ldxp_stxp_fallbackimpl.vgtest
+new file mode 100644
+index 000000000..474282a03
+--- /dev/null
++++ b/none/tests/arm64/ldxp_stxp_fallbackimpl.vgtest
+@@ -0,0 +1,2 @@
++prog: ldxp_stxp
++vgopts: -q --sim-hints=fallback-llsc
+
+commit 0d38ca5dd6b446c70738031132d41f09de0f7a8a
+Author: Julian Seward <jseward@acm.org>
+Date:   Fri Nov 12 13:08:45 2021 +0100
+
+    Bug 444399 - disInstr(arm64): unhandled instruction 0xC87F2D89 (LD{,A}XP and ST{,L}XP).  FOLLOWUP FIX.
+    
+    This is an attempt to un-break 'make dist', as broken by the main commit for
+    this bug, which was 530df882b8f60ecacaf2b9b8a719f7ea1c1d1650.
+
+diff --git a/none/tests/arm64/Makefile.am b/none/tests/arm64/Makefile.am
+index 9efb49b27..4a06f0996 100644
+--- a/none/tests/arm64/Makefile.am
++++ b/none/tests/arm64/Makefile.am
+@@ -14,8 +14,10 @@ EXTRA_DIST = \
+         fmadd_sub.stdout.exp fmadd_sub.stderr.exp fmadd_sub.vgtest \
+ 	fp_and_simd_v82.stdout.exp fp_and_simd_v82.stderr.exp \
+ 	fp_and_simd_v82.vgtest \
+-	ldxp_stxp.stdout.exp ldxp_stxp.stderr.exp \
+-	ldxp_stxp_basisimpl.vgtest ldxp_stxp_fallbackimpl.vgtest
++	ldxp_stxp_basisimpl.stdout.exp ldxp_stxp_basisimpl.stderr.exp \
++	ldxp_stxp_basisimpl.vgtest \
++	ldxp_stxp_fallbackimpl.stdout.exp ldxp_stxp_fallbackimpl.stderr.exp \
++	ldxp_stxp_fallbackimpl.vgtest
+ 
+ check_PROGRAMS = \
+ 	allexec \
