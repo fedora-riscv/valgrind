@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.18.1
-Release: 2%{?dist}
+Release: 3%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -498,7 +498,7 @@ fi
 %endif
 
 %changelog
-* Wed Nov 17 2021 Mark Wielaard <mjw@fedoraproject.org>
+* Wed Nov 17 2021 Mark Wielaard <mjw@fedoraproject.org> - 3.18.1-3
 - Add valgrind-3.18.1-ppc-pstq.patch
 - Add valgrind-3.18.1-ppc-pstq-tests.patch
 - Add valgrind-3.18.1-gdbserver_tests-hwcap.patch
