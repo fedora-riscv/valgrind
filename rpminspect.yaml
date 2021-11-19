@@ -5,6 +5,12 @@ inspections:
   xml: off
 
 annocheck:
+  # Currently lto is disabled globally for valgrind, it should be able
+  # to be enabled through upstream configure --enable-lto in the future.
+  # Note that all (default fedora) flags need to be repeated here, if
+  # you override some config flags it will completely overwrite the
+  # defaults (--ignore-unknown --verbose).
+  - hardened: --ignore-unknown --verbose --skip-lto
   # Ignore files built specially without hardening flags
   ignore:
     # Valgrind tools themselves (memcheck, cachegrind, massif, etc) are
@@ -24,6 +30,10 @@ annocheck:
     # dependency on openmpi however, so a user can use the wrapper without
     # explicitly pulling in openmpi unless the program explicitly uses it.
     - /usr/lib*/openmpi/valgrind/libmpiwrap-*-linux.so
+    # These static archives (to create custom valgrind tools) are only
+    # distributed in valgrind-tools-devel and don't have hardening flags
+    # for the same reason as the standard tools (see above).
+    - /usr/lib*/valgrind/*-*linux.a
 
 runpath:
   allowed_paths:
