@@ -1,0 +1,284 @@
+commit 9abfed23c0d430aafb85de6397d171316c982792
+Author: Paul Floyd <pjfloyd@wanadoo.fr>
+Date:   Fri Nov 19 08:34:53 2021 +0100
+
+    Bug 445504 Using C++ condition_variable results in bogus "mutex is locked simultaneously by two threads" warning(edit)
+    
+    Add intercepts for pthread_cond_clockwait to DRD and Helgrind
+    Also testcase from bugzilla done by Bart, with configure check
+
+diff --git a/configure.ac b/configure.ac
+index e7381f205..cb836dbff 100755
+--- a/configure.ac
++++ b/configure.ac
+@@ -1989,6 +1989,27 @@ AC_LANG(C)
+ 
+ AM_CONDITIONAL(CXX_CAN_INCLUDE_THREAD_HEADER, test x$ac_cxx_can_include_thread_header = xyes)
+ 
++# Check whether compiler can process #include <condition_variable> without errors
++
++AC_MSG_CHECKING([that C++ compiler can include <condition_variable> header file])
++AC_LANG(C++)
++safe_CXXFLAGS=$CXXFLAGS
++CXXFLAGS=-std=c++0x
++
++AC_COMPILE_IFELSE([AC_LANG_SOURCE([
++#include <condition_variable> 
++])],
++[
++ac_cxx_can_include_condition_variable_header=yes
++AC_MSG_RESULT([yes])
++], [
++ac_cxx_can_include_condition_variable_header=no
++AC_MSG_RESULT([no])
++])
++CXXFLAGS=$safe_CXXFLAGS
++AC_LANG(C)
++
++AM_CONDITIONAL(CXX_CAN_INCLUDE_CONDITION_VARIABLE_HEADER, test x$ac_cxx_can_include_condition_variable_header = xyes)
+ 
+ # On aarch64 before glibc 2.20 we would get the kernel user_pt_regs instead
+ # of the user_regs_struct from sys/user.h. They are structurally the same
+diff --git a/drd/drd_pthread_intercepts.c b/drd/drd_pthread_intercepts.c
+index 8b4454364..95127b42c 100644
+--- a/drd/drd_pthread_intercepts.c
++++ b/drd/drd_pthread_intercepts.c
+@@ -1175,6 +1175,30 @@ PTH_FUNCS(int, condZureltimedwait, pthread_cond_timedwait_intercept,
+           (cond, mutex, timeout));
+ #endif /* VGO_solaris */
+ 
++
++static __always_inline
++int pthread_cond_clockwait_intercept(pthread_cond_t *cond,
++                                     pthread_mutex_t *mutex,
++                                     clockid_t clockid,
++                                     const struct timespec* abstime)
++{
++   int   ret;
++   OrigFn fn;
++   VALGRIND_GET_ORIG_FN(fn);
++   VALGRIND_DO_CLIENT_REQUEST_STMT(VG_USERREQ__PRE_COND_WAIT,
++                                   cond, mutex, DRD_(mutex_type)(mutex), 0, 0);
++   CALL_FN_W_WWWW(ret, fn, cond, mutex, clockid, abstime);
++   VALGRIND_DO_CLIENT_REQUEST_STMT(VG_USERREQ__POST_COND_WAIT,
++                                   cond, mutex, 1, 0, 0);
++   return ret;
++}
++
++PTH_FUNCS(int, pthreadZucondZuclockwait, pthread_cond_clockwait_intercept,
++          (pthread_cond_t *cond, pthread_mutex_t *mutex,
++            clockid_t clockid, const struct timespec* abstime),
++          (cond, mutex, clockid, abstime));
++
++
+ // NOTE: be careful to intercept only pthread_cond_signal() and not Darwin's
+ // pthread_cond_signal_thread_np(). The former accepts one argument; the latter
+ // two. Intercepting all pthread_cond_signal* functions will cause only one
+diff --git a/drd/tests/Makefile.am b/drd/tests/Makefile.am
+index 4cb2f7f84..c804391e8 100755
+--- a/drd/tests/Makefile.am
++++ b/drd/tests/Makefile.am
+@@ -105,6 +105,8 @@ EXTRA_DIST =                                        \
+ 	circular_buffer.vgtest			    \
+ 	concurrent_close.stderr.exp		    \
+ 	concurrent_close.vgtest			    \
++	condvar.stderr.exp			    \
++	condvar.vgtest				    \
+ 	custom_alloc.stderr.exp			    \
+ 	custom_alloc.vgtest			    \
+ 	custom_alloc_fiw.stderr.exp		    \
+@@ -458,6 +460,11 @@ check_PROGRAMS += \
+ endif
+ endif
+ 
++if CXX_CAN_INCLUDE_CONDITION_VARIABLE_HEADER
++check_PROGRAMS += \
++    condvar
++endif
++
+ if HAVE_OPENMP
+ check_PROGRAMS += omp_matinv omp_prime omp_printf
+ endif
+@@ -502,6 +509,8 @@ LDADD = -lpthread
+ 
+ 
+ bug322621_SOURCES           = bug322621.cpp
++condvar_SOURCES		    = condvar.cpp
++condvar_CXXFLAGS            = $(AM_CXXFLAGS) -std=c++0x
+ concurrent_close_SOURCES    = concurrent_close.cpp
+ if !VGCONF_OS_IS_FREEBSD
+ dlopen_main_LDADD           = -ldl
+diff --git a/drd/tests/condvar.cpp b/drd/tests/condvar.cpp
+new file mode 100644
+index 000000000..18ecb3f8a
+--- /dev/null
++++ b/drd/tests/condvar.cpp
+@@ -0,0 +1,55 @@
++/* See also https://bugs.kde.org/show_bug.cgi?id=445504 */
++
++#include <condition_variable>
++#include <future>
++#include <iostream>
++#include <mutex>
++#include <thread>
++#include <vector>
++
++using lock_guard = std::lock_guard<std::mutex>;
++using unique_lock = std::unique_lock<std::mutex>;
++
++struct state {
++  std::mutex m;
++  std::vector<int> v;
++  std::condition_variable cv;
++
++  state() {
++    // Call pthread_cond_init() explicitly to let DRD know about 'cv'.
++    pthread_cond_init(cv.native_handle(), NULL);
++  }
++};
++
++void other_thread(state *sp) {
++  state &s = *sp;
++  std::cerr << "Other thread: waiting for notify\n";
++  unique_lock l{s.m};
++  while (true) {
++    if (s.cv.wait_for(l, std::chrono::seconds(3)) !=
++	std::cv_status::timeout) {
++      std::cerr << "Other thread: notified\n";
++      break;
++    }
++  }
++  return;
++}
++
++
++int main() {
++  state s;
++  auto future = std::async(std::launch::async, other_thread, &s);
++
++  if (future.wait_for(std::chrono::seconds(1)) != std::future_status::timeout) {
++    std::cerr << "Main: other thread returned too early!\n";
++    return 2;
++  }
++
++  {
++    std::lock_guard<std::mutex> g{s.m};
++    s.v.push_back(1);
++    s.v.push_back(2);
++    s.cv.notify_all();
++  }
++  return 0;
++}
+diff --git a/drd/tests/condvar.stderr.exp b/drd/tests/condvar.stderr.exp
+new file mode 100644
+index 000000000..be1de9f97
+--- /dev/null
++++ b/drd/tests/condvar.stderr.exp
+@@ -0,0 +1,5 @@
++
++Other thread: waiting for notify
++Other thread: notified
++
++ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)
+diff --git a/drd/tests/condvar.vgtest b/drd/tests/condvar.vgtest
+new file mode 100644
+index 000000000..2e7d49f5a
+--- /dev/null
++++ b/drd/tests/condvar.vgtest
+@@ -0,0 +1,3 @@
++prereq: ./supported_libpthread && [ -e condvar ]
++vgopts: --check-stack-var=yes --read-var-info=yes
++prog: condvar
+diff --git a/helgrind/hg_intercepts.c b/helgrind/hg_intercepts.c
+index 866efdbaa..49c3ddcd9 100644
+--- a/helgrind/hg_intercepts.c
++++ b/helgrind/hg_intercepts.c
+@@ -1409,6 +1409,88 @@ static int pthread_cond_timedwait_WRK(pthread_cond_t* cond,
+ #  error "Unsupported OS"
+ #endif
+ 
++//-----------------------------------------------------------
++// glibc:   pthread_cond_clockwait
++//
++__attribute__((noinline))
++static int pthread_cond_clockwait_WRK(pthread_cond_t* cond,
++                                      pthread_mutex_t* mutex,
++                                      clockid_t clockid,
++                                      struct timespec* abstime,
++                                      int timeout_error)
++{
++   int ret;
++   OrigFn fn;
++   unsigned long mutex_is_valid;
++   Bool abstime_is_valid;
++   VALGRIND_GET_ORIG_FN(fn);
++
++   if (TRACE_PTH_FNS) {
++      fprintf(stderr, "<< pthread_cond_clockwait %p %p %p",
++                      cond, mutex, abstime);
++      fflush(stderr);
++   }
++
++   /* Tell the tool a cond-wait is about to happen, so it can check
++      for bogus argument values.  In return it tells us whether it
++      thinks the mutex is valid or not. */
++   DO_CREQ_W_WW(mutex_is_valid,
++                _VG_USERREQ__HG_PTHREAD_COND_WAIT_PRE,
++                pthread_cond_t*,cond, pthread_mutex_t*,mutex);
++   assert(mutex_is_valid == 1 || mutex_is_valid == 0);
++
++   abstime_is_valid = abstime->tv_nsec >= 0 && abstime->tv_nsec < 1000000000;
++
++   /* Tell the tool we're about to drop the mutex.  This reflects the
++      fact that in a cond_wait, we show up holding the mutex, and the
++      call atomically drops the mutex and waits for the cv to be
++      signalled. */
++   if (mutex_is_valid && abstime_is_valid) {
++      DO_CREQ_v_W(_VG_USERREQ__HG_PTHREAD_MUTEX_UNLOCK_PRE,
++                  pthread_mutex_t*,mutex);
++   }
++
++   CALL_FN_W_WWWW(ret, fn, cond,mutex,clockid,abstime);
++
++   if (mutex_is_valid && !abstime_is_valid && ret != EINVAL) {
++      DO_PthAPIerror("Bug in libpthread: pthread_cond_clockwait "
++                     "invalid abstime did not cause"
++                     " EINVAL", ret);
++   }
++
++   if (mutex_is_valid && abstime_is_valid) {
++      /* and now we have the mutex again if (ret == 0 || ret == timeout) */
++      DO_CREQ_v_WW(_VG_USERREQ__HG_PTHREAD_MUTEX_LOCK_POST,
++                   pthread_mutex_t *, mutex,
++                   long, (ret == 0 || ret == timeout_error) ? True : False);
++   }
++
++   DO_CREQ_v_WWWW(_VG_USERREQ__HG_PTHREAD_COND_WAIT_POST,
++                  pthread_cond_t*,cond, pthread_mutex_t*,mutex,
++                  long,ret == timeout_error,
++                  long, (ret == 0 || ret == timeout_error) && mutex_is_valid
++                        ? True : False);
++
++   if (ret != 0 && ret != timeout_error) {
++      DO_PthAPIerror( "pthread_cond_clockwait", ret );
++   }
++
++   if (TRACE_PTH_FNS) {
++      fprintf(stderr, " cotimedwait -> %d >>\n", ret);
++   }
++
++   return ret;
++}
++
++#if defined(VGO_linux)
++   PTH_FUNC(int, pthreadZucondZuclockwait, // pthread_cond_clockwait
++                 pthread_cond_t* cond, pthread_mutex_t* mutex,
++                 clockid_t clockid,
++                 struct timespec* abstime) {
++      return pthread_cond_clockwait_WRK(cond, mutex, clockid, abstime, ETIMEDOUT);
++   }
++#endif
++
+ 
+ //-----------------------------------------------------------
+ // glibc:   pthread_cond_signal@GLIBC_2.0

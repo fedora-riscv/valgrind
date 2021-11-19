@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.18.1
-Release: 3%{?dist}
+Release: 4%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -120,6 +120,10 @@ Patch15: valgrind-3.18.1-arm64-atomic-align.patch
 # commit 595341b150312d2407bd43304449bf39ec3e1fa8
 # amd64 front end: add more spec rules
 Patch16: valgrind-3.18.1-amd64-more-spec-rules.patch
+
+# KDE#445504 Using C++ condition_variable results in bogus
+# "mutex is locked simultaneously by two threads" warning
+Patch17: valgrind-3.18.1-condvar.patch
 
 BuildRequires: make
 BuildRequires: glibc-devel
@@ -269,6 +273,7 @@ Valgrind User Manual for details.
 %patch14 -p1
 %patch15 -p1
 %patch16 -p1
+%patch17 -p1
 
 %build
 # LTO triggers undefined symbols in valgrind.  Valgrind has a --enable-lto
@@ -498,6 +503,9 @@ fi
 %endif
 
 %changelog
+* Fri Nov 19 2021 Mark Wielaard <mjw@fedoraproject.org> - 3.18.1-4
+- Add valgrind-3.18.1-condvar.patch
+
 * Wed Nov 17 2021 Mark Wielaard <mjw@fedoraproject.org> - 3.18.1-3
 - Add valgrind-3.18.1-ppc-pstq.patch
 - Add valgrind-3.18.1-ppc-pstq-tests.patch
