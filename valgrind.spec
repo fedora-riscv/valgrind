@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.18.1
-Release: 4%{?dist}
+Release: 5%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -124,6 +124,9 @@ Patch16: valgrind-3.18.1-amd64-more-spec-rules.patch
 # KDE#445504 Using C++ condition_variable results in bogus
 # "mutex is locked simultaneously by two threads" warning
 Patch17: valgrind-3.18.1-condvar.patch
+
+# KDE#445668 Inline stack frame generation is broken for Rust binaries
+Patch18: valgrind-3.18.1-demangle-namespace.patch
 
 BuildRequires: make
 BuildRequires: glibc-devel
@@ -274,6 +277,7 @@ Valgrind User Manual for details.
 %patch15 -p1
 %patch16 -p1
 %patch17 -p1
+%patch18 -p1
 
 %build
 # LTO triggers undefined symbols in valgrind.  Valgrind has a --enable-lto
@@ -503,6 +507,9 @@ fi
 %endif
 
 %changelog
+* Mon Nov 22 2021 Mark Wielaard <mjw@fedoraproject.org> - 3.18.1-5
+- Add valgrind-3.18.1-demangle-namespace.patch
+
 * Fri Nov 19 2021 Mark Wielaard <mjw@fedoraproject.org> - 3.18.1-4
 - Add valgrind-3.18.1-condvar.patch
 
