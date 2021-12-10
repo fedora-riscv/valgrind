@@ -1,4 +1,4 @@
-commit 4ea7c91dad1251d320bfffbb50b2323988af45a4
+commit 67e7b20eb256baec225b3d7df1f03d731bf5e939
 Author: Mark Wielaard <mark@klomp.org>
 Date:   Fri Dec 10 17:41:59 2021 +0100
 
@@ -150,14 +150,14 @@ index 6987ad941..08fa77df0 100644
  #endif /* __VKI_SCNUMS_PPC32_LINUX_H */
  
 diff --git a/include/vki/vki-scnums-ppc64-linux.h b/include/vki/vki-scnums-ppc64-linux.h
-index 6827964fd..507117bf3 100644
+index 6827964fd..a76fa6d32 100644
 --- a/include/vki/vki-scnums-ppc64-linux.h
 +++ b/include/vki/vki-scnums-ppc64-linux.h
 @@ -407,6 +407,7 @@
  #define __NR_pkey_alloc		384
  #define __NR_pkey_free		385
  #define __NR_pkey_mprotect	386
-+#define __NR_pkey_rseq		387
++#define __NR_rseq		387
  
  #endif /* __VKI_SCNUMS_PPC64_LINUX_H */
  
