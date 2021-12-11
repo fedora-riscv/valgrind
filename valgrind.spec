@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.18.1
-Release: 6%{?dist}
+Release: 7%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -130,6 +130,9 @@ Patch18: valgrind-3.18.1-demangle-namespace.patch
 
 # KDE#405377 Handle new Linux kernel feature: Restartable Sequences ("rseq")
 Patch19: valgrind-3.18.1-rseq-enosys.patch
+
+# KDE#444481  gdb_server test failures on s390x
+Patch20: valgrind-3.18.1-s390x-vdso.patch
 
 BuildRequires: make
 BuildRequires: glibc-devel
@@ -282,6 +285,7 @@ Valgrind User Manual for details.
 %patch17 -p1
 %patch18 -p1
 %patch19 -p1
+%patch20 -p1
 
 %build
 # LTO triggers undefined symbols in valgrind.  Valgrind has a --enable-lto
@@ -511,6 +515,9 @@ fi
 %endif
 
 %changelog
+* Sat Dec 11 2021 Mark Wielaard <mjw@fedoraproject.org> - 3.18.1-7
+-Add valgrind-3.18.1-s390x-vdso.patch
+
 * Fri Dec 10 2021 Mark Wielaard <mjw@fedoraproject.org> - 3.18.1-6
 - Add valgrind-3.18.1-rseq-enosys.patch
 
