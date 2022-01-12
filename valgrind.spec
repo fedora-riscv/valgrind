@@ -134,6 +134,9 @@ Patch19: valgrind-3.18.1-rseq-enosys.patch
 # KDE#444481  gdb_server test failures on s390x
 Patch20: valgrind-3.18.1-s390x-vdso.patch
 
+# KDE#447995 Valgrind segfault on power10 due to hwcap checking code
+Patch21: valgrind-3.18.1-ppc-hwcaps.patch
+
 BuildRequires: make
 BuildRequires: glibc-devel
 
@@ -286,6 +289,7 @@ Valgrind User Manual for details.
 %patch18 -p1
 %patch19 -p1
 %patch20 -p1
+%patch21 -p1
 
 %build
 # LTO triggers undefined symbols in valgrind.  Valgrind has a --enable-lto
@@ -515,6 +519,9 @@ fi
 %endif
 
 %changelog
+* Wed Jan 12 2022 Mark Wielaard <mjw@fedoraproject.org>
+- Add valgrind-3.18.1-ppc-hwcaps.patch
+
 * Sat Dec 11 2021 Mark Wielaard <mjw@fedoraproject.org> - 3.18.1-7
 -Add valgrind-3.18.1-s390x-vdso.patch
 
