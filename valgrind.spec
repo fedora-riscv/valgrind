@@ -3,7 +3,7 @@
 Summary: Tool for finding memory management bugs in programs
 Name: %{?scl_prefix}valgrind
 Version: 3.18.1
-Release: 7%{?dist}
+Release: 8%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: http://www.valgrind.org/
@@ -523,7 +523,7 @@ fi
 %endif
 
 %changelog
-* Wed Jan 12 2022 Mark Wielaard <mjw@fedoraproject.org>
+* Wed Jan 12 2022 Mark Wielaard <mjw@fedoraproject.org> - 3.18.1-8
 - Add valgrind-3.18.1-ppc-hwcaps.patch
 - Add valgrind-3.18.1-s390x-wflrx.patch
 
