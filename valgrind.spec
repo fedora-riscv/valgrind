@@ -137,6 +137,9 @@ Patch20: valgrind-3.18.1-s390x-vdso.patch
 # KDE#447995 Valgrind segfault on power10 due to hwcap checking code
 Patch21: valgrind-3.18.1-ppc-hwcaps.patch
 
+# KDE#447991 s390x: Valgrind indicates illegal instruction on wflrx
+Patch22: valgrind-3.18.1-s390x-wflrx.patch
+
 BuildRequires: make
 BuildRequires: glibc-devel
 
@@ -290,6 +293,7 @@ Valgrind User Manual for details.
 %patch19 -p1
 %patch20 -p1
 %patch21 -p1
+%patch22 -p1
 
 %build
 # LTO triggers undefined symbols in valgrind.  Valgrind has a --enable-lto
@@ -521,6 +525,7 @@ fi
 %changelog
 * Wed Jan 12 2022 Mark Wielaard <mjw@fedoraproject.org>
 - Add valgrind-3.18.1-ppc-hwcaps.patch
+- Add valgrind-3.18.1-s390x-wflrx.patch
 
 * Sat Dec 11 2021 Mark Wielaard <mjw@fedoraproject.org> - 3.18.1-7
 -Add valgrind-3.18.1-s390x-vdso.patch
