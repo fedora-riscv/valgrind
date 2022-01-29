@@ -1,8 +1,10 @@
-commit 9d1d6cd6acc612cd94261956a8a94a6403a5d528
-Author: Will Schmidt <will_schmidt@vnet.ibm.com>
-Date:   Tue Jan 4 16:41:00 2022 -0600
+commit 3ea8d4327003c3cefe8e82c59be8e92dcfe1a60f
+Author: Carl Love <cel@us.ibm.com>
+Date:   Fri Jan 14 23:04:44 2022 +0000
 
-    Subject: Assorted changes to protect from side affects from the feature checking code.
+    Assorted changes to protect from side affects from the feature checking code.
+    
+    Patch contributed by Will Schmidt <will_schmidt@vnet.ibm.com>
     
     This problem was initially reported by Tulio, he assisted me in
     identifying the underlying issue here.
@@ -16,36 +18,32 @@ Date:   Tue Jan 4 16:41:00 2022 -0600
     This patch adds clobber masks to the instruction stanzas, as well as
     updates the associated comments to clarify which registers are being
     used.
-    As part of this change I've also
-    - updated the .long for the cnttzw instruction to write to r20, and
-      zeroed the reserved bits from that instruction so it is properly
-      decoded by the disassembler.
-    - updated the .long for the dadd instruction to write to f0.
+        As part of this change I've also
+        - updated the .long for the cnttzw instruction to write to r20, and
+          zeroed the reserved bits from that instruction so it is properly
+          decoded by the disassembler.
+        - updated the .long for the dadd instruction to write to f0.
     
-    I've inspected the current codegen with these changes in place, and
-    confirm that r20 is now saved and restored on entry and exit from the
-    machine_get_hwcaps() function.
+        I've inspected the current codegen with these changes in place, and
+        confirm that r20 is now saved and restored on entry and exit from the
+        machine_get_hwcaps() function.
+    
+    bugzilla 447995   Valgrind segfault on power10 due to hwcap checking code
 
 diff --git a/coregrind/m_machine.c b/coregrind/m_machine.c
-index 0b60ecc0fd44..a860ed67a334 100644
+index 0b60ecc0f..089acee64 100644
 --- a/coregrind/m_machine.c
 +++ b/coregrind/m_machine.c
-@@ -1244,11 +1244,11 @@ Bool VG_(machine_get_hwcaps)( void )
-      /* Check for ISA 3.0 support. */
-      have_isa_3_0 = True;
+@@ -1246,7 +1246,7 @@ Bool VG_(machine_get_hwcaps)( void )
       if (VG_MINIMAL_SETJMP(env_unsup_insn)) {
          have_isa_3_0 = False;
       } else {
 -        __asm__ __volatile__(".long 0x7d205434"); /* cnttzw RT, RB */
-+        __asm__ __volatile__(".long 00x7f140434"::"r20"); /* cnttzw r20,r24 */
++        __asm__ __volatile__(".long 00x7f140434":::"r20"); /* cnttzw r20,r24 */
       }
  
       // ISA 3.1 not supported on 32-bit systems
- 
-      /* determine dcbz/dcbzl sizes while we still have the signal
-@@ -1356,79 +1356,79 @@ Bool VG_(machine_get_hwcaps)( void )
-      /* Altivec insns */
-      have_V = True;
+@@ -1358,7 +1358,7 @@ Bool VG_(machine_get_hwcaps)( void )
       if (VG_MINIMAL_SETJMP(env_unsup_insn)) {
          have_V = False;
       } else {
@@ -54,7 +52,7 @@ index 0b60ecc0fd44..a860ed67a334 100644
       }
  
       /* General-Purpose optional (fsqrt, fsqrts) */
-      have_FX = True;
+@@ -1366,7 +1366,7 @@ Bool VG_(machine_get_hwcaps)( void )
       if (VG_MINIMAL_SETJMP(env_unsup_insn)) {
          have_FX = False;
       } else {
@@ -63,7 +61,7 @@ index 0b60ecc0fd44..a860ed67a334 100644
       }
  
       /* Graphics optional (stfiwx, fres, frsqrte, fsel) */
-      have_GX = True;
+@@ -1374,7 +1374,7 @@ Bool VG_(machine_get_hwcaps)( void )
       if (VG_MINIMAL_SETJMP(env_unsup_insn)) {
          have_GX = False;
       } else {
@@ -72,7 +70,7 @@ index 0b60ecc0fd44..a860ed67a334 100644
       }
  
       /* VSX support implies Power ISA 2.06 */
-      have_VX = True;
+@@ -1382,7 +1382,7 @@ Bool VG_(machine_get_hwcaps)( void )
       if (VG_MINIMAL_SETJMP(env_unsup_insn)) {
          have_VX = False;
       } else {
@@ -81,7 +79,7 @@ index 0b60ecc0fd44..a860ed67a334 100644
       }
  
       /* Check for Decimal Floating Point (DFP) support. */
-      have_DFP = True;
+@@ -1390,7 +1390,7 @@ Bool VG_(machine_get_hwcaps)( void )
       if (VG_MINIMAL_SETJMP(env_unsup_insn)) {
          have_DFP = False;
       } else {
@@ -90,7 +88,7 @@ index 0b60ecc0fd44..a860ed67a334 100644
       }
  
       /* Check for ISA 2.07 support. */
-      have_isa_2_07 = True;
+@@ -1398,7 +1398,7 @@ Bool VG_(machine_get_hwcaps)( void )
       if (VG_MINIMAL_SETJMP(env_unsup_insn)) {
          have_isa_2_07 = False;
       } else {
@@ -99,7 +97,7 @@ index 0b60ecc0fd44..a860ed67a334 100644
       }
  
       /* Check for ISA 3.0 support. */
-      have_isa_3_0 = True;
+@@ -1406,7 +1406,7 @@ Bool VG_(machine_get_hwcaps)( void )
       if (VG_MINIMAL_SETJMP(env_unsup_insn)) {
          have_isa_3_0 = False;
       } else {
@@ -108,7 +106,7 @@ index 0b60ecc0fd44..a860ed67a334 100644
       }
  
       /* Check for ISA 3.1 support. */
-      have_isa_3_1 = True;
+@@ -1414,7 +1414,7 @@ Bool VG_(machine_get_hwcaps)( void )
       if (VG_MINIMAL_SETJMP(env_unsup_insn)) {
          have_isa_3_1 = False;
       } else {
@@ -117,9 +115,7 @@ index 0b60ecc0fd44..a860ed67a334 100644
       }
  
       /* Check if Host supports scv instruction */
-      have_scv_support = True;
-      if (VG_MINIMAL_SETJMP(env_unsup_insn)) {
-         have_scv_support = False;
+@@ -1424,9 +1424,9 @@ Bool VG_(machine_get_hwcaps)( void )
       } else {
          /* Set r0 to 13 for the system time call.  Don't want to make a random
             system call.  */
@@ -127,10 +123,8 @@ index 0b60ecc0fd44..a860ed67a334 100644
 -        __asm__ __volatile__(".long 0x6009000d"); /* set r0 to 13 */
 -        __asm__ __volatile__(".long 0x44000001"); /* scv */
 +        __asm__ __volatile__(".long 0x7c000278"); /* clear r0 with xor r0,r0,r0 */
-+        __asm__ __volatile__(".long 0x6009000d"); /* set r0 to 13 with ori r9,r0,13 */
++        __asm__ __volatile__(".long 0x6000000d"); /* set r0 to 13 with ori r0,r0,13 */
 +        __asm__ __volatile__(".long 0x44000001"); /* scv 0 */
       }
  
       /* determine dcbz/dcbzl sizes while we still have the signal
-       * handlers registered */
-      find_ppc_dcbz_sz(&vai);
