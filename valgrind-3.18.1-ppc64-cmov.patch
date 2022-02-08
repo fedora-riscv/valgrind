@@ -1,0 +1,33 @@
+commit fb6a77ed78876083e8ba4c2f92384db5c2e41be8
+Author: Mark Wielaard <mark@klomp.org>
+Date:   Tue Feb 8 16:36:08 2022 +0100
+
+    ppc64 --track-origins=yes failure because of bad cmov addHRegUse
+    
+    For Pin_CMov getRegUsage_PPCInstr called addHRegUse for the dst
+    register with HRmWrite, but since this is a conditional move the
+    register could be both read and written (read + write = modify).
+    This matches the dst of Pin_FpCMov and Pin_AvCMov.
+    
+    In a very rare case, and only with --track-origins=yes, this
+    could cause bad code generation.
+    
+    This is slightly amazing, this code is from 2005 and as far as
+    I know we never seen an issue with --track-origins=yes on power
+    before. And I have been unable to come up simple reproducer.
+    
+    https://bugs.kde.org/show_bug.cgi?id=449672
+
+diff --git a/VEX/priv/host_ppc_defs.c b/VEX/priv/host_ppc_defs.c
+index 3ae0f6e08..4222b4786 100644
+--- a/VEX/priv/host_ppc_defs.c
++++ b/VEX/priv/host_ppc_defs.c
+@@ -2590,7 +2590,7 @@ void getRegUsage_PPCInstr ( HRegUsage* u, const PPCInstr* i, Bool mode64 )
+       return;
+    case Pin_CMov:
+       addRegUsage_PPCRI(u,  i->Pin.CMov.src);
+-      addHRegUse(u, HRmWrite, i->Pin.CMov.dst);
++      addHRegUse(u, HRmModify, i->Pin.CMov.dst);
+       return;
+    case Pin_Load:
+       addRegUsage_PPCAMode(u, i->Pin.Load.src);
