@@ -143,6 +143,9 @@ Patch22: valgrind-3.18.1-s390x-wflrx.patch
 # KDE#449672 ppc64 --track-origins=yes failure because of bad cmov addHRegUse
 Patch23: valgrind-3.18.1-ppc64-cmov.patch
 
+# KDE#449494 arm64: Mismatch detected between RDMA and atomics features
+Patch24: valgrind-3.18.1-arm64-atomics-rdm.patch
+
 BuildRequires: make
 BuildRequires: glibc-devel
 
@@ -298,6 +301,7 @@ Valgrind User Manual for details.
 %patch21 -p1
 %patch22 -p1
 %patch23 -p1
+%patch24 -p1
 
 %build
 # LTO triggers undefined symbols in valgrind.  Valgrind has a --enable-lto
@@ -529,6 +533,7 @@ fi
 %changelog
 * Tue Feb  8 2022 Mark Wielaard <mjw@fedoraproject.org>
 - Add valgrind-3.18.1-ppc64-cmov.patch
+- Add valgrind-3.18.1-arm64-atomics-rdm.patch
 
 * Sat Jan 22 2022 Fedora Release Engineering <releng@fedoraproject.org> - 1:3.18.1-9
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_36_Mass_Rebuild
