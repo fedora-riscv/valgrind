@@ -39,7 +39,7 @@ index 0b60ecc0f..089acee64 100644
          have_isa_3_0 = False;
       } else {
 -        __asm__ __volatile__(".long 0x7d205434"); /* cnttzw RT, RB */
-+        __asm__ __volatile__(".long 00x7f140434":::"r20"); /* cnttzw r20,r24 */
++        __asm__ __volatile__(".long 0x7f140434":::"r20"); /* cnttzw r20,r24 */
       }
  
       // ISA 3.1 not supported on 32-bit systems
