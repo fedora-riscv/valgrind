@@ -146,6 +146,9 @@ Patch23: valgrind-3.18.1-ppc64-cmov.patch
 # KDE#449494 arm64: Mismatch detected between RDMA and atomics features
 Patch24: valgrind-3.18.1-arm64-atomics-rdm.patch
 
+# KDE#445916 Demangle Rust v0 symbols with .llvm suffix
+Patch25: valgrind-3.18.1-rust-demangle-suffix.patch
+
 BuildRequires: make
 BuildRequires: glibc-devel
 
@@ -302,6 +305,7 @@ Valgrind User Manual for details.
 %patch22 -p1
 %patch23 -p1
 %patch24 -p1
+%patch25 -p1
 
 %build
 # LTO triggers undefined symbols in valgrind.  Valgrind has a --enable-lto
@@ -534,6 +538,7 @@ fi
 * Tue Feb  8 2022 Mark Wielaard <mjw@fedoraproject.org>
 - Add valgrind-3.18.1-ppc64-cmov.patch
 - Add valgrind-3.18.1-arm64-atomics-rdm.patch
+- Add valgrind-3.18.1-rust-demangle-suffix.patch
 
 * Sat Jan 22 2022 Fedora Release Engineering <releng@fedoraproject.org> - 1:3.18.1-9
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_36_Mass_Rebuild
