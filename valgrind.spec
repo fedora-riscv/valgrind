@@ -1,12 +1,12 @@
 %{?scl:%scl_package valgrind}
 
-Summary: Tool for finding memory management bugs in programs
+Summary: Dynamic analysis tools to detect memory or thread bugs and profile
 Name: %{?scl_prefix}valgrind
-Version: 3.18.1
-Release: 9%{?dist}
+Version: 3.19.0
+Release: 1%{?dist}
 Epoch: 1
 License: GPLv2+
-URL: http://www.valgrind.org/
+URL: https://www.valgrind.org/
 
 # Only necessary for RHEL, will be ignored on Fedora
 
@@ -77,77 +77,13 @@ Source0: https://sourceware.org/pub/valgrind/valgrind-%{version}.tar.bz2
 Patch1: valgrind-3.9.0-cachegrind-improvements.patch
 
 # Make ld.so supressions slightly less specific.
-Patch3: valgrind-3.9.0-ldso-supp.patch
+Patch2: valgrind-3.9.0-ldso-supp.patch
 
 # Add some stack-protector
-Patch4: valgrind-3.16.0-some-stack-protector.patch
+Patch3: valgrind-3.16.0-some-stack-protector.patch
 
 # Add some -Wl,z,now.
-Patch5: valgrind-3.16.0-some-Wl-z-now.patch
-
-# KDE#444495 dhat/tests/copy fails on s390x
-Patch6: valgrind-3.18.1-dhat-tests-copy.patch
-
-# KDE#444242 s390x: Sign-extend "relative long" offset in EXRL
-Patch7: valgrind-3.18.1-s390x-EXRL.patch
-
-# KDE#444571 - PPC, fix lxsibzx and lxsihzx
-Patch8: valgrind-3.18.1-ppc64-lxsibzx-lxsihzx.patch
-
-# commit ae8c6de01417023e78763de145b1c0e6ddd87277
-# commit 3950c5d661ee09526cddcf24daf5fc22bc83f70c
-# Fix for the prefixed stq instruction in PC relative mode.
-# KDE#444836 pstq instruction for R=1 is not storing to the correct address
-Patch9: valgrind-3.18.1-ppc-pstq.patch
-Patch10: valgrind-3.18.1-ppc-pstq-tests.patch
-
-# commit 64ab89162906d5b9e2de6c3afe476fec861ef7ec
-# gdbserver_tests: Filter out glibc hwcaps libc.so
-Patch11: valgrind-3.18.1-gdbserver_tests-hwcap.patch
-
-# KDE#445184 Rust v0 symbol demangling is broken 
-Patch12: valgrind-3.18.1-rust-v0-demangle.patch
-
-# KDE#445354 arm64 backend: incorrect code emitted for doubleword CAS
-Patch13: valgrind-3.18.1-arm64-doubleword-cas.patch
-
-# KDE#444399 arm64: unhandled instruction LD{,A}XP and ST{,L}XP
-Patch14: valgrind-3.18.1-arm64-ldaxp-stlxp.patch
-
-# KDE#445415 arm64 front end: alignment checks missing for atomic instructions.
-Patch15: valgrind-3.18.1-arm64-atomic-align.patch
-
-# commit 595341b150312d2407bd43304449bf39ec3e1fa8
-# amd64 front end: add more spec rules
-Patch16: valgrind-3.18.1-amd64-more-spec-rules.patch
-
-# KDE#445504 Using C++ condition_variable results in bogus
-# "mutex is locked simultaneously by two threads" warning
-Patch17: valgrind-3.18.1-condvar.patch
-
-# KDE#445668 Inline stack frame generation is broken for Rust binaries
-Patch18: valgrind-3.18.1-demangle-namespace.patch
-
-# KDE#405377 Handle new Linux kernel feature: Restartable Sequences ("rseq")
-Patch19: valgrind-3.18.1-rseq-enosys.patch
-
-# KDE#444481  gdb_server test failures on s390x
-Patch20: valgrind-3.18.1-s390x-vdso.patch
-
-# KDE#447995 Valgrind segfault on power10 due to hwcap checking code
-Patch21: valgrind-3.18.1-ppc-hwcaps.patch
-
-# KDE#447991 s390x: Valgrind indicates illegal instruction on wflrx
-Patch22: valgrind-3.18.1-s390x-wflrx.patch
-
-# KDE#449672 ppc64 --track-origins=yes failure because of bad cmov addHRegUse
-Patch23: valgrind-3.18.1-ppc64-cmov.patch
-
-# KDE#449494 arm64: Mismatch detected between RDMA and atomics features
-Patch24: valgrind-3.18.1-arm64-atomics-rdm.patch
-
-# KDE#445916 Demangle Rust v0 symbols with .llvm suffix
-Patch25: valgrind-3.18.1-rust-demangle-suffix.patch
+Patch4: valgrind-3.16.0-some-Wl-z-now.patch
 
 BuildRequires: make
 BuildRequires: glibc-devel
@@ -278,34 +214,14 @@ Valgrind User Manual for details.
 %setup -q -n %{?scl:%{pkg_name}}%{!?scl:%{name}}-%{version}
 
 %patch1 -p1
-%patch3 -p1
+%patch2 -p1
 
 # Old rhel gcc doesn't have -fstack-protector-strong.
 %if 0%{?fedora} || 0%{?rhel} >= 7
+%patch3 -p1
 %patch4 -p1
-%patch5 -p1
 %endif
 
-%patch6 -p1
-%patch7 -p1
-%patch8 -p1
-%patch9 -p1
-%patch10 -p1
-%patch11 -p1
-%patch12 -p1
-%patch13 -p1
-%patch14 -p1
-%patch15 -p1
-%patch16 -p1
-%patch17 -p1
-%patch18 -p1
-%patch19 -p1
-%patch20 -p1
-%patch21 -p1
-%patch22 -p1
-%patch23 -p1
-%patch24 -p1
-%patch25 -p1
 
 %build
 # LTO triggers undefined symbols in valgrind.  Valgrind has a --enable-lto
@@ -535,6 +451,9 @@ fi
 %endif
 
 %changelog
+* Tue Apr 12 2022 Mark Wielaard <mjw@fedoraproject.org> - 3.19.0-1
+- Upgrade to valgrind 3.19.0. Drop old patches.
+
 * Tue Feb  8 2022 Mark Wielaard <mjw@fedoraproject.org>
 - Add valgrind-3.18.1-ppc64-cmov.patch
 - Add valgrind-3.18.1-arm64-atomics-rdm.patch
