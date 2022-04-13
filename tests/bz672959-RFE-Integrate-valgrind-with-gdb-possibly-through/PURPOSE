@@ -1,7 +1,0 @@
-PURPOSE of /tools/valgrind/Sanity/bz672959-RFE-Integrate-valgrind-with-gdb-possibly-through
-Description: Test for BZ#672959 ([RFE] Integrate valgrind with gdb possibly through)
-Author: Miroslav Franc <mfranc@redhat.com>
-Bug summary: [RFE] Integrate valgrind with gdb possibly through gdbserver.
-Bugzilla link: https://bugzilla.redhat.com/show_bug.cgi?id=672959
-
-This is small sanity test to make sure gdb works with valgrind gdb server.

@@ -1,6 +1,6 @@
-summary: CI Gating Plan
+summary: CI test plan, runs all tests from tests repo.
 discover:
     how: fmf
-    directory: tests
+    url: https://src.fedoraproject.org/tests/valgrind
 execute:
     how: tmt
