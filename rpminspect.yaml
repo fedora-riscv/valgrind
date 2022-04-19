@@ -7,7 +7,7 @@ inspections:
 annocheck:
   # Currently lto is disabled globally for valgrind, it should be able
   # to be enabled through upstream configure --enable-lto in the future.
-  # Note that all (default fedora) flags need to be repeated here, if
+  # Note that all (default hardened) flags need to be repeated here, if
   # you override some config flags it will completely overwrite the
   # defaults (--ignore-unknown --verbose).
   jobs:
