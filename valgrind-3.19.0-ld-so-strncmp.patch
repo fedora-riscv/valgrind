@@ -1,0 +1,25 @@
+commit 947388eb043ea1c44b37df94046e1eee790ad776
+Author: Mike Crowe <mac@mcrowe.com>
+Date:   Mon Sep 9 14:16:16 2019 +0100
+
+    Intercept strncmp for glibc ld.so v2.28+
+    
+    In glibc 5aad5f617892e75d91d4c8fb7594ff35b610c042 (first released in
+    v2.28) a call to strncmp was added to dl-load.c:is_dst. This causes
+    valgrind to complain about glibc's highly-optimised strncmp performing
+    sixteen-byte reads on short strings in ld.so. Let's intercept strncmp in
+    ld.so too so we use valgrind's simple version to avoid this problem.
+
+diff --git a/shared/vg_replace_strmem.c b/shared/vg_replace_strmem.c
+index 3b42b3a87..5396e83be 100644
+--- a/shared/vg_replace_strmem.c
++++ b/shared/vg_replace_strmem.c
+@@ -710,6 +710,8 @@ static inline void my_exit ( int x )
+  STRNCMP(VG_Z_LIBC_SONAME, __GI_strncmp)
+  STRNCMP(VG_Z_LIBC_SONAME, __strncmp_sse2)
+  STRNCMP(VG_Z_LIBC_SONAME, __strncmp_sse42)
++ STRNCMP(VG_Z_LD_LINUX_SO_2, strncmp)
++ STRNCMP(VG_Z_LD_LINUX_X86_64_SO_2, strncmp)
+ 
+ #elif defined(VGO_freebsd)
+  STRNCMP(VG_Z_LIBC_SONAME, strncmp)
