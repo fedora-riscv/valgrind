@@ -1,0 +1,17 @@
+Add the missing int, to avoid a compilation failure in strict C99 mode.
+
+Submitted upstream: <https://bugs.kde.org/show_bug.cgi?id=462007>
+
+diff --git a/none/tests/faultstatus.c b/none/tests/faultstatus.c
+index 458ea8264593af4e..92a8350ab2285092 100644
+--- a/none/tests/faultstatus.c
++++ b/none/tests/faultstatus.c
+@@ -190,7 +190,7 @@ int main()
+ 	return 0;
+ }
+ 
+-static volatile s_zero;
++static volatile int s_zero;
+ 
+ static int zero()
+ {
