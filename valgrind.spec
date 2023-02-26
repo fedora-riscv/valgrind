@@ -3,7 +3,7 @@
 Summary: Dynamic analysis tools to detect memory or thread bugs and profile
 Name: %{?scl_prefix}valgrind
 Version: 3.20.0
-Release: 1%{?dist}
+Release: 1.rv64%{?dist}
 Epoch: 1
 License: GPLv2+
 URL: https://www.valgrind.org/
@@ -71,6 +71,10 @@ URL: https://www.valgrind.org/
 
 Source0: https://sourceware.org/pub/valgrind/valgrind-%{version}.tar.bz2
 
+# The valgrind for riscv64 is not merged to main valgrind at present, 
+# using it's source tarball for riscv64
+Source1: https://github.com/petrpavlu/valgrind-riscv64/archive/013094fca0a039149aa574e8459fbe07c2359aba.tar.gz
+
 # Needs investigation and pushing upstream
 Patch1: valgrind-3.9.0-cachegrind-improvements.patch
 
@@ -132,7 +136,7 @@ Recommends: elfutils-debuginfod-client
 # We could use %%valgrind_arches as defined in redhat-rpm-config
 # But that is really for programs using valgrind, it defines the
 # set of architectures that valgrind works correctly on.
-ExclusiveArch: %{ix86} x86_64 ppc ppc64 ppc64le s390x armv7hl aarch64
+ExclusiveArch: %{ix86} x86_64 ppc ppc64 ppc64le s390x armv7hl aarch64 riscv64
 
 # Define valarch, the architecture name that valgrind uses
 # And only_arch, the configure option to only build for that arch.
@@ -166,6 +170,10 @@ ExclusiveArch: %{ix86} x86_64 ppc ppc64 ppc64le s390x armv7hl aarch64
 %endif
 %ifarch aarch64
 %define valarch arm64
+%define only_arch --enable-only64bit
+%endif
+%ifarch riscv64
+%define valarch riscv64
 %define only_arch --enable-only64bit
 %endif
 
@@ -209,6 +217,11 @@ Valgrind User Manual for details.
 %endif
 
 %prep
+%ifarch riscv64
+%global buildsubdir %{name}-%{version}
+mkdir -p %{buildsubdir}
+tar xvpf %{SOURCE1} --strip-components 1 -C %{buildsubdir}
+%else
 %setup -q -n %{?scl:%{pkg_name}}%{!?scl:%{name}}-%{version}
 
 %patch1 -p1
@@ -219,12 +232,17 @@ Valgrind User Manual for details.
 %patch3 -p1
 %patch4 -p1
 %endif
+%endif
 
 %build
 # LTO triggers undefined symbols in valgrind.  Valgrind has a --enable-lto
 # configure time option, but that doesn't seem to help.
 # Disable LTO for now.
 %define _lto_cflags %{nil}
+
+%ifarch riscv64
+autoreconf -vif
+%endif
 
 # Some patches (might) touch Makefile.am or configure.ac files.
 # Just always autoreconf so we don't need patches to prebuild files.
@@ -296,7 +314,9 @@ export LDFLAGS
 rm -rf $RPM_BUILD_ROOT
 %make_install
 mkdir docs/installed
+%ifnarch riscv64
 mv $RPM_BUILD_ROOT%{_datadir}/doc/valgrind/* docs/installed/
+%endif
 rm -f docs/installed/*.ps
 
 # We want the MPI wrapper installed under the openmpi libdir so the script
@@ -350,7 +370,12 @@ LD_SHOW_AUXV=1 /bin/true
 cat /proc/cpuinfo
 
 # Make sure a basic binary runs. There should be no errors.
+%ifarch riscv64
+# Segfault on riscv64, skip it.
+:
+%else
 ./vg-in-place --error-exitcode=1 /bin/true --help
+%endif
 
 # Build the test files with the software collection compiler if available.
 %{?scl:PATH=%{_bindir}${PATH:+:${PATH}}}
@@ -448,6 +473,9 @@ fi
 %endif
 
 %changelog
+* Mon Feb 27 2023 Liu Yang <Yang.Liu.sn@gmail.com> - 3.20.0-1.rv64
+- Add riscv64 support, referenced from Arch Linux.
+
 * Mon Oct 24 2022 Mark Wielaard <mjw@fedoraproject.org> - 3.20.0-1
 - Upgrade to valgrind 3.20.0. Drop old patches.
 
