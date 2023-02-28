@@ -421,7 +421,9 @@ echo ===============END TESTING===============
 %files
 %license COPYING COPYING.DOCS
 %doc NEWS README_*
+%ifnarch riscv64
 %doc docs/installed/html docs/installed/*.pdf
+%endif
 %{_bindir}/*
 %dir %{_libexecdir}/valgrind
 # Install everything in the libdir except the .so.
@@ -430,7 +432,9 @@ echo ===============END TESTING===============
 # Turn on executable bit again for vgpreload libraries.
 # Was disabled in %%install to prevent debuginfo stripping.
 %attr(0755,root,root) %{_libexecdir}/valgrind/vgpreload*-%{valarch}-*so
+%ifnarch riscv64
 %{_mandir}/man1/*
+%endif
 
 %files devel
 %dir %{_includedir}/valgrind
